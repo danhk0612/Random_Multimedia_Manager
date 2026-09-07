@@ -42,7 +42,7 @@
 ## 데이터 설계 경계
 
 Category/Source, MediaItem의 즐겨찾기·제외·존재 상태, ViewHistory, PlaybackProgress, 현재 세션 순서를 분리한다.
-기존 필드/재식별/영속 세션 초안은 docs/DATA_AND_RANDOM_POLICY.md 참조. 분류 중복 등록과 동일 파일 식별, 기간 경계, 세션 보존, 삭제 이력 잔존은 T02 선행 결정이다. 후보로만 남은 스키마 필드는 미리 생성하지 않는다.
+기존 필드/재식별/영속 세션 초안은 docs/DATA_AND_RANDOM_POLICY.md 참조. 분류 간 상태 비공유·이동 시 미승계·기본 7일·휴지통 삭제 성공 후 감상 기록 제거가 사용자 확정이다. 세부 식별/기간 경계/삭제 정리 계약은 T02에서 결정한다. 후보로만 남은 스키마 필드는 미리 생성하지 않는다.
 
 ## 미디어와 비동기
 
@@ -54,7 +54,7 @@ Category/Source, MediaItem의 즐겨찾기·제외·존재 상태, ViewHistory, 
 
 ## 개발·검증 환경
 
-Windows x64와 .NET 10 SDK에서 솔루션 빌드 및 앱 실행을 검증한다. 실제 지원할 Windows 버전은 T18에서 확정하며, 기존 Windows 10/11 가정만으로 모든 에디션 지원을 보장하지 않는다.
+Windows x64와 .NET 10 SDK에서 솔루션 빌드 및 앱 실행을 검증한다. 배포는 exe 또는 압축, 의존성 포함 우선이며 불가능하면 추가 설치/연결을 허용한다. 실제 지원할 Windows 버전은 T18에서 확정하며, 기존 Windows 10/11 가정만으로 모든 에디션 지원을 보장하지 않는다.
 
 - [Microsoft .NET Windows 설치 및 지원표](https://learn.microsoft.com/en-us/dotnet/core/install/windows)
 - [Microsoft WPF 개요](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/overview/)
