@@ -1,72 +1,26 @@
 # Random Multimedia Manager
 
-Windows용 로컬 랜덤 만화/영상 감상 및 정리 프로그램.
+Windows용 로컬 만화·영상 랜덤 감상 및 정리 프로그램. 현재는 최소 WPF 셸과 개발 기준 문서를 준비한 단계다.
 
-이 프로젝트의 목적은 단순한 랜덤 파일 실행이 아니라, **분류된 로컬 미디어 라이브러리에서 최근 감상한 항목을 일정 기간 제외하여 랜덤으로 선택하고, 자체 만화 뷰어/영상 플레이어 안에서 감상·즐겨찾기·제외·삭제·이동을 한 흐름으로 처리하는 것**이다.
+## 시작 문서
 
-## 핵심 기능
+- [프로젝트](PROJECT.md)
+- [요구사항](REQUIREMENTS.md)
+- [아키텍처](ARCHITECTURE.md)
+- [현재 상태](CURRENT_STATE.md)
+- [Task 및 다음 작업](TASKS.md)
+- [AI 작업 운영](AI_WORKFLOW.md)
+- [미확정 결정](docs/DECISIONS.md)
 
-- 분류(Category) 생성 및 타입 지정: 만화 / 영상
-- 하나의 분류에 여러 소스 폴더 등록
-- 로컬 파일 라이브러리 스캔 및 인덱싱
-- 여러 분류를 선택한 랜덤 감상
-- 최근 N일 내 감상 기록이 있는 항목 랜덤 후보 제외
-- 현재 랜덤 세션 내 중복 선택 방지
-- 자체 만화 뷰어
-  - ZIP/CBZ 우선 지원
-  - 자연 정렬(Natural Sort)
-  - 단일/두 페이지/세로 스크롤
-  - 확대/축소 및 고품질 리샘플링
-- 자체 영상 플레이어
-  - 일반 재생/탐색/배속/볼륨/전체화면
-  - SRT/SMI 외부 자막
-  - 오디오/자막 트랙 선택
-  - 하드웨어 디코딩
-  - RTX Video Super Resolution(VSR) 후속 지원
-- 공통 감상 동작
-  - 즐겨찾기 토글
-  - 랜덤 대상 영구 제외
-  - 이번 감상 기록 제외
-  - 이전/다음 랜덤 항목
-  - 탐색기에서 파일 위치 열기
-  - 삭제(휴지통/영구삭제/매번 선택)
-- 만화 마지막 페이지 / 영상 마지막 재생 위치 저장
-- 전역 단축키 지원
-  - 프로그램 즉시 종료
-  - 프로그램 전체 숨김 + 재생 정지/음소거
-- 시스템 트레이 지원 및 동작 옵션화
+## 개발 환경과 실행
 
-## 문서
+Windows x64, .NET 10 SDK. 저장소 루트에서 실행한다.
 
-개발 시작 전에 아래 문서를 기준으로 구현한다.
+```powershell
+dotnet restore RandomMultimediaManager.sln
+dotnet build RandomMultimediaManager.sln -c Release --no-restore
+dotnet run --project src/RandomMultimediaManager.App/RandomMultimediaManager.App.csproj
+```
 
-- [제품 요구사항](docs/PRODUCT_SPEC.md)
-- [아키텍처](docs/ARCHITECTURE.md)
-- [데이터 및 랜덤/기록 정책](docs/DATA_AND_RANDOM_POLICY.md)
-- [만화 뷰어 / 영상 플레이어 사양](docs/VIEWER_PLAYER_SPEC.md)
-- [단축키 / 즉시 종료 / 전체 숨김 / 트레이 사양](docs/SHORTCUTS_AND_TRAY.md)
-- [개발 로드맵](docs/ROADMAP.md)
-- [새 Work용 인수인계](docs/WORK_HANDOFF.md)
-
-## 초기 기술 방향
-
-- C# / .NET
-- WPF
-- SQLite
-- 만화 이미지 렌더링: SkiaSharp 계열 검토
-- 압축 파일: .NET ZIP + 필요 시 SharpCompress
-- 영상 엔진: LibVLCSharp/libVLC 우선 검토
-- RTX VSR: NVIDIA RTX Video SDK 연동을 별도 단계로 진행
-
-구체적인 패키지 버전과 RTX VSR 연결 방식은 실제 구현 시점에 공식 문서를 다시 확인해 확정한다.
-
-## 설계 원칙
-
-1. 랜덤 감상이 메인 UX이며 일반 파일 브라우저가 중심이 되어서는 안 된다.
-2. 감상과 동시에 즐겨찾기·제외·삭제 등 라이브러리 정리가 가능해야 한다.
-3. 감상 기록과 이어보기 위치는 별개의 데이터로 관리한다.
-4. 현재 파일의 감상 기록은 파일을 여는 즉시 확정하지 않고, 파일을 벗어날 때 확정할 수 있도록 Pending 상태를 사용한다.
-5. 삭제된 파일은 감상 기록을 새로 남기지 않는다.
-6. 대용량 ZIP/영상에서도 전체 파일을 불필요하게 메모리에 올리지 않는다.
-7. 단축키와 트레이 동작은 사용자가 설정할 수 있어야 한다.
-8. 위험한 삭제/기록 초기화 동작은 사용자 설정에 따른 확인 정책을 적용한다.
+현재 예상 동작은 제목이 있는 빈 창 실행/닫기뿐이다. 미디어 기능은 아직 없다.
+현재 환경에서의 검증 결과와 Windows 실행 확인 여부는 CURRENT_STATE.md를 확인한다.
