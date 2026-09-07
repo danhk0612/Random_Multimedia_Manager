@@ -12,7 +12,7 @@
 
 | 영역 | 상태 |
 |---|---|
-| WPF 시작/빈 메인창 코드 | 작성됨, Windows 실행 미검증 |
+| WPF 시작/빈 메인창 코드 | Windows 복원·Release 빌드·실행·닫기 정상 (사용자 확인) |
 | 분류·스캔·SQLite·랜덤·감상 기록 | 미구현 |
 | 만화·영상·SRT/SMI·이어보기 | 미구현 |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | 미구현 |
@@ -21,11 +21,10 @@
 
 ## 검증
 
-- T01에서 PR #1이 open/미병합임을 확인하고 setup/project-foundation의 최신 커밋 fb3bad20198d0bb6545fde06216c89e7b8f0b4b0을 기준으로 관련 문서·솔루션·App 시작 코드를 재확인했다.
-- README의 Windows x64/.NET 10용 명령은 `dotnet restore RandomMultimediaManager.sln`, `dotnet build RandomMultimediaManager.sln -c Release --no-restore`, `dotnet run --project src/RandomMultimediaManager.App/RandomMultimediaManager.App.csproj`이다.
-- 현재 작업 실행 환경은 Windows가 아니며 외부 Git clone도 실행 환경의 네트워크 제한으로 수행할 수 없었다. 따라서 Windows x64/.NET 10에서 restore/build 및 빈 창 실행·닫기는 여전히 미검증이다.
-- 프로젝트는 net10.0-windows, WPF, x64이고 App.xaml은 MainWindow.xaml을 시작하며 MainWindow는 빈 Grid인 최소 셸임을 정적 확인했다. 솔루션 프로젝트 경로도 App 프로젝트와 일치한다.
-- 정적 확인은 컴파일/실행 성공을 의미하지 않는다. 실제 Windows 빌드/빈 창 실행 확인 전에는 T01을 완료 처리하지 않는다.
+- 2026-09-07 사용자 Windows x64 PC에서 검증 완료 확인을 받았다. .NET 10 SDK 설치 및 최신 main 별도 clone 안내 후 restore·Release build·빈 창 실행·X 종료 결과 요청에 사용자가 “문제 없음”으로 확인했다.
+- 검증 증거는 사용자 수동 확인이며 에이전트가 직접 실행한 결과가 아니다. 설치 후 SDK 패치 버전, 실제 로컬 HEAD 출력과 성공 로그는 별도로 제공되지 않았다. 안내 기준 main은 894517f이며 이를 실측 커밋으로 단정하지 않는다.
+- 최초 실패 로그의 SDK 7.0.203 / NETSDK1045와 후속 exe 부재는 SDK 설치 전 환경 문제였다. 해당 실패를 최종 검증 상태로 유지하지 않는다.
+- 솔루션/App 시작 구성의 기존 정적 검증 결과를 보존하며 T01은 사용자 확인을 근거로 완료 처리한다.
 
 ## T02 설계 상태
 
@@ -37,20 +36,7 @@
 
 ## 다음 작업과 차단
 
-T00 완료, T01 Windows 검증 대기, T02 계약 완료 및 main 통합. 후속 코드 구현은 T01 완료 및 T02 계약 통합 전 시작하지 않는다.
+T00/T01 완료, T02 계약 완료 및 main 통합. T03의 선행 조건을 충족하여 최신 main에서 T03을 재개할 수 있다. T03 구현은 아직 시작하지 않았다.
 다음 구현은 Astra T03. 이후 T07(Sol), T09(Astra), T04(Sol)는 별도 브랜치에서 병렬 가능하다.
 T14 생명주기 상세(특히 숨김 상태 종료 저장 실패), T08 표시 기본값, T10 자막, T18 배포 검증은 해당 Task에 남긴다. T02 데이터 정책 자체의 추가 사용자 결정은 없다.
-T01의 정적 검증 결과와 검증 대기 상태는 T02 문서를 통해 main에 보존했다. 남은 T03 차단 조건은 Windows x64/.NET 10에서 실제 restore·Release build·빈 창 실행·닫기 검증이다. 아래 검증 결과가 확인되기 전에는 T03을 시작하지 않는다.
-
-## T01 재개 절차
-
-Windows x64 PC에서 최신 main을 새로 받아 README의 명령으로 검증한다. `dotnet --info`와 `git rev-parse HEAD`로 SDK/OS 및 대상 커밋을 함께 남긴다.
-
-```powershell
-dotnet restore RandomMultimediaManager.sln
-dotnet build RandomMultimediaManager.sln -c Release --no-restore
-dotnet run --project src/RandomMultimediaManager.App/RandomMultimediaManager.App.csproj -c Release --no-build
-```
-
-앞 명령이 실패하면 다음 단계로 진행하지 않는다. 제목이 Random Multimedia Manager인 빈 창이 나타나고, X로 닫으면 오류 없이 프로세스가 종료되어 터미널로 돌아오는지 확인한다.
-사용자가 제공한 실제 로그/창 확인 결과 또는 Windows 실행 환경의 검증 증거를 확인한 뒤 T01을 완료 처리하고 이 문서와 TASKS.md에 대상 커밋·검증 환경·결과를 반영한다. 이후 최신 main에서 T03을 재개한다.
+T01 완료 근거는 위 사용자 수동 검증 확인이다. T03 담당자는 최신 main의 이 문서와 TASKS.md를 확인하고 별도 브랜치에서 T03만 진행한다.
