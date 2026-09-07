@@ -8,14 +8,14 @@
 - 외부 패키지, DB, 뷰어, 플레이어, 정책 서비스는 아직 없다.
 - 셸의 일반 창 닫기는 WPF 기본 동작이다. 트레이/빠른 종료 제품 정책의 확정이 아니다.
 
-기존 3개 프로젝트 초안은 권장안이므로 현재 비어 있는 Core/Infrastructure를 만들지 않는다. 정책 구현 시 독립 테스트가 필요해지면 T02에서 Core 분리를 판단하고 근거를 기록한다.
+T02는 문서 계약만 확정했다. T03에서 순수 모델/정책 테스트를 위해 net10.0 Core와 Core.Tests를 실제 내용과 함께 추가한다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.
 
 ## 유지할 기술 방향
 
 | 영역 | 방향 | 도입 시점 |
 |---|---|---|
 | UI | WPF; 필요 화면부터 View/ViewModel 분리 | 각 UI Task |
-| 데이터 | SQLite, 접근 방식/마이그레이션은 T02에서 결정 | T03 |
+| 데이터 | SQLite + Microsoft.Data.Sqlite 직접 SQL; user_version 순차 migration | T03 |
 | 만화 | .NET ZIP, SkiaSharp 계열 | T07/T08 |
 | 영상 | LibVLCSharp/libVLC | T09 |
 | VSR | NVIDIA RTX Video SDK 가능성 검증 | T19 |
@@ -36,13 +36,13 @@
 | 만화/영상 구현 | 리소스 열기·조작·해제, 결과 전달 | 각각 별도 랜덤/기록 정책 구현 |
 | Windows 생명주기 | 트레이·키 등록·창/음소거 상태 조정 | 미확정 종료/복원 정책 선택 |
 
-공통 명령 → 세션 조정 → 현재 Pending 처리 → 대상 열기 결과 확인 → 표시 및 새 감상 컨텍스트 흐름을 사용한다. 전환 실패·중복 명령·삭제 후 이동의 정확한 상태 전이와 인터페이스는 T02에서 정한다.
-실제 파일 삭제와 SQLite 트랜잭션은 하나의 원자적 작업이 아니다. 파일 삭제 성공 후 DB 갱신 실패의 복구 방식을 T02/T12에서 설계한다.
+공통 명령 → 대상 숨김·음소거 준비 → 기존 방문의 진행/기록 저장 → 대상 활성화와 새 Pending 순서다. 준비/저장 실패 시 현재 방문과 cursor를 유지한다. 직렬 명령 처리와 세션/작업/방문 토큰으로 중복과 늦은 완료를 차단한다.
+실제 파일 삭제와 SQLite는 하나의 원자적 작업이 아니다. T12는 durable 삭제 저널과 DB의 AppliedDeletion 멱등 표식으로 복구한다. 성공 불명은 격리하고 기록을 보존한다. 상세 상태표·스키마·메서드 계약은 docs/DATA_AND_RANDOM_POLICY.md가 단일 기준이다.
 
 ## 데이터 설계 경계
 
 Category/Source, MediaItem의 즐겨찾기·제외·존재 상태, ViewHistory, PlaybackProgress, 현재 세션 순서를 분리한다.
-기존 필드/재식별/영속 세션 초안은 docs/DATA_AND_RANDOM_POLICY.md 참조. 분류 간 상태 비공유·이동 시 미승계·기본 7일·휴지통 삭제 성공 후 감상 기록 제거가 사용자 확정이다. 세부 식별/기간 경계/삭제 정리 계약은 T02에서 결정한다. 후보로만 남은 스키마 필드는 미리 생성하지 않는다.
+T02 확정 계약은 docs/DATA_AND_RANDOM_POLICY.md에 있다. (CategoryId, PathKey) 유일성, 기본 7×24시간과 정확한 경계 허용, 방문별 Pending, 동일 경로 삭제의 모든 분류 정리가 기준이다. 기록/진행/설정은 %LOCALAPPDATA%/RandomMultimediaManager/library.db에 저장한다. 세션/Seen/Pending은 메모리만이며 복원하지 않는다. 후순위 필드는 만들지 않는다.
 
 ## 미디어와 비동기
 
