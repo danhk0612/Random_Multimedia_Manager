@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="../RandomMultimediaManager.Core/RandomMultimediaManager.Core.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="[10.0.8]" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="[2.1.13]" />
     <EmbeddedResource Include="Data/SchemaV1.sql" LogicalName="SchemaV1.sql" />
   </ItemGroup>
 </Project>

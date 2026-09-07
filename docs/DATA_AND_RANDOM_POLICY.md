@@ -257,3 +257,5 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 - Core.Tests는 순수 모델을 검증한다. Data.Tests는 App/Data 제품 소스와 SQL 리소스를 링크하여 동일 구현을 net10.0에서 실행한다. 제품 Infrastructure 프로젝트나 테스트용 저장 구현은 없다.
 
 패키지: [Microsoft.Data.Sqlite 10.0.8](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.8), .NET Standard 2.0 대상으로 net10.0 및 net10.0-windows 호환. 직접 참조는 정확한 버전으로 고정했다. [공식 트랜잭션 문서](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions)와 함께 2026-09-07 접근 확인.
+
+네이티브 번들은 [SQLitePCLRaw.bundle_e_sqlite3 2.1.13](https://www.nuget.org/packages/SQLitePCLRaw.bundle_e_sqlite3/2.1.13)으로 고정한다. 초기 복원에서 자동 선택된 2.1.11의 NU1903 경고를 확인하여 같은 2.1 계열 패치를 명시했다. 경고 억제는 하지 않는다.
