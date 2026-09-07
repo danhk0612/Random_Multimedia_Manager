@@ -1,341 +1,236 @@
-# 데이터 모델 및 랜덤/기록 정책
+# 데이터 모델 및 랜덤·감상 계약
 
-## 1. 목적
+T02 확정 계약. 제품 코드는 아직 없다. REQUIREMENTS.md의 확정 기능 안에서 정한 기본값이며, 후순위 기능은 DECISIONS.md에만 보존한다. 이 문서의 표·스키마·오류 계약을 T03 이후의 구현과 테스트 기준으로 사용한다.
 
-이 문서는 기존 상세 설계안을 보존한다. 확정 요구사항은 루트 REQUIREMENTS.md가 우선한다.
-스키마와 필드, fingerprint, 분류 override, 즐겨찾기 랜덤 필터, 후보 완화, 세션 영속/복원, 기록 초기화는 설계 제안이며 T02 또는 사용자 결정 전 구현하지 않는다. 다음 영역을 검토한다.
+## 1. 식별과 소스 관계
 
-- 파일을 어떻게 식별할지
-- 랜덤 후보를 어떻게 계산할지
-- 감상 기록을 언제 남길지
-- 이어보기 위치와 감상 기록을 어떻게 분리할지
-- 삭제/제외/즐겨찾기 상태를 어떻게 다룰지
-- 현재 랜덤 세션의 이전/다음 동작을 어떻게 유지할지
+- ID는 앱이 생성하는 소문자 하이픈 UUID 문자열이다. Category 1:N CategorySource, Category 1:N MediaItem이다.
+- 항목의 유일성은 (CategoryId, PathKey). 같은 경로를 다른 분류에 등록하면 서로 다른 ItemId이며 기록·즐겨찾기·영구 제외·진행 위치를 공유하지 않는다. 파일은 복제하지 않는다.
+- 분류명은 Trim 후 1~100자, 동일 이름 허용(ID로 구분). 타입은 Comic/Video. 항목이 한 번이라도 등록된 분류는 타입 변경을 거부한다(Missing 항목 포함). 빈 분류는 변경 후 소스를 재스캔한다.
+- 소스는 절대 폴더 경로, 하위 포함 기본 true, 활성 기본 true. 동일 분류의 같은 RootPathKey 재등록은 기존 소스를 반환하며 옵션을 암묵적으로 덮어쓰지 않는다. 편집 명령으로만 변경한다.
+- 중첩 소스를 허용한다. 동일 분류·경로 항목을 한 번만 저장하고 후보에서도 한 번만 센다. 항목-소스 연결 테이블은 만들지 않는다. 활성 소스의 경로 포함 관계로 소속 여부를 계산한다.
+- 소스 비활성/제거/경로 편집은 기록·항목을 삭제하지 않는다. 활성 소스에 더 이상 포함되지 않는 항목은 랜덤 후보에서 빠지며 수동 열기는 가능하다. 소스 제거는 물리 Missing을 뜻하지 않는다.
+- 분류 활성 기본 true. 비활성 분류는 신규 랜덤에서 제외하고 수동/기존 세션 탐색은 허용한다. 현재 감상 중 분류/소스 편집은 감상을 끝내지 않는다.
 
-## 2. 권장 데이터 모델
+### Windows 경로 계약
 
-실제 스키마 이름은 구현 단계에서 조정할 수 있지만 의미는 유지한다.
+로컬 드라이브의 완전한 절대 경로만 최초 범위로 받는다. 드라이브 상대 경로(C:foo), 상대 경로, URL, UNC 네트워크 경로, 장치 경로는 등록 거부한다. 네트워크 지원 확장이 아니다.
+구분자를 역슬래시로 통일하고 Windows Path.GetFullPath로 . / ..를 해소한 뒤, 루트 외 끝 구분자를 제거한다. 구성요소 끝 공백/마침표와 대체 데이터 스트림(:) 경로는 모호성을 피하려고 거부한다. 드라이브 구분용 콜론은 허용한다.
+표시/열기용 Path는 대소문자를 보존하고 PathKey는 위 결과의 ToUpperInvariant 값이다. SQLite BINARY 비교를 사용한다. Unicode 정규화로 이름을 합치지 않는다. SQLite NOCASE에 Windows Unicode 비교를 맡기지 않는다.
+폴더 포함은 같은 드라이브에서 경로 구성요소 단위로 판정한다(C:\A와 C:\AB를 혼동하지 않는다). 하위 미포함은 직계 파일만 포함한다.
+심볼릭 링크/정션 등 reparse point 소스·항목 및 상위 경로는 따라가지 않는다. 스캔에서 건너뛰고 안내한다. 하드링크·8.3 별칭·파일 ID·내용 해시는 병합하지 않는다. 이 계약의 '같은 파일' 정리 범위는 같은 PathKey이며 별칭까지 같은 물리 실체임을 추론하지 않는다. Windows 대소문자 구분 디렉터리는 미지원으로 안내한다. T05에서 해당 검증을 구현한다.
 
-### Category
+### 이동·Missing·재등장
 
-- `Id`
-- `Name`
-- `MediaType` (`Comic`, `Video`)
-- `IsEnabled`
-- `HistoryExclusionDaysOverride` nullable
-- `CreatedAt`
-- `UpdatedAt`
+| 관찰 | 처리 |
+|---|---|
+| 이동/이름 변경으로 PathKey 변경 | 옛 항목 Missing, 새 경로 새 ItemId와 기본 상태. 상태 승계 없음 |
+| 대소문자만 변경되어 PathKey 동일 | 표시 Path/메타데이터만 갱신 |
+| 확실한 파일/디렉터리 없음 | 같은 PathKey의 항목을 Missing으로 표시. 기록/진행/선호 보존 |
+| 접근 거부·오프라인·스캔 취소·부분 실패 | 없음으로 단정하지 않음. 이전 존재 상태 보존, 이번 열기 실패만 반환 |
+| 같은 경로 재등장 | 기존 ItemId의 Missing 해제. 경로 기반 상태 보존이며 내용 동일성 판별 아님 |
+| 같은 경로 내용 교체 | ItemId 유지, 크기/수정시각 변경 시 진행 위치만 제거. 기록/선호 보존 |
 
-### CategorySource
+크기/수정시각은 내용 식별자가 아니다. 관찰하지 못한 동일 메타데이터 교체는 검출을 보장하지 않는다. 스캔 완료된 범위만 원자적으로 반영하며 취소/실패한 하위 범위를 일괄 Missing 처리하지 않는다. 파일 존재 확인은 bool File.Exists만으로 권한 오류와 부재를 합치지 않는다.
 
-- `Id`
-- `CategoryId`
-- `RootPath`
-- `IncludeSubdirectories`
-- `IsEnabled`
+## 2. 시간·후보·세션
 
-하나의 Category에 여러 Source를 연결한다.
+- 모든 시각은 UTC Unix milliseconds 정수. 표시만 현지 시각. 감상 시각 ViewedAtUtc는 **항목에서 벗어나는 전환을 저장하는 시각**이다. OpenedAtUtc는 방문 메모리 정보다.
+- 전역 HistoryExclusionDays 기본 7, 정수 0~36500. D일은 D×24시간이며 달력 날짜/DST 기준이 아니다.
+- 한 선택 명령에서 Now를 한 번 캡처한다. D>0이고 LastViewedAtUtc > Now-D×86400000이면 제외. 정확히 경계와 같으면 허용. 0이면 과거 기록 검사를 생략하지만 영구 제외와 세션 중복 방지는 유지한다. 미래 기록은 D>0에서 제외한다. 시계 역행 시 과거 기록을 수정하지 않는다.
+- 후보는 선택된 활성 분류의 항목 중 활성 소스 포함, Missing=false, IsRandomExcluded=false, 삭제 복구 격리 아님, 현재 세션 Seen에 없음인 항목으로 위 기간 조건을 적용한다.
+- 후보 ItemId별 균등 선택. 다중 분류의 같은 PathKey도 서로 다른 항목으로 각각 후보가 된다. 분류 균등·즐겨찾기 가중치/랜덤 필터·기간 override는 없다.
+- 추첨 후 파일 존재와 열기를 확인한다. 실패하면 기록/Seen/경로에 추가하지 않고 현재 감상을 유지한다. 한 명령에서 다른 후보를 자동 연쇄 시도하지 않는다.
+- 0개면 NoCandidates를 반환하고 현재 화면/Pending/Forward/Seen을 보존한다. 자동 완화·자동 세션 초기화 없음. 사용자는 기존 기간 설정을 바꾸거나 감상 화면을 닫고 랜덤 보기를 다시 시작할 수 있다.
+- 세션 시작은 분류 선택 후 랜덤 보기 명령이다. 새 세션은 선택 분류 ID 집합을 고정한다. 진행 중 별도 랜덤 보기로 재시작할 때도 대상 열기/기존 방문 저장이 성공해야 새 세션으로 교체한다. 실패하면 이전 세션 유지.
+- Seen은 성공적으로 활성화된 모든 ItemId를 포함한다(수동 열기로 경로에 들어온 항목 포함). Suppress 여부와 무관하다. Back/Forward는 Seen·기간·영구 제외·소스 활성 조건을 다시 적용하지 않고 파일 열기 가능 여부만 확인한다.
+- 세션 경로는 성공한 항목 방문의 항목 ID 순서, cursor, Seen으로 구성한다. Back/Forward 재방문은 경로를 추가하지 않는다. 재방문 성공마다 **새 VisitId와 Suppress=false인 Pending**을 만든다.
+- Previous는 앞쪽의 가장 가까운 유효 항목, Next는 뒤쪽 유효 Forward를 우선하고 없으면 신규 추첨이다. Missing/삭제된 슬롯만 건너뛴다. 다른 열기 실패는 자동 건너뛰지 않고 현 위치 유지. 앞쪽 유효 항목이 없으면 NoPrevious.
+- 수동으로 다른 항목을 열면 현재 cursor 바로 뒤에 삽입하고 기존 Forward는 보존한다. 세션이 없으면 선택 분류 집합이 빈 탐색 세션을 만들며, 이후 신규 랜덤은 분류 선택을 요구한다. 현재와 같은 ItemId 열기 명령은 no-op(새 방문 아님).
+- 삭제된 현재 슬롯은 tombstone으로 두고 현재 미디어만 비운다. 자동 다음 재생은 하지 않는다. Previous/Next는 그 cursor 기준으로 이동한다.
 
-### MediaItem
+## 3. 감상 상태와 원자적 전환
 
-- `Id`
-- `CategoryId`
-- `Path`
-- `NormalizedPath`
-- `FileName`
-- `Extension`
-- `FileSize`
-- `LastWriteTimeUtc`
-- `Fingerprint` nullable
-- `IsFavorite`
-- `IsRandomExcluded`
-- `IsMissing`
-- `CreatedAt`
-- `UpdatedAt`
+Visit = VisitId, ItemId, OpenedAtUtc, Origin(Random/Manual/Back/Forward), SuppressHistory, 최신 Progress.
+Pending은 메모리에만 있으며 활성 방문은 최대 하나. 파일을 준비만 한 상태는 방문이 아니다.
+상태는 Empty, Active(Pending), Opening(기존 방문 선택적 보유), Deleting, SaveFailed, Closing으로 구분한다.
+성공적으로 활성화한 후의 재생 오류/영상 끝/일시정지/페이지 오류는 Pending을 없애지 않는다.
 
-### ViewHistory
+| 명령/결과 | 기존 방문 및 저장 | 대상·세션 결과 |
+|---|---|---|
+| 최초 열기 실패 | 없음 | Empty, 새 Pending 없음 |
+| 다른 대상 열기 시작 | Pending과 cursor 유지, 기존 미디어 보유 | 대상은 숨김·음소거 준비 |
+| 대상 준비 실패/취소 | 기존 Pending/억제/위치 유지 | 준비 리소스 해제, 기존 상태 복귀 |
+| 대상 준비 성공 | 기존 조작/재생을 잠시 멈춰 최종 위치를 캡처하고 진행+억제되지 않은 기록을 한 DB 트랜잭션으로 확정 | commit 성공 후 cursor 변경·대상 활성·새 Pending |
+| 기존 방문 저장 실패 | rollback, Pending 유지, SaveFailed | 대상 해제, cursor/Seen 불변. 재시도/기존 재생 상태로 복귀 가능 |
+| Previous/Forward 성공 | 기존 방문 확정 | 기존 슬롯으로 이동, 새 VisitId/Pending |
+| 이번 제외 ON/OFF | 현재 Visit의 boolean 설정, 과거 기록 불변 | 재방문/다음에는 false |
+| 즐겨찾기/영구 제외 | 해당 ItemId의 값만 트랜잭션 저장 | Pending/진행/Seen 불변 |
+| 감상 화면 닫기/정상 종료 | 진행+기록 저장 성공 후 방문 종료 | 리소스 해제, 세션 폐기 |
+| 단순 숨김·복원·pause·stop·영상 끝 | 기록 확정 없음 | 동일 방문 유지 |
+| 빠른 종료 | 즉시 전체 숨김·음소거, 진행 중 준비 취소, 활성 방문 정상 저장 | T14의 종료 조정으로 해제·종료. 억제 명령 아님 |
+| 삭제 취소/실패 | 기록·Pending 억제값 유지 | 원래 감상 복귀(재열기 필요 시 같은 Visit) |
+| 삭제 성공 | 해당 경로 모든 Pending 억제, 모든 분류 기록 제거 | 현재 비움, 경로 슬롯 tombstone; §5 적용 |
 
-- `Id`
-- `MediaItemId`
-- `ViewedAt`
-- `Source` (`Random`, `Manual`, 기타 필요 시)
+전환은 '대상 준비 → 기존 저장 → 대상 활성'이다. 만화는 유효 페이지 목록과 시작 페이지 디코딩 완료, 영상은 엔진이 재생 가능한 준비 완료를 보고한 상태를 Ready로 한다. 파일 핸들만 열렸다는 이유로 성공하지 않는다. 자막 로드 실패는 영상 Ready와 별도다.
+Ready 이후 활성화는 준비된 객체를 넘기는 논리적 commit이며 새 디코딩 작업을 시작하는 열기 단계가 아니다. 활성화 후 엔진 오류는 현재 방문 오류로 취급한다. 기존 미디어를 파괴한 뒤 대상 열기를 시도하는 구현은 계약 위반이다. T09에서 동시 보유/음소거 준비 가능성을 확인하고 불가능하면 T11 착수 전 Astra로 돌아온다.
+저장 실패 때 자동으로 Pending을 폐기하거나 닫지 않는다. 일반 전환/닫기는 저장 재시도 가능하게 남긴다. 빠른 종료 저장 실패의 숨김 상태·재시도·복원 UX는 T14 차단 결정이며, 성공으로 위장하거나 강제 Kill하는 기본값은 없다.
 
-랜덤 제외 기간 계산은 `MediaItemId`별 마지막 `ViewedAt`을 사용한다.
+### 중복 명령·비동기 소유권
 
-### PlaybackProgress
+모든 상태 변경은 한 조정자의 직렬 명령 처리로 수행한다. CommandId, SessionId, OperationId, VisitId를 사용한다. 같은 CommandId 재전달은 같은 결과/진행 중 결과를 반환하고 재실행하지 않는다. 토글 API는 Toggle이 아닌 SetFavorite(itemId, desiredValue), SetSuppressed(visitId, desiredValue)로 전달한다.
+Opening/Deleting/저장 중 새 탐색·삭제·상태 편집은 Busy로 반환하며 큐에 쌓지 않는다. 숨김/음소거는 즉시 처리하며 Closing은 새 명령을 차단하고 진행 작업이 안전한 경계에 도달하기를 기다린다.
+취소는 세대를 무효화한다. 모든 완료/위치 콜백의 세션·작업·방문 토큰을 검사하며 늦은 결과는 화면/DB/Pending에 적용하지 않고 그 결과 소유 리소스만 해제한다.
+파일 삭제가 이미 시작되면 취소 요청만으로 실패로 바꾸지 않는다. 실제 결과를 끝까지 받아 §5 기록을 남긴다. 종료도 이 결과 처리를 기다린다.
+VisitId는 ViewHistory PK로 사용해 저장 재시도 중 중복 기록을 막는다. 저장 시각은 최초 저장 시도 때 고정하며 재시도에서 변경하지 않는다. 동일 ID/다른 payload는 오류다. 정상 commit 확인 뒤 Pending을 정리한다. 저장 실패 후 현재 감상으로 복귀하면 해당 실패 시도의 저장 의도를 취소하고 다음 이탈 때 새 시각/최종 위치를 캡처한다. commit 여부가 불명확하면 먼저 VisitId 조회로 확인하며 확인 전 복귀/새 방문을 허용하지 않는다. 억제 방문은 기록 insert가 없으므로 동일 직렬 작업의 진행 upsert 재시도만 허용하고 완료 확인 전 다음 작업을 진행하지 않는다. 스캔·삭제·진행 쓰기도 동일 항목의 순서와 삭제 격리를 지킨다.
 
-- `MediaItemId`
-- `ComicPageIndex` nullable
-- `ComicScrollPosition` nullable
-- `VideoPositionMs` nullable
-- `UpdatedAt`
+## 4. 기록·선호·진행의 독립성
 
-감상 기록과 분리한다.
+| 데이터 | 범위/의미 | 다른 데이터에 미치는 영향 |
+|---|---|---|
+| IsFavorite | 분류별 Item 선호 | 랜덤 확률·기간·기록 불변 |
+| IsRandomExcluded | 분류별 신규 랜덤 제외, 해제 가능 | 수동/Back/Forward 열기 가능 |
+| SuppressHistory | 현재 Visit 1회 기록 억제 | 과거 기록·진행 불변, OFF로 되돌릴 수 있음 |
+| ViewHistory | 성공한 방문의 이탈 시 확정 | 마지막 시각만 기간 계산 |
+| PlaybackProgress | 분류별 마지막 위치 | 기록 유무와 무관 |
+| IsMissing | 관찰한 경로 부재 | 과거 기록/진행을 지우지 않음 |
 
-### RandomSession
+진행 기본은 이어보기이며 ResumeMode=Resume/FromStart 설정을 둔다(기본 Resume). FromStart여도 진행은 저장한다.
+만화는 0-based 기준 페이지, 세로 모드는 그 페이지 내 0~1 상대 오프셋(그 외 0). 두 페이지는 읽기 순서상 첫 페이지를 기준으로 한다. 영상은 0 이상 milliseconds. 다른 타입의 필드는 NULL이다.
+5초마다 변경된 최신 위치 하나만 저장하고 pause/정지·정상 이탈 때 최종 저장한다. 위치 콜백을 모두 큐에 보관하지 않는다. 세로 위치 복원은 뷰포트 좌상단 기준 페이지 내 비율이다. 페이지 범위는 열린 파일의 [0,count-1], 영상은 [0,duration]으로 clamp한다. 길이 미확정 시 엔진이 탐색 가능해질 때 적용하며 실패하면 처음부터, 기록 성공 여부와는 분리한다. 끝부분 자동 초기화는 없다.
+같은 경로 내용 변경이 확인되면 기존 진행을 삭제하고 기본 시작 위치를 사용한다. 삭제 성공 시에도 진행을 제거한다. 외부 Missing은 위치를 유지한다.
 
-- `Id`
-- `StartedAt`
-- `EndedAt` nullable
-- `IsRestorable`
+## 5. 물리 삭제와 DB 정합성
 
-### RandomSessionItem
+기본은 확인 후 휴지통. REQUIREMENTS R10의 명시적 영구 삭제 선택은 유지하되 휴지통 실패의 자동 fallback은 없다. 실제 파일을 삭제하는 것이므로 다른 분류에도 영향을 준다는 내용을 확인에 포함한다.
+정리 범위는 **동일 PathKey의 모든 ItemId**: 기록/진행 제거, IsMissing=true, 즐겨찾기/영구 제외 유지. Item 행을 없애지 않는다. 해당 경로의 활성 방문/준비·세션 슬롯도 무효화한다. 이는 분류 간 상태 공유가 아니라 물리 삭제 결과의 동기화다.
 
-- `Id`
-- `SessionId`
-- `MediaItemId`
-- `SequenceIndex`
-- `Status` (`Available`, `Deleted`, `Missing` 등)
+SQLite와 파일 시스템은 하나의 트랜잭션이 아니다. T12는 다음 복구 프로토콜을 구현한다.
 
-세션의 Back/Forward 동작을 위해 순서를 보존한다.
+1. 경로를 격리하고 삭제 대상 ItemId 집합·크기/수정시각을 캡처한다. 같은 경로의 신규 열기/스캔 반영/진행·기록 쓰기를 차단한다. 진행 위치와 Pending은 메모리에 보유한다.
+2. 앱 데이터의 delete-journal/<OperationId>.json에 Version=1, OperationId, PathKey, Path, 대상 ItemIds, Mode, CreatedAtUtc, Phase=Prepared를 원자 교체하고 디스크 flush한다. 저널 쓰기 실패면 실제 삭제를 시작하지 않는다.
+3. 파일 리소스를 해제한 후 OS 휴지통/명시적 삭제를 수행한다. 반환값은 Succeeded / Failed / Cancelled / Unknown. 파일이 원래 없었다면 Succeeded로 추정하지 않고 Missing 관찰로만 처리한다.
+4. 명확한 성공이면 메모리에서 즉시 삭제 반영·Pending 억제, Phase=Succeeded를 durable 기록한다. 실패/취소면 Phase=Failed/Cancelled를 기록하고 격리 해제·같은 Visit로 재열기를 시도한다. 재열기 실패해도 기존 Pending은 남고 오류 화면에서 이탈 시 정상 확정한다.
+5. Succeeded인 작업은 DB 트랜잭션 하나로 위 정리와 AppliedDeletion(OperationId)를 삽입한다. commit 전후 재실행은 AppliedDeletion PK로 멱등 처리한다. commit 성공 후 저널 파일을 제거하고 격리 해제한다.
+6. DB 실패면 성공 저널을 유지하고 해당 경로는 격리한 채 재시도한다. 다른 경로 감상은 가능하다. 종료/재시작 시 세션 복원 없이 저널만 재생한다.
 
-## 3. 파일 식별 정책
+시작 시 저널 검사를 라이브러리 공개 전에 수행한다. Succeeded는 자동 DB 재적용(이미 Applied이면 저널만 정리), Failed/Cancelled는 삭제 정리 없이 제거한다. 손상/Prepared/Unknown은 **성공 여부 불명**으로 격리하며 기록을 보존한다. 손상 때문에 PathKey를 읽을 수 없으면 복구 확인 전 라이브러리 쓰기/감상 시작 전체를 보류한다. 파일이 없다는 사실만으로 삭제 성공을 추정하지 않는다. 사용자가 삭제 성공을 확인하면 Succeeded로 기록 후 정리, 실패/취소 확인이면 기록 보존 후 격리 해제한다. 이 확인은 삭제 오류 복구 절차이며 세션 복원/일반 백업 기능이 아니다.
+OS 성공 직후 저널 기록 실패/전원 단절은 Prepared만 남을 수 있어 자동 확정 불가능하다. 이 한계를 숨기지 않는다. 격리 중 같은 경로가 다시 생기면 자동 재삭제하지 않는다. 성공 저널의 대상 ItemId 집합만 정리한 후 재스캔하여 존재를 갱신한다. 격리로 신규 ItemId 생성도 차단한다.
+저널은 파일 삭제 명령을 재실행하는 로그가 아니다. 복구는 DB 정리만 재실행한다. 완료된 AppliedDeletion 표식은 저널 제거 확인 뒤 삭제할 수 있으며 삭제 저널을 무한 보관하지 않는다.
 
-사용자 확정: 분류가 다르면 상태를 공유하지 않으며 이동 시 이전 상태를 승계하지 않는다.
-T02는 분류와 정규화 경로를 기준으로 식별하는 계약을 정한다. 경로 변경 시 새 항목으로 처리하며 자동 fingerprint 병합/기록 승계를 초기 구현하지 않는다.
-물리 파일 삭제 시 같은 경로를 참조하는 여러 분류의 존재 상태 및 기록 정리 범위를 T02에서 명시한다.
+## 6. SQLite v1 계약
 
-## 4. 랜덤 후보 계산
+T03에서 Microsoft.Data.Sqlite 직접 SQL 접근을 도입한다. ORM/범용 repository/별도 Infrastructure 프로젝트는 만들지 않는다. 아래 DDL은 문서 계약이며 아직 실행 제품 코드가 아니다. ID와 PathKey 생성/경로 검증은 위 계약을 따른다.
 
-기본 전역 설정을 `HistoryExclusionDays`라고 하며 사용자 확정 기본값은 7일이다.
-
-분류에 override가 있으면 해당 값을 우선한다.
-
-후보 조건:
-
-```text
-Category selected
-AND Category enabled
-AND MediaItem.IsMissing = false
-AND MediaItem.IsRandomExcluded = false
-AND file exists
-AND no disqualifying recent history
-AND not newly selected in current random session
-AND favorite filter matches
+```sql
+CREATE TABLE Category (
+ Id TEXT PRIMARY KEY NOT NULL,
+ Name TEXT NOT NULL CHECK(length(trim(Name)) BETWEEN 1 AND 100),
+ MediaType TEXT NOT NULL CHECK(MediaType IN ('Comic','Video')),
+ IsEnabled INTEGER NOT NULL DEFAULT 1 CHECK(IsEnabled IN (0,1)),
+ UNIQUE(Id, MediaType)
+);
+CREATE TABLE CategorySource (
+ Id TEXT PRIMARY KEY NOT NULL,
+ CategoryId TEXT NOT NULL REFERENCES Category(Id) ON DELETE CASCADE,
+ RootPath TEXT NOT NULL,
+ RootPathKey TEXT NOT NULL COLLATE BINARY,
+ IncludeSubdirectories INTEGER NOT NULL DEFAULT 1 CHECK(IncludeSubdirectories IN (0,1)),
+ IsEnabled INTEGER NOT NULL DEFAULT 1 CHECK(IsEnabled IN (0,1)),
+ UNIQUE(CategoryId, RootPathKey)
+);
+CREATE TABLE MediaItem (
+ Id TEXT PRIMARY KEY NOT NULL,
+ CategoryId TEXT NOT NULL,
+ MediaType TEXT NOT NULL CHECK(MediaType IN ('Comic','Video')),
+ Path TEXT NOT NULL,
+ PathKey TEXT NOT NULL COLLATE BINARY,
+ FileSize INTEGER NOT NULL CHECK(FileSize >= 0),
+ LastWriteTimeUtc INTEGER NOT NULL,
+ IsFavorite INTEGER NOT NULL DEFAULT 0 CHECK(IsFavorite IN (0,1)),
+ IsRandomExcluded INTEGER NOT NULL DEFAULT 0 CHECK(IsRandomExcluded IN (0,1)),
+ IsMissing INTEGER NOT NULL DEFAULT 0 CHECK(IsMissing IN (0,1)),
+ FOREIGN KEY(CategoryId, MediaType) REFERENCES Category(Id, MediaType),
+ UNIQUE(CategoryId, PathKey),
+ UNIQUE(Id, MediaType)
+);
+CREATE INDEX IX_Item_Path ON MediaItem(PathKey);
+CREATE INDEX IX_Item_Candidates ON MediaItem(CategoryId, IsMissing, IsRandomExcluded);
+CREATE TABLE ViewHistory (
+ VisitId TEXT PRIMARY KEY NOT NULL,
+ MediaItemId TEXT NOT NULL REFERENCES MediaItem(Id) ON DELETE CASCADE,
+ ViewedAtUtc INTEGER NOT NULL,
+ Origin TEXT NOT NULL CHECK(Origin IN ('Random','Manual','Back','Forward'))
+);
+CREATE INDEX IX_History_ItemTime ON ViewHistory(MediaItemId, ViewedAtUtc DESC);
+CREATE TABLE PlaybackProgress (
+ MediaItemId TEXT PRIMARY KEY NOT NULL,
+ MediaType TEXT NOT NULL CHECK(MediaType IN ('Comic','Video')),
+ ComicPageIndex INTEGER,
+ ComicPageOffset REAL,
+ VideoPositionMs INTEGER,
+ UpdatedAtUtc INTEGER NOT NULL,
+ FOREIGN KEY(MediaItemId, MediaType) REFERENCES MediaItem(Id, MediaType) ON DELETE CASCADE,
+ CHECK(
+  (MediaType='Comic' AND ComicPageIndex IS NOT NULL AND ComicPageIndex>=0
+   AND ComicPageOffset IS NOT NULL AND ComicPageOffset BETWEEN 0 AND 1
+   AND VideoPositionMs IS NULL)
+  OR
+  (MediaType='Video' AND VideoPositionMs IS NOT NULL AND VideoPositionMs>=0
+   AND ComicPageIndex IS NULL AND ComicPageOffset IS NULL)
+ )
+);
+CREATE TABLE AppSettings (
+ Id INTEGER PRIMARY KEY CHECK(Id=1),
+ HistoryExclusionDays INTEGER NOT NULL DEFAULT 7 CHECK(HistoryExclusionDays BETWEEN 0 AND 36500),
+ ResumeMode TEXT NOT NULL DEFAULT 'Resume' CHECK(ResumeMode IN ('Resume','FromStart'))
+);
+INSERT INTO AppSettings(Id) VALUES(1);
+CREATE TABLE AppliedDeletion (
+ OperationId TEXT PRIMARY KEY NOT NULL
+);
 ```
 
-### 최근 기록 제외 판정
-
-예:
-
-```text
-오늘: 2026-09-06
-제외 기간: 30일
-마지막 감상일: 2026-08-20
-→ 후보 제외
-```
-
-경계일 포함 여부는 구현 전반에서 일관되게 처리한다. 권장 규칙은:
-
-```text
-LastViewedAt >= Now - ExclusionPeriod
-→ 제외
-```
-
-## 5. 여러 분류 선택
-
-여러 Category를 동시에 선택할 수 있다.
-
-- Comic + Comic 가능
-- Video + Video 가능
-- Comic + Video 가능
-
-후보 집합을 합친 뒤 전체에서 랜덤 선택한다.
-
-초기 버전은 분류별 가중치를 두지 않는다. 따라서 파일 수가 많은 분류가 더 자주 뽑힐 수 있다.
-
-분류별 균등 확률/가중치는 후속 기능으로 둔다.
-
-## 6. 즐겨찾기 필터
-
-랜덤 선택 시 세 가지 모드를 제공할 수 있다.
-
-- `All`
-- `FavoritesOnly`
-- `ExcludeFavorites`
-
-즐겨찾기 자체는 감상 기록이나 랜덤 제외 기간에 영향을 주지 않는다.
-
-## 7. 랜덤 대상 영구 제외
-
-`IsRandomExcluded = true`인 항목은 기간과 관계없이 랜덤 후보에서 제외한다.
-
-- 파일은 삭제되지 않는다.
-- 수동 탐색/열기는 가능하다.
-- 사용자가 다시 해제할 수 있다.
-
-## 8. 현재 세션 중복 방지
-
-새 랜덤 후보를 뽑을 때 현재 `RandomSession`의 모든 신규 선택 이력을 제외한다.
-
-중요:
-
-- `이전`으로 과거 항목을 다시 보는 것은 허용
-- `다음`으로 기존 Forward 항목을 다시 보는 것은 허용
-- 세션 끝에서 새 항목을 뽑을 때만 중복 방지 적용
-
-예:
-
-```text
-A → F → K
-        ↑
-
-이전 → F
-다음 → K
-K에서 다음 → A/F/K를 제외한 새 후보 선택
-```
-
-## 9. 후보가 0개일 때
-
-기본 동작은 사용자에게 알린다.
-
-선택지:
-
-- 가장 오래 전에 본 항목부터 허용
-- 제외 기간 변경
-- 취소
-
-`가장 오래 전에 본 항목부터 허용`은 랜덤 정책을 완전히 무시한다는 뜻이 아니라, 현재 조건에서 가장 오래된 마지막 감상 기록을 가진 그룹부터 후보를 완화하는 방식으로 구현하는 것을 권장한다.
-
-설정에서 자동 완화를 선택할 수 있다.
-
-## 10. 감상 Pending 상태
-
-현재 파일을 열었을 때 즉시 `ViewHistory`를 생성하지 않는다.
-
-메모리 상의 현재 컨텍스트 예:
-
-```text
-CurrentMedia
-- MediaItemId
-- PendingView = true
-- SuppressViewHistory = false
-- WasDeleted = false
-```
-
-## 11. 감상 기록 확정 시점
-
-기본적으로 현재 항목에서 벗어나는 시점에 기록을 확정한다.
-
-- 이전 랜덤
-- 다음 랜덤
-- 수동으로 다른 파일 열기
-- 뷰어/플레이어 닫기
-- 정상 앱 종료
-
-다음 조건이면 기록하지 않는다.
-
-- `SuppressViewHistory = true`
-- 현재 파일이 성공적으로 삭제됨
-- 파일 열기에 실패하여 실제 감상이 시작되지 않음
-- 빠른 종료의 Pending 처리: 미확정 D03 결정 후 반영
-
-## 12. 이번 감상 기록 제외
-
-현재 항목에만 적용되는 토글이다.
-
-```text
-이번 감상 기록 제외 = ON
-```
-
-효과:
-
-- 현재 Pending 감상 기록을 확정하지 않음
-- 이전에 존재하던 과거 ViewHistory는 삭제하지 않음
-- PlaybackProgress 저장 여부와는 별개
-
-즉 `기록하지 않음`은 과거 기록 삭제가 아니라 **이번 1회 기록 억제**다.
-
-## 13. 이어보기 위치 저장
-
-PlaybackProgress는 ViewHistory와 독립적이다.
-
-따라서 다음 조합이 가능하다.
-
-```text
-이번 감상 기록 제외 = ON
-영상 위치 = 00:37:20 저장
-```
-
-즉 다음 랜덤 제외 기간에는 영향을 주지 않지만 나중에 수동으로 열면 이어볼 수 있다.
-
-진행 위치까지 저장하지 않는 옵션이 필요해지면 별도 옵션으로 추가한다. 초기에는 기록 제외가 진행 위치 저장까지 막지는 않는다.
-
-## 14. 삭제 처리
-
-삭제 순서:
-
-1. 사용자의 삭제 정책 확인
-2. 실제 파일 삭제/휴지통 이동 시도
-3. 성공 여부 확인
-4. 성공 시 현재 Pending 감상 기록 억제
-5. 해당 파일의 감상 기록 제거 및 DB 항목 상태 반영 (동일 물리 경로의 분류별 정리 계약은 T02에서 확정)
-6. 현재 RandomSessionItem을 `Deleted` 상태로 변경
-
-삭제 실패 시:
-
-- MediaItem을 정상 항목으로 유지
-- Pending 감상 규칙도 임의 변경하지 않음
-- 오류를 표시하고 현재 화면 유지 가능
-
-## 15. Missing 파일 처리
-
-DB에는 있지만 실제 파일이 없으면:
-
-- `IsMissing = true`
-- 랜덤 후보에서 제외
-- 재스캔에서 동일 파일을 재식별하면 복구 가능
-
-랜덤 선택 직전에도 파일 존재 여부를 최종 확인한다.
-
-## 16. 세션 Back/Forward 정책
-
-현재 인덱스를 `CurrentSequenceIndex`로 관리한다.
-
-- 이전: `index - 1`
-- 다음: `index + 1`이 존재하면 기존 항목 이동
-- 다음: 마지막 인덱스면 새 랜덤 항목 생성 후 append
-
-과거로 이동한 뒤 새로운 랜덤 분기를 만드는 일반 브라우저식 Forward 삭제 동작은 초기에는 사용하지 않는다.
-
-예:
-
-```text
-A → B → C
-    ↑
-
-다음 → C
-```
-
-항상 기존 세션 경로를 우선한다.
-
-## 17. 세션 복원
-
-후속 또는 초기 옵션 기능.
-
-저장 가능 정보:
-
-- 선택했던 Category 목록
-- 랜덤 필터
-- SessionItem 순서
-- 마지막 CurrentSequenceIndex
-
-복원 시 실제 파일 존재 여부를 다시 검증한다.
-
-## 18. 기록 초기화
-
-관리 기능 후보:
-
-- 전체 ViewHistory 삭제
-- 특정 Category의 ViewHistory 삭제
-- 특정 MediaItem의 ViewHistory 삭제
-- PlaybackProgress만 초기화
-
-기록 초기화와 실제 파일 삭제는 절대 연결하지 않는다.
-
-## 19. DB 안정성
-
-- SQLite transaction을 사용해 관련 변경을 원자적으로 처리
-- 파일 삭제와 DB 삭제는 순서를 분리하여 실제 파일 삭제 성공 전에 DB에서 먼저 제거하지 않음
-- 빠른 종료의 DB transaction 처리와 종료 수준은 D03/T14에서 결정
-- OS 강제 프로세스 Kill과 같은 비정상 종료 후에도 다음 시작 시 DB 및 라이브러리 정합성 점검 가능 구조로 설계
+FileName/Extension은 Path에서 도출하며 별도 식별 필드로 저장하지 않는다.
+감상 Pending·세션·Seen·fingerprint·분류 override 테이블/열은 만들지 않는다. Category 삭제 기능은 이번 계약으로 추가하지 않으며 FK가 기록 보존 정책을 우회하는 사용자 명령을 뜻하지 않는다.
+
+연결마다 foreign_keys=ON, busy_timeout=5000; 로컬 DB journal_mode=WAL, synchronous=FULL. DB writer 하나로 직렬화한다. 읽기는 짧은 snapshot, 파일 IO/디코딩 동안 DB 트랜잭션을 열어두지 않는다.
+분류/소스 편집, 성공 스캔 범위 upsert/Missing, 방문 최종 진행+기록, 삭제 정리+AppliedDeletion은 각각 원자적 쓰기 단위다. 단순 진행 checkpoint와 즐겨찾기/영구 제외는 별도 짧은 트랜잭션이다.
+PRAGMA user_version=1. 빈 DB만 위 스키마로 초기화하고 순차 N→N+1 migration을 단일 트랜잭션으로 수행한다. 실패하면 rollback하고 기존 DB 보존, 오류 안내 후 데이터 기능을 열지 않는다. 지원보다 높은 버전도 쓰지 않는다. drop/recreate·자동 다운그레이드 없음. 재실행 시 동일 migration을 중복 적용하지 않는다. T03은 초기화 및 실패 원자성을 검증하며 후속 migration은 필요 Task에서 추가한다.
+
+## 7. 설정·메모리·책임 계약
+
+- 저장 루트: %LOCALAPPDATA%/RandomMultimediaManager/. DB는 library.db, 삭제 저널은 delete-journal/. exe 옆 저장/portable mode/클라우드 동기화는 없음. 압축 배포와 데이터 저장 위치는 별개다.
+- 설정도 같은 SQLite AppSettings 단일 행으로 저장한다. 실패하면 UI가 새 값으로 확정된 것처럼 표시하지 않는다. 미확정 키/트레이·뷰어 기본값을 T03에서 미리 넣지 않는다. 이후 해당 Task에서 column migration을 추가한다.
+- 세션 순서/cursor/Seen/Pending/억제/선택 분류는 메모리만. 종료·화면 닫기·새 세션 성공 시 폐기. 충돌/강제 Kill로 Pending이 사라질 수 있고 재시작 시 감상을 추정해 기록하지 않는다. 이미 저장된 기록·진행·삭제 복구만 영속한다.
+- 세션 슬롯에는 ID/상태만 보관하며 디코더·이미지·미디어 객체를 보관하지 않는다. 현재와 전환 준비 대상 최대 두 미디어만 소유한다. 경로 10000 슬롯 또는 Seen 10000 ID 도달 시 새 슬롯/신규 선택을 SessionLimit으로 거부하고 현재/Back/Forward를 유지한다. 기록을 잘라 중복 방지를 깨지 않는다. 새 세션 시작 안내로 해소한다. 명령 재전달 캐시는 현재 세션 최근 256개이며 그보다 오래된 CommandId 재전달은 지원하지 않는다. VisitId DB 멱등성은 별도로 유지한다.
+- Core(.NET 10, WPF/SQLite/엔진 참조 없음)를 T03에서 실제 모델/값 계약과 함께 생성한다. T06에서 순수 후보/방문 정책을 넣는다. 이유는 UTC 경계·실패/재방문을 Windows 렌더러 없이 테스트하기 위해서다. App→Core 단방향, Core.Tests→Core. SQLite integration test는 별도 필요한 테스트 범위에서 수행한다.
+- 데이터 접근/OS 파일 작업/미디어 구현은 App 내부의 필요한 폴더에만 둔다. 역할마다 프로젝트·인터페이스를 선행 생성하지 않는다. T07/T09는 T03의 공유 모델을 사용한다.
+
+| 역할 | 입력→결과 계약 |
+|---|---|
+| 후보 정책(Core) | 고정 Now/기간/선택 분류/항목 snapshot/Seen → 후보 ID; IO 없음 |
+| 방문 정책(Core) | 상태+명령+결과 → 다음 상태/저장 의도; WPF·엔진 호출 없음 |
+| 조정자(App, T06/T11) | CommandId와 현재 토큰 검증, 준비/저장/활성 순서 소유 |
+| 데이터(App, T03) | CommitVisit(VisitId, ItemId, time, origin, suppress, progress) → Committed/AlreadyCommitted/Failed; suppress면 기록 없이 진행만 저장 |
+| 미디어(T07~T09) | Prepare(ItemId, Path, Progress, OperationId, cancel) → Ready(owned handle)/Failed/Cancelled; Ready는 아직 표시·소리 없음 |
+| 공통 호스트(T11) | Activate(ready, VisitId), CaptureProgress(VisitId), SetMuted, Dispose; 페이지/재생 위치는 타입별 payload |
+| 파일(T05/T12) | 존재: Present/Missing/Unavailable; 삭제: Succeeded/Failed/Cancelled/Unknown |
+| 생명주기(T14) | Hide는 표시/소리만, Close는 조정자 종료 요청; 직접 기록 생성/삭제 금지 |
+
+위 메서드는 의미 계약이다. 실제 인터페이스는 해당 소비자가 생기는 Task에서만 만든다. 재생 조작의 상세 API나 트레이 키는 T02에서 정하지 않는다.
+
+## 8. 필수 정책 검증 사례와 남은 경계
+
+| Task | 필수 사례 |
+|---|---|
+| T03 | DDL 제약/외래키, 같은 분류 경로 중복 거부·다른 분류 허용, 타입별 진행 NULL 제약, migration rollback/상위 버전 거부, VisitId 재시도, 삭제 정리 원자성 |
+| T05 | 중첩 소스 중복, 소스 해제≠Missing, 접근 실패·취소, 대소문자/이동/재등장/내용 교체, reparse 경로 거부 |
+| T06 | 7일 경계±1ms·0일·미래 기록, A→B→Back A→Forward B의 4개 Visit, 억제 재방문 초기화, 수동 삽입 Forward 보존, 후보 0/한도, Busy·늦은 Ready·commit 실패 |
+| T11 | 만화↔영상 준비 실패의 기존 방문 보존, 자막 실패 분리, 이어보기/이번 제외 독립, 정상 닫기와 Hide 분리 |
+| T12 | 다른 분류 동일 경로 정리, 실패/취소 기록 보존, OS 성공 뒤 DB 실패 재시작, Prepared 불명 격리, Applied 뒤 저널 제거 실패 재시도, 새 파일 재삭제 금지 |
+
+T02 데이터/감상 정책에 미확정 차단 항목은 없다. 실제 후속 코드 착수는 T01 Windows 검증 완료와 이 계약 통합이 선행이다. T09의 Ready/동시 보유 검증이 실패하면 T11을 차단하고 Astra 판단을 받는다.
+T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 상세 설계를 남긴다. T08 표시 기본값, T10 자막 선택, T18 배포/OS 범위, T19 VSR은 각각의 Task에서 위임 범위 안에 결정한다. 자동 재식별·기록 승계·세션 복원·후보 완화는 승인하지 않는다.
+
+기술 근거(2026-09-07 접근 확인): [SQLite PRAGMA](https://www.sqlite.org/pragma.html), [Microsoft.Data.Sqlite 트랜잭션](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions). 제품 정책과 기본값은 위 문서에서 도출한 요구사항이 아니라 T02의 설계 결정이다.
