@@ -13,7 +13,7 @@
 | 영역 | 상태 |
 |---|---|
 | WPF 시작/빈 메인창 코드 | Windows 복원·Release 빌드·실행·닫기 정상 (사용자 확인) |
-| SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현, 실행 검증 진행 중 |
+| SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (PR 통합 대기) |
 | 분류 UI·스캔·랜덤 | 미구현 |
 | 만화·영상·SRT/SMI·이어보기 | 미구현 |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | 미구현 |
@@ -37,15 +37,18 @@
 
 ## 다음 작업과 차단
 
-T00/T01 완료, T02 계약 완료 및 main 통합. T03의 선행 조건을 충족하여 최신 main에서 T03을 재개할 수 있다. T03은 task/t03-sqlite-foundation에서 저장 기반을 구현하고 검증 중이다.
-다음 구현은 Astra T03. 이후 T07(Sol), T09(Astra), T04(Sol)는 별도 브랜치에서 병렬 가능하다.
+T00/T01 완료, T02 계약 완료 및 main 통합. T03은 task/t03-sqlite-foundation에서 구현·검증 완료했으며 PR #4 통합 대기다.
+T03 통합 후 T07(Sol), T09(Astra), T04(Sol)는 별도 브랜치에서 병렬 가능하다. 이번 작업에서 후속 Task는 시작하지 않았다.
 T14 생명주기 상세(특히 숨김 상태 종료 저장 실패), T08 표시 기본값, T10 자막, T18 배포 검증은 해당 Task에 남긴다. T02 데이터 정책 자체의 추가 사용자 결정은 없다.
-T01 완료 근거는 위 사용자 수동 검증 확인이다. T03 담당자는 최신 main의 이 문서와 TASKS.md를 확인하고 별도 브랜치에서 T03만 진행한다.
+T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 PR #4 통합 여부와 최신 기준 문서를 확인한다.
 
 ## T03 저장 구현
 
 - 기준 main a2ae988. T01 사용자 Windows 확인과 T02 통합 결과를 보존했다.
 - Core 공통 모델, App/Data SQLite v1 초기화·설정·방문/삭제 트랜잭션, 실행형 Core.Tests/Data.Tests를 추가했다.
 - 동일 VisitId의 전체 payload 검증 불일치는 사용자 승인 후 VisitCommit 검증값 테이블로 보완했다. 상세 계약은 DATA_AND_RANDOM_POLICY의 T03 보완을 따른다.
-- 로컬 Linux에는 .NET SDK가 없으며 설치 다운로드도 완료되지 않았다. C# 빌드/실행 성공으로 간주하지 않는다. Windows PR 검증 결과를 확인 중이다.
-- T03 검증 대기이며 다른 Task는 진행하지 않았다.
+- Windows Server 2025 x64 / .NET SDK 10.0.400 GitHub Actions에서 restore·Release build 성공(경고 0, 오류 0), Core 검사 20개 및 SQLite 통합 시나리오 13개 통과. 빈 WPF 창 생성·정상 닫기·재실행을 2회 확인하고 LocalAppData DB 생성을 확인했다. 사용자 데스크톱에서 직접 관찰한 결과와 구분한다.
+- 검증 코드 커밋: 791529c. [성공 실행 34137980053](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34137980053). 이후 완료 상태 갱신은 문서만 변경한다.
+- 로컬 Linux에서는 SQL 실행/외래키, 문서와 SQL 일치, 프로젝트/XAML XML, diff 공백 검사를 수행했다. C# 실행 결과는 위 Windows 러너의 실제 로그를 근거로 한다.
+- Microsoft.Data.Sqlite 10.0.8, SQLitePCLRaw.bundle_e_sqlite3 2.1.13을 고정했다. 최종 복원에 NU1903 경고 없음.
+- T03 완료(PR #4 통합 대기). 다른 Task는 진행하지 않았다.

@@ -1,6 +1,6 @@
 # Random Multimedia Manager
 
-Windows용 로컬 만화·영상 랜덤 감상 및 정리 프로그램. 현재는 최소 WPF 셸과 개발 기준 문서를 준비한 단계다.
+Windows용 로컬 만화·영상 랜덤 감상 및 정리 프로그램. 현재는 최소 WPF 셸과 SQLite 저장 기반까지 구현한 단계다.
 
 ## 시작 문서
 
