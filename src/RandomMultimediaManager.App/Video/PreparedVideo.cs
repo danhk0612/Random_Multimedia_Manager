@@ -32,7 +32,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private readonly MediaPlayer player;
     private readonly VideoView view;
     private readonly ConcurrentQueue<string> logs = new();
-    private readonly EventHandler errorHandler;
+    private readonly EventHandler<EventArgs> errorHandler;
     private readonly EventHandler<LogEventArgs> logHandler;
     private readonly CancellationToken preparationCancellation;
     private VideoVisit? visit;
@@ -64,7 +64,7 @@ public sealed class PreparedVideo : IAsyncDisposable
         NativeVersion = engine.Version;
         // Never call native APIs, dispatch synchronously, or mutate another slot from a VLC callback.
         errorHandler = (_, _) => Interlocked.Exchange(ref failed, 1);
-        logHandler = (_, e) =>
+        logHandler = (sender, e) =>
         {
             logs.Enqueue($"{e.Level}: {e.Message}");
             while (logs.Count > 160) logs.TryDequeue(out _);

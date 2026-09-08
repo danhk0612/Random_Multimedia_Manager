@@ -84,11 +84,14 @@ internal static class Program
                     Check(current.Snapshot(visit).Visit == visit, "late completion preserves current visit");
 
                     var secondToken = Operation();
-                    var second = await PreparedVideo.PrepareAsync(surface, secondToken, copy, null, false, CancellationToken.None);
+                    using var readyCancellation = new CancellationTokenSource();
+                    var second = await PreparedVideo.PrepareAsync(surface, secondToken, copy, null, false, readyCancellation.Token);
                     Check(second.Status == VideoPreparationStatus.Ready, $"two decoders coexist: {second.Error}");
                     candidate = second.Video!;
                     Check(current.Snapshot(visit).Muted == before.Muted && current.Snapshot(visit).State == VLCState.Paused,
                         "candidate does not change current playback/mute");
+                    readyCancellation.Cancel();
+                    Check(!candidate.CanActivate(secondToken), "cancelled Ready cannot activate");
                     await candidate.DisposeAsync();
                     candidate = null;
                     Check(current.SetRate(visit, 1.5f), "rate accepted (actual speed needs observation)");
@@ -99,6 +102,12 @@ internal static class Program
                     }
                     Console.WriteLine($"Tracks audio={current.AudioTracks(visit).Length}, subtitle={current.SubtitleTracks(visit).Length}");
                     await current.StopAsync(visit);
+                    current.Play(visit);
+                    current.SetMuted(visit, true);
+                    var deadline = DateTime.UtcNow.AddSeconds(5);
+                    while (current.Snapshot(visit).State != VLCState.Playing && DateTime.UtcNow < deadline)
+                        await Task.Delay(25);
+                    Check(current.Snapshot(visit).State == VLCState.Playing, "play after stop retains visit");
                     await current.DisposeAsync();
                     await current.DisposeAsync();
                     current = null;
