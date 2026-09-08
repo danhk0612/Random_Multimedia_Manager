@@ -92,6 +92,8 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
             database.SaveCategory(new Category(categoryDraftId, CategoryName, CategoryMediaType, CategoryIsEnabled));
             var id = categoryDraftId;
             ReloadCategories();
+            selectedCategory = null;
+            OnPropertyChanged(nameof(SelectedCategory));
             SelectedCategory = Categories.Single(x => x.Id == id);
             return SetResult(true, "분류 설정을 저장했습니다.");
         }
