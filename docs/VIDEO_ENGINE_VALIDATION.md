@@ -2,7 +2,7 @@
 
 ## 상태와 적용 범위
 
-T09 구현 검증 중, 완료 아님. 기준 main 5291e9d에서 T01 사용자 Windows 검증,
+T09 구현·Windows 자동 검증 완료, 데스크톱 실측 대기로 Task 완료 아님. 기준 main 5291e9d에서 T01 사용자 Windows 검증,
 T02 계약 통합, T03 PR #4 병합을 확인했다. DB·랜덤·Pending·감상 기록·이어보기 DB,
 외부 자막 로드/검색·삭제·트레이·전역 키는 구현하지 않는다.
 T02 계약의 원문은 DATA_AND_RANDOM_POLICY.md §3/4/7을 그대로 따른다.
@@ -114,12 +114,19 @@ dotnet run --project tests/RandomMultimediaManager.Video.Tests -c Release -- 'D:
 
 ## 완료 게이트와 실제 결과
 
+검증 코드 커밋: `98d8c28ff149323d18471bb8ea8fa21471047f89`.
+Windows Server 2025 x64 (10.0.26100), .NET SDK 10.0.400에서 실행했다.
+로드된 런타임은 **libVLC 3.0.23 Vetinari**다.
+[영상 프로브 성공](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34211175806),
+[빌드·저장·셸 회귀 성공](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34211175847).
+이후 상태 문서 갱신은 코드 검증 결과를 바꾸지 않는다.
+
 | 항목 | 실제 상태 |
 |---|---|
 | 로컬 XML/XAML·csproj 파싱 및 diff 공백 | 통과 |
 | 로컬 C# 빌드/실행 | Linux, dotnet 미설치로 미수행 |
-| Windows x64 빌드·기존 저장/셸 회귀 | CI 결과 확인 중 |
-| 합성 무음 MP4/MKV 디코딩·수명 프로브 | CI 결과 확인 중 |
+| Windows x64 빌드·기존 저장/셸 회귀 | 통과: SDK 10.0.400, 경고/오류 0, Core 20개·SQLite 13개·T04 3개·창 실행/종료 2회 |
+| 합성 무음 MP4/MKV 디코딩·수명 프로브 | 통과: 각각 3회, Ready·동시 보유·실패/취소·토큰 거부·정지 후 재생·반복 해제·복사본 exclusive open/이동/삭제 |
 | 음성 포함 MP4/MKV 실파일 재생·조작·트랙 선택 | 미검증 |
 | 후보 화면/음성 누출 없음, 기존 영상 음성/화면 보존 | 데스크톱 미검증 |
 | 실제 재생 위치/배속, 정지 후 재생 | 데스크톱 미검증 |
@@ -148,6 +155,9 @@ T11: 기존 저장 성공 이후에만 Activate 호출, 현재 + 후보 상한, 
 VisitId 생성·Pending·기록 정책, 최종 진행 저장, 취소 세대 무효화를 연결한다.
 검증 창의 임시 GUID와 바로 활성화 순서를 제품 감상 흐름으로 사용하지 않는다.
 RestorePosition의 0/중간/길이 경계/길이 미확정·탐색 불가/실패 fallback 실측도 필요하다.
+현재는 준비 도중 Ended/탐색 후 디코딩 대기 실패를 Failed로 반환한다. 길이 경계에서
+Ready가 성립하는지와 탐색 실패 시 처음부터 복귀는 아직 보장하지 않으므로
+DB 이어보기에 연결하지 않는다. 이 경계도 T09의 미완료 항목이며 T11에서 묵인하지 않는다.
 공통 만화/영상 인터페이스와 DB 이어보기 연결은 아직 없다.
 
 공유 파일은 MainWindow.xaml의 진입 버튼, MainWindow.xaml.cs의 검증 창 소유/해제 대기,
