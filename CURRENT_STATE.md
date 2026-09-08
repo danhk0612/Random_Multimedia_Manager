@@ -16,8 +16,9 @@
 | SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (main 통합 완료) |
 | 분류/소스 폴더 UI | T04 구현 및 Windows 자동 빌드·저장 계약 검증 완료, 실제 UI 수동 조작 검증 대기 |
 | 스캔·랜덤 | 미구현 |
-| 만화·SRT/SMI·이어보기 DB 연결 | 미구현 |
-| 영상 엔진·WPF 검증 호스트 | T09 구현·Windows 자동 검증 통과, 데스크톱 실측 대기 |
+| 만화 ZIP/CBZ 페이지 읽기 기반 | T07 구현·Windows 자동 검증 완료 (PR #6 main 통합 완료) |
+| 만화 표시·SRT/SMI·이어보기 DB 연결 | 미구현 |
+| 영상 엔진·WPF 검증 호스트 | T09 구현·Windows 자동 검증 통과, 데스크톱 실측 및 이어보기 경계 보완 대기 |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | 미구현 |
 | 단축키·트레이·빠른 숨김/종료 | 미구현 |
 | VSR | 후순위, 가능성 미검증 |
@@ -40,8 +41,8 @@
 ## 다음 작업과 차단
 
 T00/T01 완료, T02 계약 완료 및 main 통합. T03은 task/t03-sqlite-foundation에서 구현·검증 완료했으며 PR #4 main 통합 완료다.
-T04는 task/t04-category-source-ui / PR #5에서 구현 및 자동 검증을 완료했으나 실제 Windows UI 수동 조작 검증 전이므로 완료 처리하지 않는다. T07/T09 상태와 결과는 변경하지 않는다.
-T14 생명주기 상세(특히 숨김 상태 종료 저장 실패), T08 표시 기본값, T10 자막, T18 배포 검증은 해당 Task에 남긴다. T02 데이터 정책 자체의 추가 사용자 결정은 없다.
+T04는 task/t04-category-source-ui / PR #5에서 구현 및 자동 검증을 완료했으나 실제 Windows UI 수동 조작 검증 전이므로 완료 처리하지 않는다. T07은 task/t07-zip-cbz-page-reader / PR #6에서 구현·Windows 자동 검증 완료했으며 main에 통합되었다. T09는 자동 검증을 통과했으나 데스크톱 실측 및 이어보기 경계 보완 전까지 미완료다.
+T08은 D06 및 T02 계약을 확인한 뒤 별도 작업으로 착수할 수 있다. T14 생명주기 상세(특히 숨김 상태 종료 저장 실패), T08 표시 기본값, T10 자막, T18 배포 검증은 해당 Task에 남긴다. T02 데이터 정책 자체의 추가 사용자 결정은 없다.
 T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 해당 Task의 선행 조건과 최신 기준 문서를 확인한다.
 
 ## T03 저장 구현
@@ -63,10 +64,21 @@ T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 
 - PR #5 자동 검증 실행 34174712538: Windows Server 2025 x64 / .NET SDK 10.0.400에서 restore·Release build 경고 0/오류 0, Core 20개, 기존 SQLite 13개와 T04 3개 시나리오 통과. T04 시나리오는 재시작 영속성, 중복 옵션 비덮어쓰기/중첩 허용, 소스 제거 시 기록 보존, 빈/항목 존재 분류 타입 변경, 저장 실패 rollback을 검증한다. 앱 메인 창 실행·정상 종료 2회도 통과했다.
 - GitHub Actions의 창 생성 확인은 실제 사용자가 폼에 입력·클릭해 레이아웃/상호작용을 확인한 Windows UI 수동 검증과 다르다. 그 수동 검증 전까지 T04는 완료가 아니라 검증 대기다.
 
+## T07 만화 압축 읽기
+
+- 기준 main 5291e9d에서 task/t07-zip-cbz-page-reader를 분기했다. 작업 중 PR #5/T04가 main에 통합되어 최종 브랜치 동기화 시 그 상태와 코드를 보존했다. Core 공통 모델·T02 계약·DB 의미는 변경하지 않았다.
+- App/Media/Comic의 `ComicArchive`가 .NET `ZipArchive`로 ZIP/CBZ를 열고 JPG/JPEG/PNG/WEBP/BMP/GIF 엔트리만 내부 폴더 경로까지 포함해 자연 정렬한다. 압축 전체 추출이나 전체 페이지 메모리 적재는 하지 않는다.
+- 압축 결과를 Opened/EmptyArchive/NoImageEntries/UnsupportedEncryption/CorruptArchive/Cancelled/Failed로 구분한다. 페이지 요청은 0-based 인덱스로 필요한 엔트리 스트림만 열고 Opened/InvalidPage/Cancelled/Failed를 반환한다.
+- 압축 객체가 원본 파일·ZipArchive와 열려 있는 페이지 스트림을 소유한다. 페이지 스트림을 먼저 Dispose하면 해당 스트림만 해제되고, 압축 Dispose는 남아 있는 페이지 스트림까지 닫은 뒤 원본 파일 잠금을 해제한다. 취소된 압축 열기도 파일 핸들을 남기지 않는다.
+- 압축 Opened는 T02의 감상 Ready가 아니다. T08에서 시작 페이지를 실제 디코딩한 뒤에만 만화 Ready를 완성해야 하며, T07 자체는 Pending/감상 기록을 생성하지 않는다.
+- Windows Server 2025 x64 / .NET SDK 10.0.400 GitHub Actions에서 restore·Release build 및 T07 실행형 검증을 통과했다. 자연 정렬(1/2/10, 내부 폴더, 숫자 자릿수·선행 0·대소문자), 빈/이미지 없음/손상/암호화, 잘못된 페이지, 취소, 페이지·압축 소유권과 파일 잠금 해제를 확인했다. [T07 성공 실행 34174996255](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34174996255).
+- 같은 코드 헤드에서 기존 T03 회귀 workflow도 restore·Release build, Core/Data 검사, WPF 빈 창 2회 실행·닫기까지 성공했다. [회귀 성공 실행 34174996314](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34174996314).
+- PR #6 main 통합 완료. T08이나 다른 Task는 진행하지 않았다.
+
 ## T09 영상 기반
 
 - main 5291e9d에서 별도 task/t09-libvlc-integration으로 착수. T01/T02/T03 결과와 다른 Task 상태를 보존한다.
 - LibVLCSharp/WPF 3.10.1, VideoLAN.LibVLC.Windows 3.0.23.1 고정. 독립 엔진·고정 HWND의 숨김/음소거 준비와 토큰 검사, 별도 WPF 검증 창을 추가했다.
 - T09 미완료: Windows x64/SDK 10.0.400에서 빌드 경고/오류 0, 합성 무음 MP4/MKV 각각 3회 준비·동시 보유·실패/취소·반복 해제·파일 이동/삭제 및 기존 회귀 검사 통과. 엔진은 libVLC 3.0.23 Vetinari. 음성·HW·중첩 UI·전체화면·이어보기 경계 실측은 미검증이며 T02 전체 계약 성립을 확정하지 않는다.
 - 실제 결과, 소유권, 검증 명령과 T10/T11 게이트는 [영상 검증 문서](docs/VIDEO_ENGINE_VALIDATION.md)에 기록한다. DB·랜덤·기록·공통 감상 조정자·외부 자막·삭제는 구현하지 않았다.
-- 검증 코드 98d8c28, Windows 실행 34211175806/34211175847. PR #7 Draft, 직접 병합하지 않는다. 작업 중 main a678c0c의 T04를 이 브랜치에 통합해 분류 UI와 검증 상태를 보존했다.
+- 검증 코드 98d8c28, Windows 실행 34211175806/34211175847. PR #7은 병합 후에도 T09 완료를 의미하지 않으며 T10/T11 선행 게이트를 유지한다. 작업 중 main a678c0c의 T04를 이 브랜치에 통합해 분류 UI와 검증 상태를 보존했다.

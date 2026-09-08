@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomMultimediaManager.Cor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomMultimediaManager.Data.Tests", "tests\RandomMultimediaManager.Data.Tests\RandomMultimediaManager.Data.Tests.csproj", "{37AB28F2-527B-43D7-83EB-7A09E99FD077}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomMultimediaManager.Comic.Tests", "tests\RandomMultimediaManager.Comic.Tests\RandomMultimediaManager.Comic.Tests.csproj", "{A245A48A-38D4-4DD4-97E8-38A5C1E71E57}"
+EndProject
 Global
     GlobalSection(SolutionConfigurationPlatforms) = preSolution
         Debug|Any CPU = Debug|Any CPU
@@ -32,5 +34,9 @@ Global
         {FDCD39EB-C542-46C8-939D-0BDC291CB24E}.Debug|Any CPU.Build.0 = Debug|Any CPU
         {FDCD39EB-C542-46C8-939D-0BDC291CB24E}.Release|Any CPU.ActiveCfg = Release|Any CPU
         {FDCD39EB-C542-46C8-939D-0BDC291CB24E}.Release|Any CPU.Build.0 = Release|Any CPU
+        {A245A48A-38D4-4DD4-97E8-38A5C1E71E57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {A245A48A-38D4-4DD4-97E8-38A5C1E71E57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {A245A48A-38D4-4DD4-97E8-38A5C1E71E57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {A245A48A-38D4-4DD4-97E8-38A5C1E71E57}.Release|Any CPU.Build.0 = Release|Any CPU
     EndGlobalSection
 EndGlobal

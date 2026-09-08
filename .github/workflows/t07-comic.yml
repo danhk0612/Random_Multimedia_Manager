@@ -1,0 +1,22 @@
+name: T07 comic archive verification
+on:
+  pull_request:
+    paths:
+      - 'src/RandomMultimediaManager.App/Media/Comic/**'
+      - 'tests/RandomMultimediaManager.Comic.Tests/**'
+      - 'RandomMultimediaManager.sln'
+      - '.github/workflows/t07-comic.yml'
+permissions:
+  contents: read
+jobs:
+  comic:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore RandomMultimediaManager.sln
+      - run: dotnet build RandomMultimediaManager.sln -c Release --no-restore
+      - run: dotnet run --project tests/RandomMultimediaManager.Comic.Tests -c Release --no-build
