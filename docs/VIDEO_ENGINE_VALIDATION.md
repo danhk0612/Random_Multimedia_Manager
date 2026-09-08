@@ -150,6 +150,7 @@ RestorePosition의 0/중간/길이 경계/길이 미확정·탐색 불가/실패
 공통 만화/영상 인터페이스와 DB 이어보기 연결은 아직 없다.
 
 공유 파일은 MainWindow.xaml의 진입 버튼, MainWindow.xaml.cs의 검증 창 소유/해제 대기,
-App.csproj의 패키지 3개다. T04의 UI와 OnClosing 변경을 보존하여 수동 통합한다.
+App.csproj의 패키지 3개다. 작업 중 병합된 T04 main a678c0c를 T09 브랜치에 통합했다.
+분류 뷰와 상태/검증 결과를 보존하고 버튼만 상단에 배치했다. 후속 OnClosing 변경과의 통합에는 주의한다.
 App.xaml/App.xaml.cs, Core, DB, T03 workflow는 변경하지 않는다. TASKS/CURRENT_STATE는
 T09 부분만 반영하고 다른 Task의 최신 상태를 복원/덮어쓰기하지 않는다. PR은 Draft이며 병합하지 않는다.
