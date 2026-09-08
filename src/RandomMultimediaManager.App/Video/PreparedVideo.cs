@@ -5,8 +5,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using LibVLCSharp.Shared;
+using LibVLCSharp.Shared.Structures;
 using LibVLCSharp.WPF;
 using RandomMultimediaManager.Core;
+using MediaType = RandomMultimediaManager.Core.MediaType;
 
 namespace RandomMultimediaManager.App.Video;
 

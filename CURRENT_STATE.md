@@ -15,7 +15,8 @@
 | WPF 시작/빈 메인창 코드 | Windows 복원·Release 빌드·실행·닫기 정상 (사용자 확인) |
 | SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (main 통합 완료) |
 | 분류 UI·스캔·랜덤 | 미구현 |
-| 만화·영상·SRT/SMI·이어보기 | 미구현 |
+| 만화·SRT/SMI·이어보기 DB 연결 | 미구현 |
+| 영상 엔진·WPF 검증 호스트 | T09 구현 검증 중, Windows 실행 게이트 미완료 |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | 미구현 |
 | 단축키·트레이·빠른 숨김/종료 | 미구현 |
 | VSR | 후순위, 가능성 미검증 |
@@ -52,3 +53,11 @@ T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 
 - 로컬 Linux에서는 SQL 실행/외래키, 문서와 SQL 일치, 프로젝트/XAML XML, diff 공백 검사를 수행했다. C# 실행 결과는 위 Windows 러너의 실제 로그를 근거로 한다.
 - Microsoft.Data.Sqlite 10.0.8, SQLitePCLRaw.bundle_e_sqlite3 2.1.13을 고정했다. 최종 복원에 NU1903 경고 없음.
 - T03 완료(PR #4 main 통합 완료). 다른 Task는 진행하지 않았다.
+
+## T09 영상 기반
+
+- main 5291e9d에서 별도 task/t09-libvlc-integration으로 착수. T01/T02/T03 결과와 다른 Task 상태를 보존한다.
+- LibVLCSharp/WPF 3.10.1, VideoLAN.LibVLC.Windows 3.0.23.1 고정. 독립 엔진·고정 HWND의 숨김/음소거 준비와 토큰 검사, 별도 WPF 검증 창을 추가했다.
+- T09 미완료: 정적 검증 통과, Windows CI 확인 중. 음성·HW·중첩 UI·전체화면 실측은 미검증이며 T02 계약 성립을 확정하지 않는다.
+- 실제 결과, 소유권, 검증 명령과 T10/T11 게이트는 [영상 검증 문서](docs/VIDEO_ENGINE_VALIDATION.md)에 기록한다. DB·랜덤·기록·공통 감상 조정자·외부 자막·삭제는 구현하지 않았다.
+- PR #7 Draft로 준비하며 직접 병합하지 않는다.
