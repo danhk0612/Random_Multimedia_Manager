@@ -77,7 +77,7 @@ internal static class Program
         ];
         SequenceEqual(expected, actual, "natural path sort covers 1/2/10, folders, digits, case");
 
-        ComicPageOpenResult page = archive.OpenPage(6);
+        ComicPageOpenResult page = archive.OpenPage(7);
         Equal(ComicPageOpenStatus.Opened, page.Status, "requested page stream opens");
         using Stream stream = page.Stream!;
         using var reader = new StreamReader(stream, Encoding.UTF8);
