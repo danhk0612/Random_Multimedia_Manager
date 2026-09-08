@@ -5,7 +5,8 @@
 - C# / .NET 10 / WPF, Windows x64용 앱 프로젝트 하나.
 - src/RandomMultimediaManager.App: App.xaml로 시작하여 MainWindow를 여는 최소 셸.
 - RandomMultimediaManager.sln: 솔루션 진입점.
-- T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. 뷰어/플레이어/랜덤 정책은 아직 없다.
+- T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. 만화 뷰어/랜덤 정책은 아직 없다.
+- T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 계약/Windows 실측은 검증 중이며 상세는 docs/VIDEO_ENGINE_VALIDATION.md. 제품 공통 감상 조정자는 아직 없다.
 - 셸의 일반 창 닫기는 WPF 기본 동작이다. 트레이/빠른 종료 제품 정책의 확정이 아니다.
 
 T02 계약에 사용자 승인된 VisitCommit 검증값을 보완하고 T03에서 net10.0 Core와 Core.Tests/Data.Tests를 추가했다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.

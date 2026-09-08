@@ -11,6 +11,9 @@
     <ProjectReference Include="../RandomMultimediaManager.Core/RandomMultimediaManager.Core.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="[10.0.8]" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="[2.1.13]" />
+    <PackageReference Include="LibVLCSharp" Version="[3.10.1]" />
+    <PackageReference Include="LibVLCSharp.WPF" Version="[3.10.1]" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="[3.0.23.1]" />
     <EmbeddedResource Include="Data/SchemaV1.sql" LogicalName="SchemaV1.sql" />
   </ItemGroup>
 </Project>

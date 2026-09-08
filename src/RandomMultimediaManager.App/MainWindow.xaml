@@ -3,5 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:RandomMultimediaManager.App.Views"
         Title="Random Multimedia Manager" Width="960" Height="640">
-    <views:CategoryEditorView />
+    <DockPanel>
+        <Button DockPanel.Dock="Top" Content="영상 기반 검증" HorizontalAlignment="Right"
+                Margin="12,6" Padding="12,6" Click="OpenVideoValidation" />
+        <views:CategoryEditorView />
+    </DockPanel>
 </Window>
