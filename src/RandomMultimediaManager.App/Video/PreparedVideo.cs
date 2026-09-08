@@ -105,6 +105,7 @@ public sealed class PreparedVideo : IAsyncDisposable
                 throw new InvalidOperationException("숨김 WPF 영상 HWND 생성 실패: T02 준비 계약 검증 필요.");
             if (!owned.player.Play()) throw new InvalidOperationException("엔진이 재생 시작을 거부했습니다.");
             await owned.WaitForDecodedAsync(cancellation);
+            owned.player.Mute = true;
             await owned.RestorePositionAsync(progress?.VideoPositionMs ?? 0, cancellation);
             owned.player.SetPause(true);
             await owned.WaitAsync(() => owned.player.State == VLCState.Paused, cancellation);
@@ -131,7 +132,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private static (LibVLC Engine, Media Media, MediaPlayer Player) CreateNative(string path, bool hardware)
     {
         LibVLCSharp.Shared.Core.Initialize();
-        var engine = new LibVLC(true, "--aout=directsound,none", "--directx-volume=0", "--mute",
+        var engine = new LibVLC(true, "--aout=directsound,none", "--directx-volume=0",
             "--no-spdif", "--no-volume-save", "--no-video-title-show", "--no-sub-autodetect-file", "--stats");
         Media? media = null;
         MediaPlayer? player = null;

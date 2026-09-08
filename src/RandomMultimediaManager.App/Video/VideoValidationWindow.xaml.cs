@@ -52,6 +52,7 @@ public partial class VideoValidationWindow : Window
         UpdateControls();
         preparing = PrepareSelectedAsync(request, dialog.FileName, SoftwareOnly.IsChecked != true, cancellation.Token);
         await preparing;
+        if (staged is null) { cancellation?.Dispose(); cancellation = null; }
         busy = false;
         UpdateControls();
     }
@@ -105,6 +106,11 @@ public partial class VideoValidationWindow : Window
         }
         catch
         {
+            staged = null;
+            operation = null;
+            await next.DisposeAsync();
+            cancellation?.Dispose();
+            cancellation = null;
             if (old is not null && oldVisit is not null && previous is not null)
             {
                 old.SetMuted(oldVisit, previous.Muted);
@@ -114,6 +120,7 @@ public partial class VideoValidationWindow : Window
         }
         current = next;
         visit = nextVisit;
+        Rate.SelectedIndex = 1;
         staged = null;
         operation = null;
         cancellation?.Dispose();
@@ -131,6 +138,7 @@ public partial class VideoValidationWindow : Window
         pause.Click += Pause;
         var full = new Button { Content = "전체화면 / 복귀", Margin = new Thickness(6) };
         full.Click += ToggleFullscreen;
+        panel.PreviewKeyDown += OnKeyDown;
         panel.Children.Add(pause);
         panel.Children.Add(full);
         return panel;

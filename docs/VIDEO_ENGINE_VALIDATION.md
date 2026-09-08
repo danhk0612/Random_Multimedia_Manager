@@ -33,8 +33,9 @@ net10.0-windows/PlatformTarget=x64를 유지한다. 4.x preview는 사용하지 
 
 마지막 소스는 GitHub 연결의 raw 읽기로 접근 확인했다. API 문서의 Mute는 활성 오디오
 스트림 부재/출력 플러그인/패스스루에서 보장되지 않는다. 따라서 Play 전에 Mute만
-설정하고 무음 성공으로 간주하지 않는다. DirectSound 소스의 초기 mute/volume 상속과
-버퍼 시작 전 적용을 근거로 아래 방식을 선택했으며 실측 확인은 별개다.
+설정하고 무음 성공으로 간주하지 않는다. DirectSound 소스의 초기 volume 상속과
+버퍼 시작 전 적용을 근거로 아래 방식을 선택했으며 실측 확인은 별개다. `--mute`는 이 번들에서 알 수 없는 옵션으로 엔진 생성을 실패시켜 제거했다.
+초기 볼륨 0으로 준비하고 디코딩 후 Mute를 재적용한다.
 
 ## 영상 측 구현
 
@@ -49,7 +50,7 @@ T11도 이 상한과 직렬 호출을 유지해야 하며 별도 공통 인터�
   실제 Play → 유효 video output/영상 디코딩 통계 증가 확인, 오디오가 있으면 오디오
   디코딩/출력 버퍼 통계도 확인 → 숨김 상태 위치 적용 → Paused 확인을 거친다.
   파일 열림/메타데이터/Playing 이벤트 하나만으로 Ready를 반환하지 않는다.
-- 출력: `--aout=directsound,none --directx-volume=0 --mute --no-spdif --no-volume-save`.
+- 출력: `--aout=directsound,none --directx-volume=0 --no-spdif --no-volume-save`.
   출력 플러그인을 임의 fallback하여 무음 조건을 바꾸지 않는다. 오디오가 있으면
   Ready 전에 Mute와 Volume=0도 확인한다. 무음 파일은 오디오 장치 존재를 요구하지 않는다.
 - Prepare의 실패/취소는 자신의 객체만 해제한다. 취소 후 Ready가 도착해도 검증 창의
