@@ -1,0 +1,22 @@
+name: T09 video native verification
+on:
+  pull_request:
+    paths:
+      - 'src/RandomMultimediaManager.App/**'
+      - 'tests/RandomMultimediaManager.Video.Tests/**'
+      - '.github/workflows/t09-video.yml'
+permissions:
+  contents: read
+jobs:
+  video:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet --info
+      - run: dotnet build tests/RandomMultimediaManager.Video.Tests -c Release
+      - name: Software decoding and native lifecycle (silent synthetic fixtures)
+        run: dotnet run --project tests/RandomMultimediaManager.Video.Tests -c Release --no-build
