@@ -1,0 +1,48 @@
+name: T03 storage verification
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'RandomMultimediaManager.sln'
+      - '.github/workflows/t03-storage.yml'
+permissions:
+  contents: read
+jobs:
+  storage:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet --info
+      - run: dotnet restore RandomMultimediaManager.sln
+      - run: dotnet build RandomMultimediaManager.sln -c Release --no-restore
+      - run: dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release --no-build
+      - run: dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release --no-build
+      - name: Open and close empty WPF shell twice
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path 'src/RandomMultimediaManager.App/bin/Release/net10.0-windows/RandomMultimediaManager.App.exe'
+          1..2 | ForEach-Object {
+            $process = Start-Process $exe -PassThru
+            try {
+              $deadline = (Get-Date).AddSeconds(30)
+              do {
+                Start-Sleep -Milliseconds 200
+                $process.Refresh()
+                if ($process.HasExited) { throw 'App exited before showing its window.' }
+              } while ($process.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline)
+              if ($process.MainWindowHandle -eq 0) { throw 'No WPF main window.' }
+              if ($process.MainWindowTitle -ne 'Random Multimedia Manager') { throw 'Unexpected window title.' }
+              if (-not $process.CloseMainWindow()) { throw 'CloseMainWindow failed.' }
+              if (-not $process.WaitForExit(10000)) { throw 'App did not exit.' }
+              if ($process.ExitCode -ne 0) { throw 'App exited with an error.' }
+            } finally {
+              if (-not $process.HasExited) { $process.Kill() }
+              $process.Dispose()
+            }
+          }
+          if (-not (Test-Path "$env:LOCALAPPDATA/RandomMultimediaManager/library.db")) { throw 'DB missing.' }

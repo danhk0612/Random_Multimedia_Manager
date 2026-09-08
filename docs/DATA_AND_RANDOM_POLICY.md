@@ -1,6 +1,6 @@
 # 데이터 모델 및 랜덤·감상 계약
 
-T02 확정 계약. 제품 코드는 아직 없다. REQUIREMENTS.md의 확정 기능 안에서 정한 기본값이며, 후순위 기능은 DECISIONS.md에만 보존한다. 이 문서의 표·스키마·오류 계약을 T03 이후의 구현과 테스트 기준으로 사용한다.
+T02 확정 계약과 T03 승인 보완. 저장 구현은 App/Data, 공통 모델은 Core에 있다. REQUIREMENTS.md의 확정 기능 안에서 정한 기본값이며, 후순위 기능은 DECISIONS.md에만 보존한다. 이 문서의 표·스키마·오류 계약을 T03 이후의 구현과 테스트 기준으로 사용한다.
 
 ## 1. 식별과 소스 관계
 
@@ -82,7 +82,7 @@ Ready 이후 활성화는 준비된 객체를 넘기는 논리적 commit이며 �
 Opening/Deleting/저장 중 새 탐색·삭제·상태 편집은 Busy로 반환하며 큐에 쌓지 않는다. 숨김/음소거는 즉시 처리하며 Closing은 새 명령을 차단하고 진행 작업이 안전한 경계에 도달하기를 기다린다.
 취소는 세대를 무효화한다. 모든 완료/위치 콜백의 세션·작업·방문 토큰을 검사하며 늦은 결과는 화면/DB/Pending에 적용하지 않고 그 결과 소유 리소스만 해제한다.
 파일 삭제가 이미 시작되면 취소 요청만으로 실패로 바꾸지 않는다. 실제 결과를 끝까지 받아 §5 기록을 남긴다. 종료도 이 결과 처리를 기다린다.
-VisitId는 ViewHistory PK로 사용해 저장 재시도 중 중복 기록을 막는다. 저장 시각은 최초 저장 시도 때 고정하며 재시도에서 변경하지 않는다. 동일 ID/다른 payload는 오류다. 정상 commit 확인 뒤 Pending을 정리한다. 저장 실패 후 현재 감상으로 복귀하면 해당 실패 시도의 저장 의도를 취소하고 다음 이탈 때 새 시각/최종 위치를 캡처한다. commit 여부가 불명확하면 먼저 VisitId 조회로 확인하며 확인 전 복귀/새 방문을 허용하지 않는다. 억제 방문은 기록 insert가 없으므로 동일 직렬 작업의 진행 upsert 재시도만 허용하고 완료 확인 전 다음 작업을 진행하지 않는다. 스캔·삭제·진행 쓰기도 동일 항목의 순서와 삭제 격리를 지킨다.
+VisitId는 ViewHistory와 VisitCommit PK로 사용해 저장 재시도 중 중복 적용을 막는다. 저장 시각은 최초 저장 시도 때 고정하며 재시도에서 변경하지 않는다. 동일 ID/다른 payload는 오류다. 정상 commit 확인 뒤 Pending을 정리한다. 저장 실패 후 현재 감상으로 복귀하면 해당 실패 시도의 저장 의도를 취소하고 다음 이탈 때 새 시각/최종 위치를 캡처한다. commit 여부가 불명확하면 먼저 VisitId 조회로 확인하며 확인 전 복귀/새 방문을 허용하지 않는다. 억제 방문도 VisitCommit 검증값은 저장하며 ViewHistory에는 넣지 않는다. 완료 확인 전 다음 작업을 진행하지 않는다. 스캔·삭제·진행 쓰기도 동일 항목의 순서와 삭제 격리를 지킨다.
 
 ## 4. 기록·선호·진행의 독립성
 
@@ -103,7 +103,7 @@ VisitId는 ViewHistory PK로 사용해 저장 재시도 중 중복 기록을 막
 ## 5. 물리 삭제와 DB 정합성
 
 기본은 확인 후 휴지통. REQUIREMENTS R10의 명시적 영구 삭제 선택은 유지하되 휴지통 실패의 자동 fallback은 없다. 실제 파일을 삭제하는 것이므로 다른 분류에도 영향을 준다는 내용을 확인에 포함한다.
-정리 범위는 **동일 PathKey의 모든 ItemId**: 기록/진행 제거, IsMissing=true, 즐겨찾기/영구 제외 유지. Item 행을 없애지 않는다. 해당 경로의 활성 방문/준비·세션 슬롯도 무효화한다. 이는 분류 간 상태 공유가 아니라 물리 삭제 결과의 동기화다.
+정리 범위는 **동일 PathKey의 모든 ItemId**: 기록/진행/VisitCommit 검증값 제거, IsMissing=true, 즐겨찾기/영구 제외 유지. Item 행을 없애지 않는다. 해당 경로의 활성 방문/준비·세션 슬롯도 무효화한다. 이는 분류 간 상태 공유가 아니라 물리 삭제 결과의 동기화다.
 
 SQLite와 파일 시스템은 하나의 트랜잭션이 아니다. T12는 다음 복구 프로토콜을 구현한다.
 
@@ -120,7 +120,7 @@ OS 성공 직후 저널 기록 실패/전원 단절은 Prepared만 남을 수 �
 
 ## 6. SQLite v1 계약
 
-T03에서 Microsoft.Data.Sqlite 직접 SQL 접근을 도입한다. ORM/범용 repository/별도 Infrastructure 프로젝트는 만들지 않는다. 아래 DDL은 문서 계약이며 아직 실행 제품 코드가 아니다. ID와 PathKey 생성/경로 검증은 위 계약을 따른다.
+T03은 Microsoft.Data.Sqlite 10.0.8 직접 SQL 접근을 사용한다. ORM/범용 repository/별도 Infrastructure 프로젝트는 만들지 않는다. 아래 DDL은 App/Data/SchemaV1.sql과 동일한 v1 계약이다. ID와 PathKey 생성/경로 검증은 위 계약을 따른다.
 
 ```sql
 CREATE TABLE Category (
@@ -189,6 +189,12 @@ INSERT INTO AppSettings(Id) VALUES(1);
 CREATE TABLE AppliedDeletion (
  OperationId TEXT PRIMARY KEY NOT NULL
 );
+CREATE TABLE VisitCommit (
+ VisitId TEXT PRIMARY KEY NOT NULL,
+ MediaItemId TEXT NOT NULL REFERENCES MediaItem(Id) ON DELETE CASCADE,
+ PayloadHash BLOB NOT NULL CHECK(length(PayloadHash)=32)
+);
+CREATE INDEX IX_VisitCommit_Item ON VisitCommit(MediaItemId);
 ```
 
 FileName/Extension은 Path에서 도출하며 별도 식별 필드로 저장하지 않는다.
@@ -204,7 +210,7 @@ PRAGMA user_version=1. 빈 DB만 위 스키마로 초기화하고 순차 N→N+1
 - 설정도 같은 SQLite AppSettings 단일 행으로 저장한다. 실패하면 UI가 새 값으로 확정된 것처럼 표시하지 않는다. 미확정 키/트레이·뷰어 기본값을 T03에서 미리 넣지 않는다. 이후 해당 Task에서 column migration을 추가한다.
 - 세션 순서/cursor/Seen/Pending/억제/선택 분류는 메모리만. 종료·화면 닫기·새 세션 성공 시 폐기. 충돌/강제 Kill로 Pending이 사라질 수 있고 재시작 시 감상을 추정해 기록하지 않는다. 이미 저장된 기록·진행·삭제 복구만 영속한다.
 - 세션 슬롯에는 ID/상태만 보관하며 디코더·이미지·미디어 객체를 보관하지 않는다. 현재와 전환 준비 대상 최대 두 미디어만 소유한다. 경로 10000 슬롯 또는 Seen 10000 ID 도달 시 새 슬롯/신규 선택을 SessionLimit으로 거부하고 현재/Back/Forward를 유지한다. 기록을 잘라 중복 방지를 깨지 않는다. 새 세션 시작 안내로 해소한다. 명령 재전달 캐시는 현재 세션 최근 256개이며 그보다 오래된 CommandId 재전달은 지원하지 않는다. VisitId DB 멱등성은 별도로 유지한다.
-- Core(.NET 10, WPF/SQLite/엔진 참조 없음)를 T03에서 실제 모델/값 계약과 함께 생성한다. T06에서 순수 후보/방문 정책을 넣는다. 이유는 UTC 경계·실패/재방문을 Windows 렌더러 없이 테스트하기 위해서다. App→Core 단방향, Core.Tests→Core. SQLite integration test는 별도 필요한 테스트 범위에서 수행한다.
+- Core(.NET 10, WPF/SQLite/엔진 참조 없음)에 T03 실제 모델/값 계약이 있다. T06에서 순수 후보/방문 정책을 넣는다. 이유는 UTC 경계·실패/재방문을 Windows 렌더러 없이 테스트하기 위해서다. App→Core 단방향, Core.Tests→Core. SQLite integration test는 별도 필요한 테스트 범위에서 수행한다.
 - 데이터 접근/OS 파일 작업/미디어 구현은 App 내부의 필요한 폴더에만 둔다. 역할마다 프로젝트·인터페이스를 선행 생성하지 않는다. T07/T09는 T03의 공유 모델을 사용한다.
 
 | 역할 | 입력→결과 계약 |
@@ -234,3 +240,22 @@ T02 데이터/감상 정책에 미확정 차단 항목은 없다. 실제 후속 
 T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 상세 설계를 남긴다. T08 표시 기본값, T10 자막 선택, T18 배포/OS 범위, T19 VSR은 각각의 Task에서 위임 범위 안에 결정한다. 자동 재식별·기록 승계·세션 복원·후보 완화는 승인하지 않는다.
 
 기술 근거(2026-09-07 접근 확인): [SQLite PRAGMA](https://www.sqlite.org/pragma.html), [Microsoft.Data.Sqlite 트랜잭션](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions). 제품 정책과 기본값은 위 문서에서 도출한 요구사항이 아니라 T02의 설계 결정이다.
+
+## T03 승인 보완 및 저장 API
+
+2026-09-07 사용자 승인으로 VisitCommit만 v1에 추가했다. 이전 스키마는 문서 상태로 제품 DB 배포 이력이 없으므로 신규 v1 초기화에 포함한다. 기존 문서 DDL로 수동 생성한 DB는 자동 변환하지 않고 오류로 거부한다.
+
+- 목적: 다음 방문/진행 checkpoint가 PlaybackProgress를 갱신한 후에도 이전 VisitId의 서로 다른 payload를 거부한다.
+- 검증값: VisitPayload의 버전 1 BinaryWriter 직렬화에 대한 SHA-256 32바이트. 순서는 버전, 소문자 D UUID VisitId/ItemId, UTC ms, Origin, SuppressHistory, MediaType, 타입별 위치다. 숫자는 BinaryWriter의 little-endian, 문자열은 UTF-8 길이 접두 방식이며 위치 offset의 -0은 +0으로 통일한다. NaN/무한대는 모델 검증으로 거부한다.
+- VisitCommit은 감상 이력이 아닌 저장 재시도 검증 표식이다. 억제 여부/시각/위치 원문을 별도 방문 이력으로 보관하지 않고 검증 해시만 저장한다. Pending/세션 복원이나 랜덤 기간 계산에 사용하지 않는다.
+- 새 요청은 검증값·최종 진행·억제되지 않은 이력을 하나의 트랜잭션으로 저장한다. 동일 검증값 재시도는 AlreadyCommitted이며 어떠한 진행/기록도 다시 쓰지 않는다. 다른 값은 Failed다. 호출자는 확정할 요청의 시각/위치를 고정해야 한다.
+- 표식은 해당 항목의 삭제 정리 시 이력/진행과 함께 제거한다. 삭제 이후 이전 방문 재전달은 금지하며 T12 조정자가 토큰/격리로 차단한다. 오래된 명령 무제한 재생이나 삭제 취소용 로그가 아니다.
+- ApplyDeletion은 Succeeded 저널의 PathKey/ItemIds를 입력받는다. 캡처 대상만 처리하고 OperationId 중복은 변경 없이 반환한다. 저널 제거 확인 후 ForgetAppliedDeletion을 호출한다. OS 삭제·격리·저널 구현은 T12 범위다.
+- LibraryDatabase.Open()은 LocalAppData의 DB를 초기화하고 실패 시 예외를 전달한다. App은 오류를 알리고 데이터 기능을 열지 않는다. 앱은 단일 인스턴스를 소유하며 내부 lock으로 작업/종료를 직렬화한다. UI 호출자는 Task.Run 등으로 DB 대기를 UI 스레드에서 분리한다.
+- SaveCategory, AddSource/UpdateSource/RemoveSource, GetCategories/GetSources/GetItems, ApplyObservedItems, SetFavorite/SetRandomExcluded, GetHistory/GetProgress/SaveProgress, GetSettings/SaveSettings를 제공한다. 저장 실패는 예외이며 CommitVisit/ApplyDeletion은 Failed 결과다.
+- ApplyObservedItems는 T05가 제공한 성공 관찰 목록과 확정 Missing ID만 원자적으로 반영한다. 관찰 시 신규 항목 상태는 기본값, 기존 ID/선호/이력은 유지한다. 파일 접근/스캔/정규화/reparse 검사 및 같은 경로 다중 분류 Missing 대상 수집은 T05 책임이다. 저장 API는 이미 정규화된 Path/PathKey 쌍을 요구한다.
+- Core.Tests는 순수 모델을 검증한다. Data.Tests는 App/Data 제품 소스와 SQL 리소스를 링크하여 동일 구현을 net10.0에서 실행한다. 제품 Infrastructure 프로젝트나 테스트용 저장 구현은 없다.
+
+패키지: [Microsoft.Data.Sqlite 10.0.8](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.8), .NET Standard 2.0 대상으로 net10.0 및 net10.0-windows 호환. 직접 참조는 정확한 버전으로 고정했다. [공식 트랜잭션 문서](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions)와 함께 2026-09-07 접근 확인.
+
+네이티브 번들은 [SQLitePCLRaw.bundle_e_sqlite3 2.1.13](https://www.nuget.org/packages/SQLitePCLRaw.bundle_e_sqlite3/2.1.13)으로 고정한다. 초기 복원에서 자동 선택된 2.1.11의 NU1903 경고를 확인하여 같은 2.1 계열 패치를 명시했다. 경고 억제는 하지 않는다.

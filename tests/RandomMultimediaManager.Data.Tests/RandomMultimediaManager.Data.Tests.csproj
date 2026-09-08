@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/RandomMultimediaManager.Core/RandomMultimediaManager.Core.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="[10.0.8]" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="[2.1.13]" />
+    <Compile Include="../../src/RandomMultimediaManager.App/Data/*.cs" Link="Data/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../src/RandomMultimediaManager.App/Data/SchemaV1.sql" LogicalName="SchemaV1.sql" /></ItemGroup>
+</Project>

@@ -5,10 +5,10 @@
 - C# / .NET 10 / WPF, Windows x64용 앱 프로젝트 하나.
 - src/RandomMultimediaManager.App: App.xaml로 시작하여 MainWindow를 여는 최소 셸.
 - RandomMultimediaManager.sln: 솔루션 진입점.
-- 외부 패키지, DB, 뷰어, 플레이어, 정책 서비스는 아직 없다.
+- T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. 뷰어/플레이어/랜덤 정책은 아직 없다.
 - 셸의 일반 창 닫기는 WPF 기본 동작이다. 트레이/빠른 종료 제품 정책의 확정이 아니다.
 
-T02는 문서 계약만 확정했다. T03에서 순수 모델/정책 테스트를 위해 net10.0 Core와 Core.Tests를 실제 내용과 함께 추가한다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.
+T02 계약에 사용자 승인된 VisitCommit 검증값을 보완하고 T03에서 net10.0 Core와 Core.Tests/Data.Tests를 추가했다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.
 
 ## 유지할 기술 방향
 
@@ -42,7 +42,7 @@ T02는 문서 계약만 확정했다. T03에서 순수 모델/정책 테스트�
 ## 데이터 설계 경계
 
 Category/Source, MediaItem의 즐겨찾기·제외·존재 상태, ViewHistory, PlaybackProgress, 현재 세션 순서를 분리한다.
-T02 확정 계약은 docs/DATA_AND_RANDOM_POLICY.md에 있다. (CategoryId, PathKey) 유일성, 기본 7×24시간과 정확한 경계 허용, 방문별 Pending, 동일 경로 삭제의 모든 분류 정리가 기준이다. 기록/진행/설정은 %LOCALAPPDATA%/RandomMultimediaManager/library.db에 저장한다. 세션/Seen/Pending은 메모리만이며 복원하지 않는다. 후순위 필드는 만들지 않는다.
+T02 확정 계약은 docs/DATA_AND_RANDOM_POLICY.md에 있다. (CategoryId, PathKey) 유일성, 기본 7×24시간과 정확한 경계 허용, 방문별 Pending, 동일 경로 삭제의 모든 분류 정리가 기준이다. 저장 재시도 검증값은 VisitCommit에 분리하고 기록/진행/설정은 %LOCALAPPDATA%/RandomMultimediaManager/library.db에 저장한다. 세션/Seen/Pending은 메모리만이며 복원하지 않는다. 후순위 필드는 만들지 않는다.
 
 ## 미디어와 비동기
 
