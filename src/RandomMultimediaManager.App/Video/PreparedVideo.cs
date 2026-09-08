@@ -8,6 +8,7 @@ using LibVLCSharp.Shared;
 using LibVLCSharp.Shared.Structures;
 using LibVLCSharp.WPF;
 using RandomMultimediaManager.Core;
+using VlcMedia = LibVLCSharp.Shared.Media;
 using MediaType = RandomMultimediaManager.Core.MediaType;
 
 namespace RandomMultimediaManager.App.Video;
@@ -28,7 +29,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private readonly Dispatcher dispatcher;
     private readonly Panel parent;
     private readonly LibVLC engine;
-    private readonly Media media;
+    private readonly VlcMedia media;
     private readonly MediaPlayer player;
     private readonly VideoView view;
     private readonly ConcurrentQueue<string> logs = new();
@@ -50,7 +51,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     public string[] Diagnostics => logs.ToArray();
 
     private PreparedVideo(Panel parent, VideoOperation operation, string path, bool hardware,
-        CancellationToken cancellation, LibVLC engine, Media media, MediaPlayer player)
+        CancellationToken cancellation, LibVLC engine, VlcMedia media, MediaPlayer player)
     {
         this.parent = parent;
         dispatcher = parent.Dispatcher;
@@ -129,16 +130,16 @@ public sealed class PreparedVideo : IAsyncDisposable
         }
     }
 
-    private static (LibVLC Engine, Media Media, MediaPlayer Player) CreateNative(string path, bool hardware)
+    private static (LibVLC Engine, VlcMedia Media, MediaPlayer Player) CreateNative(string path, bool hardware)
     {
         LibVLCSharp.Shared.Core.Initialize();
         var engine = new LibVLC(true, "--aout=directsound,none", "--directx-volume=0",
             "--no-spdif", "--no-volume-save", "--no-video-title-show", "--no-sub-autodetect-file", "--stats");
-        Media? media = null;
+        VlcMedia? media = null;
         MediaPlayer? player = null;
         try
         {
-            media = new Media(engine, path, FromType.FromPath);
+            media = new VlcMedia(engine, path, FromType.FromPath);
             player = new MediaPlayer(engine) { Media = media, EnableHardwareDecoding = hardware,
                 EnableKeyInput = false, EnableMouseInput = false, Mute = true, Volume = 0 };
             return (engine, media, player);
