@@ -14,10 +14,11 @@
 |---|---|
 | WPF 시작/빈 메인창 코드 | Windows 복원·Release 빌드·실행·닫기 정상 (사용자 확인) |
 | SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (main 통합 완료) |
-| 분류/소스 폴더 UI | T04 구현 및 Windows 자동 빌드·저장 계약 검증 완료, 실제 UI 수동 조작 검증 대기 |
+| 분류/소스 폴더 UI | T04 구현·자동 검증·사용자 Windows UI 수동 검증 완료 (PR #9 main 통합 완료) |
 | 스캔·랜덤 | 미구현 |
 | 만화 ZIP/CBZ 페이지 읽기 기반 | T07 구현·Windows 자동 검증 완료 (PR #6 main 통합 완료) |
-| 만화 표시·이어보기 DB 연결 | 미구현 |
+| 만화 표시·조작 | T08 구현·Windows 자동 검증 및 사용자 Windows 수동 검증 완료 (PR #10 main 통합 완료) |
+| 만화/영상 이어보기 DB 연결 | 미구현, T11 범위 |
 | 외부 SRT/SMI 자막 | T10 완료 (자동 검증 + 사용자 UI 검증, 일부 수동 항목 승인 생략, PR #11) |
 | 영상 엔진·WPF 검증 호스트 | T09 완료 (잔여 수동 검증 사용자 승인 생략, PR #8 main 통합 완료) |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | 미구현 |
@@ -41,11 +42,13 @@
 
 ## 다음 작업과 차단
 
-T00/T01 완료, T02 계약 완료 및 main 통합. T03은 task/t03-sqlite-foundation에서 구현·검증 완료했으며 PR #4 main 통합 완료다.
-T04는 task/t04-category-source-ui / PR #5에서 구현 및 자동 검증을 완료했으나 실제 Windows UI 수동 조작 검증 전이므로 완료 처리하지 않는다. T07은 task/t07-zip-cbz-page-reader / PR #6에서 구현·Windows 자동 검증 완료했으며 main에 통합되었다. T09는 자동·사용자 검증 결과를 확인하고 남은 수동 검증은 사용자 승인으로 생략하여 완료했다. PR #8은 main에 통합되었으며 T09 자체의 T10/T11 선행 차단을 해제했다. 다른 선행 Task와 결정은 그대로 따른다.
-T10은 task/t10-external-subtitles / PR #11에서 D07 기본값 문서화·구현·Windows 자동 검증을 완료했고, 사용자 Windows 확인에서 한글 자막 재생과 자막 변경/끄기 등 실제 UI 동작이 정상임을 확인했다. 사용자가 수동 검증 2(UTF-8 SRT 한글/타임코드), 3(CP949/EUC-KR SMI 한글/<SYNC> 시점), 5(손상/잘못된 인코딩 후 영상 유지)는 테스트 불가로 생략 승인했다. 해당 세 항목은 미검증으로 남기되 T10 완료를 승인한 것으로 기록한다.
-T08은 D06 위임 기본값을 작업 내 문서화하며 T04 잔여 UI 검증과 병렬 진행 가능하다. T05는 T04 완료·통합 후, T06은 T05 후, T11은 T06/T08 완료 후 진행한다. 구체적인 지시문은 TASKS.md를 따른다. T14 생명주기 상세(특히 숨김 상태 종료 저장 실패), T18 배포 검증은 해당 Task에 남긴다. T02 데이터 정책 자체의 추가 사용자 결정은 없다.
-T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 해당 Task의 선행 조건과 최신 기준 문서를 확인한다.
+T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과를 통합한다. T09 완료·승인 생략 범위도 유지한다.
+
+- 다음 착수: T05 라이브러리 최초/수동 스캔 — Sol. T03/T04 선행 충족.
+- 이후: T05 완료·main 통합 → T06 랜덤/Pending 핵심(Astra) → T11 공통 감상 UI/진행 저장(Astra). T08/T09는 이미 완료되어 T11은 T06을 기다린다.
+- 현재 남은 Task의 기존 선행 관계를 지키면 T05와 동시에 바로 시작할 독립 구현 Task는 없다. 병렬화를 위해 T06/T11 또는 T14를 앞당기거나 기능을 새로 쪼개지 않는다.
+- T05 중 공통 데이터 API/스키마/정책 변경이 필요하면 Astra 구조 판단 대상으로 보고한다. 자동 감지는 T18A, 실제 삭제는 T12, 트레이/빠른 숨김·종료는 T14~T16에 남긴다.
+- T09/T10의 사용자 승인 생략은 해당 기록 범위에만 적용하며 이후 검증을 생략하는 일반 승인이 아니다.
 
 ## T03 저장 구현
 
@@ -64,7 +67,9 @@ T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 
 - 분류 생성/이름/활성/Comic·Video 타입 편집, 다중 소스 추가/편집/제거, 소스 활성/하위 폴더 포함 설정을 WPF View/ViewModel로 구현했다. MainWindow에는 해당 뷰 진입만 최소 연결했고 App 시작 코드는 변경하지 않았다.
 - T02 경로 입력 계약을 UI 경계에서 적용하고 T03 AddSource의 중복 반환 의미를 유지했다. 중첩 소스는 허용하며, 소스 제거는 MediaItem/감상 기록을 변경하지 않는다. 실제 스캔·Missing 판단은 T05에 남겼다.
 - PR #5 자동 검증 실행 34174712538: Windows Server 2025 x64 / .NET SDK 10.0.400에서 restore·Release build 경고 0/오류 0, Core 20개, 기존 SQLite 13개와 T04 3개 시나리오 통과. T04 시나리오는 재시작 영속성, 중복 옵션 비덮어쓰기/중첩 허용, 소스 제거 시 기록 보존, 빈/항목 존재 분류 타입 변경, 저장 실패 rollback을 검증한다. 앱 메인 창 실행·정상 종료 2회도 통과했다.
-- GitHub Actions의 창 생성 확인은 실제 사용자가 폼에 입력·클릭해 레이아웃/상호작용을 확인한 Windows UI 수동 검증과 다르다. 그 수동 검증 전까지 T04는 완료가 아니라 검증 대기다.
+- 2026-09-09 잔여 검증 재개 시 최신 main `f17037b`와 T04 잔여 검증 지시, 현재 CategoryEditorView/ViewModel을 다시 확인했다. 작업 환경에는 Windows 데스크톱 직접 조작 수단이 없어 사용자에게 실제 UI 검증 절차를 제공했고 T09 검증 생략 승인은 적용하지 않았다.
+- 사용자가 해당 Windows 절차를 직접 수행하고 “모두 정상”으로 확인했다. 분류 생성·이름/활성/Comic·Video 편집, 여러 소스 추가·수정·제거, 활성/하위 폴더 포함, 중복 소스 기존 옵션 보존, 중첩 소스 허용, 저장 후 앱 재시작 영속성을 실제 입력/클릭으로 확인한 결과다. 항목이 존재하는 분류의 타입 변경 제한은 기존 Windows 자동 T04 시나리오로 검증된 상태를 함께 사용하며, 이번 사용자 검증에서 별도 우회나 생략 승인을 적용하지 않았다.
+- T04 범위의 새 문제는 보고되지 않아 제품 코드는 추가 수정하지 않았다. T04는 완료로 처리하며 PR #9에는 검증 결과와 상태 문서만 포함한다.
 
 ## T07 만화 압축 읽기
 
@@ -76,6 +81,21 @@ T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 
 - Windows Server 2025 x64 / .NET SDK 10.0.400 GitHub Actions에서 restore·Release build 및 T07 실행형 검증을 통과했다. 자연 정렬(1/2/10, 내부 폴더, 숫자 자릿수·선행 0·대소문자), 빈/이미지 없음/손상/암호화, 잘못된 페이지, 취소, 페이지·압축 소유권과 파일 잠금 해제를 확인했다. [T07 성공 실행 34174996255](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34174996255).
 - 같은 코드 헤드에서 기존 T03 회귀 workflow도 restore·Release build, Core/Data 검사, WPF 빈 창 2회 실행·닫기까지 성공했다. [회귀 성공 실행 34174996314](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34174996314).
 - PR #6 main 통합 완료. T08이나 다른 Task는 진행하지 않았다.
+
+## T08 만화 표시·조작 — 완료, PR #10 main 통합 완료
+
+- 기준 main `f17037b77a64c5cf7e42beb295f0246836675c72`에서 `task/t08-comic-viewer`를 분기했다. T07/PR #6의 main 통합을 확인한 뒤 작업했으며 DB·랜덤·기록·영상 구현은 변경하지 않았다.
+- `PreparedComic`은 T07 `ComicArchive.Opened` 뒤 복원 대상 시작 페이지를 SkiaSharp로 실제 디코딩해야 `Ready`를 반환한다. 준비와 활성화를 분리하고 준비 generation/취소 토큰으로 늦은 결과를 폐기한다. 새 준비 실패·취소는 기존 활성 만화를 교체하지 않는다.
+- 표시 모드는 한 페이지/두 페이지/세로 연속 스크롤, 읽기 방향은 좌→우/우→좌다. 원본/창/폭/높이 맞춤과 Custom 확대(10~800%), Ctrl+휠 확대, 일반 휠 이동/스크롤, 왼쪽 드래그 팬을 구현했다. Core `PlaybackProgress.Comic(page, offset)`을 입력/반환하지만 DB 저장과 공통 감상 세션 연결은 T11에 남겼다.
+- SkiaSharp 4.151.2 코어 패키지를 고정했다. `SkiaSharp.Views.WPF`는 .NET 10 복원에서 legacy OpenTK/NU1701 경고가 확인되어 사용하지 않는다. SkiaSharp 오프스크린 BGRA 프레임을 Mitchell cubic sampling으로 렌더링한 뒤 WPF `WriteableBitmap`에 복사하며, 같은 프레임 크기에서는 출력 버퍼를 재사용한다. 창 `SizeChanged`는 40ms 디바운스로 과도한 연속 고품질 재렌더를 줄였다. 기존 SQLite·LibVLC 패키지 버전은 유지했다.
+- 현재 기준 앞 1/뒤 2 페이지를 비동기 프리로드하고 디코딩 이미지 LRU를 256 MiB로 제한한다. ZIP 엔트리의 비 seek 스트림은 한 페이지 단위로 `MemoryStream`에 완전히 복사한 뒤 SkiaSharp로 디코딩하며, 동일 `ZipArchive`의 엔트리 바이트 읽기는 직렬화하여 프리로드 간 동시 읽기로 인한 부분 디코딩을 막는다. 전환/닫기에서 캐시 `SKBitmap`, 페이지 스트림, `ComicArchive`를 해제한다. 캐시 설정 UI, AI 확대, 추가 압축 형식은 추가하지 않았다.
+- MainWindow에는 `만화 뷰어` 진입만 추가했다. 기존 T04 `CategoryEditorView`와 T09 `VideoValidationWindow` 소유/`ShutdownAsync()` 대기 종료 경로를 보존하며, 메인 종료 시 만화 뷰어만 먼저 정상 닫아 리소스를 해제한다.
+- Windows Server 2025 x64 / .NET SDK 10.0.401 GitHub Actions 실행 `34320005257`: restore 성공, Release build 경고 0/오류 0. T08 자동 검사는 시작 페이지 디코딩 후 Ready, 손상 시작 이미지 DecodeFailed와 파일 잠금 해제, 페이지/세로 offset 복원, LTR/RTL spread, 페이지 경계 통과, 이미 취소된 준비의 Cancelled 반환과 기존 활성 보존, 종료 파일 잠금 해제, 17×2048² 이미지 압축에서 256 MiB LRU 오래된 페이지 퇴출을 통과했다. 기존 T07 검사 24개도 같은 실행에서 통과했다.
+- 자동 검사 도중 이미 취소된 준비에서 `TaskCanceledException`이 노출되는 결함을 발견해 `Cancelled` 결과로 정규화했고 재검증에서 통과했다.
+- 사용자 Windows 수동 검증에서 다음 결함을 발견·수정했다. (1) XAML 초기 선택 이벤트가 아직 생성되지 않은 `ZoomText`를 참조해 창이 종료되는 NRE, (2) 비 seek ZIP 엔트리 스트림 직접 Skia 디코딩으로 이미지 상단 일부만 표시되는 문제, (3) 진단 I/O와 연속 전체 프레임 재생성으로 맞춤/리사이즈가 느린 문제, (4) 비동기 프리로드가 같은 ZIP을 병렬 읽어 11페이지 이후 일부 페이지가 상단만 디코딩되는 문제. 모두 T08 내부에서 수정했다.
+- 최종 수동 확인에서 만화 뷰어 정상 진입, 실제 ZIP/CBZ 전체 이미지 표시, 한/두/세로 표시 모드, 맞춤 변경, 창 리사이즈 체감 성능, 후반 페이지 진행을 재확인했고 사용자가 추가 문제 없음으로 확인했다. 별도 DPI 배율의 최종 재확인은 받지 않았으나 초기 사용자 환경 로그는 DPI 1.5 배율에서 렌더 크기 계산과 실제 표시 문제를 추적한 근거를 포함한다. 파일 잠금 해제는 자동 검사 근거를 유지한다.
+- 최신 헤드 `694aaa85d4f1a9503a7982f452c5174504036136`에서 Actions T07 comic archive verification `34346329699`, T09 video native verification `34346329821`, T03 storage verification `34346329702`가 모두 성공했다. DB/영상 코드 자체는 수정하지 않았다.
+- PR #10은 열려 있고 mergeable이며 직접 병합하지 않았다. T08 구현과 요구된 자동·수동 검증은 완료했고 PR main 통합만 남아 있다.
 
 ## T09 영상 기반 — 완료
 
@@ -89,6 +109,11 @@ T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 
 - 승인된 예외를 포함한 계약으로 T09 작업을 수락·완료한다. 모든 환경에서 전체 계약을 실측으로 입증한 것은 아니다. PR #8 main 통합으로 T09 자체의 T10/T11 차단을 해제하고 남은 실측 범위를 인계한다. 다른 Task는 진행하지 않았다.
 - 상세 결과·소유권·T10/T11 인계는 [영상 검증 문서](docs/VIDEO_ENGINE_VALIDATION.md)를 따른다. DB·랜덤·기록·공통 감상 조정자·외부 자막·삭제는 구현하지 않았다.
 
+## T07/T09 통합 검증
+
+- T07 PR #6을 main에 병합한 뒤 T09 브랜치에 통합했다. T07의 App.Media 네임스페이스와 LibVLC Media 타입 충돌은 T09 PreparedVideo의 명시적 VlcMedia 별칭으로 해소했다. 기능·데이터 계약은 변경하지 않았다.
+- 통합 코드 `b18a2830411e919c76baf93692428035461e0523`에서 [Windows 솔루션 빌드·Core/Data/T04·셸 회귀](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34214680381)와 [무음 MP4/MKV 네이티브 검증](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34214680409)이 성공했다. T07 테스트 프로젝트는 솔루션 빌드에 포함되며 T07 실행형 테스트의 최종 별도 성공은 `cfd28df`의 [34175399461](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34175399461)이다.
+- T04 UI 수동 조작은 사용자 확인으로 완료했다. T09의 최종 상태는 위 완료 절을 따른다. 병합 자체를 검증 성공으로 해석하지 않는다.
 ## T10 외부 SRT/SMI — 완료
 
 - 기준 main `f17037b77a64c5cf7e42beb295f0246836675c72`에서 `task/t10-external-subtitles`를 분기했고 PR #11을 준비했다. T09 PR #8 main 통합을 시작 전에 확인했다.
@@ -99,9 +124,4 @@ T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 
 - 같은 코드의 [T03 저장/셸 회귀 34319687867](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34319687867)와 [T09 영상 네이티브 회귀 34319687871](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34319687871)도 성공했다. DB/Core/만화/공통 세션/엔진 패키지는 변경하지 않았다.
 - 사용자 Windows 수동 확인에서 한글 자막 재생, 자막 변경/선택, 자막 끄기 등 확인 가능한 실제 UI 동작이 정상임을 확인했다.
 - 사용자는 수동 검증 2(UTF-8 SRT 한글 표시와 타임코드), 3(CP949/EUC-KR SMI 한글 표시와 `<SYNC>` 시점), 5(손상/잘못된 인코딩 자막 실패 후 현재 영상 유지)는 테스트 불가로 생략하고 T10 완료 처리를 승인했다. 이 세 항목은 수동 통과가 아니라 미검증으로 남긴다. 자동 검증 근거는 위 결과를 유지한다.
-
-## T07/T09 통합 검증
-
-- T07 PR #6을 main에 병합한 뒤 T09 브랜치에 통합했다. T07의 App.Media 네임스페이스와 LibVLC Media 타입 충돌은 T09 PreparedVideo의 명시적 VlcMedia 별칭으로 해소했다. 기능·데이터 계약은 변경하지 않았다.
-- 통합 코드 `b18a2830411e919c76baf93692428035461e0523`에서 [Windows 솔루션 빌드·Core/Data/T04·셸 회귀](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34214680381)와 [무음 MP4/MKV 네이티브 검증](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34214680409)이 성공했다. T07 테스트 프로젝트는 솔루션 빌드에 포함되며 T07 실행형 테스트의 최종 별도 성공은 `cfd28df`의 [34175399461](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34175399461)이다.
-- T04 UI 수동 조작 검증 상태는 유지한다. T09의 최종 상태는 위 완료 절을 따른다. 병합 자체를 검증 성공으로 해석하지 않는다.
+ 
