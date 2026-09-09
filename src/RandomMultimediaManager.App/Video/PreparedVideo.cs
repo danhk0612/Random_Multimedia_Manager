@@ -41,17 +41,26 @@ public sealed class PreparedVideo : IAsyncDisposable
     private bool retiring;
     private int failed;
     private Task? disposal;
+    private long? completedPosition;
+    private int desiredVolume;
+    private bool desiredMuted = true;
+    private string preparationStage = "native initialization";
 
     public VideoOperation Operation { get; }
     public string Path { get; }
     public bool HardwareRequested { get; }
     public string NativeVersion { get; }
+    public bool AudioUnavailable { get; }
+    public bool RestoredCompleted => completedPosition.HasValue;
+    public string? Notice => AudioUnavailable
+        ? "사운드 재생 장치가 없어 영상만 재생합니다. 소리를 사용하려면 장치 연결 후 파일을 다시 여세요."
+        : null;
     public int PreparedVideoBlocks { get; private set; }
     public int PreparedAudioBlocks { get; private set; }
     public string[] Diagnostics => logs.ToArray();
 
     private PreparedVideo(Panel parent, VideoOperation operation, string path, bool hardware,
-        CancellationToken cancellation, LibVLC engine, VlcMedia media, MediaPlayer player)
+        CancellationToken cancellation, LibVLC engine, VlcMedia media, MediaPlayer player, bool audioUnavailable)
     {
         this.parent = parent;
         dispatcher = parent.Dispatcher;
@@ -63,6 +72,7 @@ public sealed class PreparedVideo : IAsyncDisposable
         this.media = media;
         this.player = player;
         NativeVersion = engine.Version;
+        AudioUnavailable = audioUnavailable;
         // Never call native APIs, dispatch synchronously, or mutate another slot from a VLC callback.
         errorHandler = (_, _) => Interlocked.Exchange(ref failed, 1);
         logHandler = (sender, e) =>
@@ -96,21 +106,30 @@ public sealed class PreparedVideo : IAsyncDisposable
             // The selected output starts muted before its first buffer; do not rely on pre-Play Mute.
             var resources = await Task.Run(() => CreateNative(path, hardware));
             try { owned = new PreparedVideo(parent, operation, path, hardware, cancellation,
-                resources.Engine, resources.Media, resources.Player); }
+                resources.Engine, resources.Media, resources.Player, resources.AudioUnavailable); }
             catch { await Task.Run(() => { resources.Player.Dispose(); resources.Media.Dispose(); resources.Engine.Dispose(); }); throw; }
             cancellation.ThrowIfCancellationRequested();
             parent.UpdateLayout();
             await parent.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+            owned.preparationStage = "hidden HWND";
             owned.view.MediaPlayer = owned.player;
             if (owned.player.Hwnd == IntPtr.Zero)
                 throw new InvalidOperationException("숨김 WPF 영상 HWND 생성 실패: T02 준비 계약 검증 필요.");
             if (!owned.player.Play()) throw new InvalidOperationException("엔진이 재생 시작을 거부했습니다.");
+            owned.preparationStage = "video/audio decode and output";
             await owned.WaitForDecodedAsync(cancellation);
             owned.player.Mute = true;
-            await owned.RestorePositionAsync(progress?.VideoPositionMs ?? 0, cancellation);
+            owned.preparationStage = "restore position";
+            long requested = progress?.VideoPositionMs ?? 0;
+            // Approved terminal restoration: keep a decoded start paused for explicit replay,
+            // but expose only the saved end position and no first frame on activation.
+            if (owned.player.Length > 0 && requested >= owned.player.Length)
+                owned.completedPosition = owned.player.Length;
+            await owned.RestorePositionAsync(owned.completedPosition.HasValue ? 0 : requested, cancellation);
+            owned.preparationStage = "pause confirmation";
             owned.player.SetPause(true);
             await owned.WaitAsync(() => owned.player.State == VLCState.Paused, cancellation);
-            if (owned.media.Tracks.Any(t => t.TrackType == TrackType.Audio) &&
+            if (!owned.AudioUnavailable && owned.media.Tracks.Any(t => t.TrackType == TrackType.Audio) &&
                 (!owned.player.Mute || owned.player.Volume != 0))
                 throw new InvalidOperationException("준비 출력의 음소거/볼륨 0 확인 실패.");
             cancellation.ThrowIfCancellationRequested();
@@ -122,18 +141,21 @@ public sealed class PreparedVideo : IAsyncDisposable
         }
         catch (Exception ex)
         {
+            // Capture before Stop/Dispose replace the useful messages with teardown logs.
+            string evidence = owned is null ? "" : "\n" + owned.PreparationEvidence() +
+                "\n" + string.Join("\n", owned.Diagnostics.TakeLast(24));
             if (owned is not null) await owned.DisposeAsync();
             return cancellation.IsCancellationRequested
                 ? new(VideoPreparationStatus.Cancelled, null, null)
-                : new(VideoPreparationStatus.Failed, null, ex.Message +
-                    (owned is null ? "" : "\n" + string.Join("\n", owned.Diagnostics.TakeLast(12))));
+                : new(VideoPreparationStatus.Failed, null, ex.Message + evidence);
         }
     }
 
-    private static (LibVLC Engine, VlcMedia Media, MediaPlayer Player) CreateNative(string path, bool hardware)
+    private static (LibVLC Engine, VlcMedia Media, MediaPlayer Player, bool AudioUnavailable) CreateNative(string path, bool hardware)
     {
         LibVLCSharp.Shared.Core.Initialize();
-        var engine = new LibVLC(true, "--aout=directsound,none", "--directx-volume=0",
+        bool audioUnavailable = !WindowsAudioEndpoint.IsAvailable();
+        var engine = new LibVLC(true, audioUnavailable ? "--no-audio" : "--audio", "--aout=directsound,none", "--directx-volume=0",
             "--no-spdif", "--no-volume-save", "--no-video-title-show", "--no-sub-autodetect-file", "--stats");
         VlcMedia? media = null;
         MediaPlayer? player = null;
@@ -142,7 +164,7 @@ public sealed class PreparedVideo : IAsyncDisposable
             media = new VlcMedia(engine, path, FromType.FromPath);
             player = new MediaPlayer(engine) { Media = media, EnableHardwareDecoding = hardware,
                 EnableKeyInput = false, EnableMouseInput = false, Mute = true, Volume = 0 };
-            return (engine, media, player);
+            return (engine, media, player, audioUnavailable);
         }
         catch { player?.Dispose(); media?.Dispose(); engine.Dispose(); throw; }
     }
@@ -152,17 +174,57 @@ public sealed class PreparedVideo : IAsyncDisposable
         var stats = media.Statistics;
         bool hasAudio = media.Tracks.Any(t => t.TrackType == TrackType.Audio);
         return player.State == VLCState.Playing && player.CanPause && player.VoutCount > 0 &&
-            stats.DecodedVideo > 0 && (!hasAudio || (stats.DecodedAudio > 0 && stats.PlayedAudioBuffers > 0));
+            stats.DecodedVideo > 0 && (AudioUnavailable || !hasAudio || (stats.DecodedAudio > 0 && stats.PlayedAudioBuffers > 0));
     }, cancellation);
+
+    private string PreparationEvidence()
+    {
+        var stats = media.Statistics;
+        bool hasAudio = media.Tracks.Any(t => t.TrackType == TrackType.Audio);
+        string audioHint = hasAudio && stats.PlayedAudioBuffers == 0
+            ? " 오디오 출력 버퍼가 준비되지 않았습니다. Windows 재생 장치 연결/활성 상태를 확인하세요."
+            : "";
+        return $"stage={preparationStage}; state={player.State}; time={player.Time}; length={player.Length}; " +
+            $"seekable={player.IsSeekable}; canPause={player.CanPause}; vout={player.VoutCount}; " +
+            $"decodedVideo={stats.DecodedVideo}; hasAudio={hasAudio}; decodedAudio={stats.DecodedAudio}; " +
+            $"playedAudio={stats.PlayedAudioBuffers}; mute={player.Mute}; volume={player.Volume}." + audioHint;
+    }
 
     private async Task RestorePositionAsync(long milliseconds, CancellationToken cancellation)
     {
-        // Restore while still hidden and silent. An unsupported seek falls back to the start.
-        if (!player.IsSeekable) return;
+        // Restore while hidden/silent. Never turn an exact-end position into a near-end threshold.
         long target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : milliseconds;
-        var before = media.Statistics.DecodedVideo;
-        player.Time = target;
-        await WaitAsync(() => media.Statistics.DecodedVideo > before, cancellation);
+        try
+        {
+            await WaitAsync(() => player.IsSeekable, cancellation);
+            target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : milliseconds;
+            if (player.Length > 0 && milliseconds >= player.Length)
+            {
+                completedPosition = player.Length;
+                target = 0;
+            }
+            var before = media.Statistics.DecodedVideo;
+            player.Time = target;
+            await WaitAsync(() => media.Statistics.DecodedVideo > before &&
+                Math.Abs((double)player.Time - target) <= 1000, cancellation);
+        }
+        catch (Exception ex) when (ex is TimeoutException ||
+            (ex is InvalidOperationException && player.State == VLCState.Ended))
+        {
+            cancellation.ThrowIfCancellationRequested();
+            CheckFailure();
+            logs.Enqueue($"Restore fallback to start: {ex.Message}");
+            preparationStage = "restore fallback: restart from beginning";
+            await Task.Run(player.Stop);
+            cancellation.ThrowIfCancellationRequested();
+            player.Mute = true;
+            player.Volume = 0;
+            int beforeRestart = media.Statistics.DecodedVideo;
+            if (!player.Play()) throw new InvalidOperationException("처음부터 준비 재시작 실패.");
+            await WaitAsync(() => media.Statistics.DecodedVideo != beforeRestart, cancellation);
+            await WaitForDecodedAsync(cancellation);
+            // The ordinary preparation still requires decode/output and Paused before Ready.
+        }
     }
 
     private async Task WaitAsync(Func<bool> predicate, CancellationToken cancellation)
@@ -203,10 +265,14 @@ public sealed class PreparedVideo : IAsyncDisposable
         visit = token;
         ready = false;
         view.Content = overlay;
-        view.Visibility = Visibility.Visible;
-        player.Volume = Math.Clamp(volume, 0, 100);
-        player.Mute = muted;
-        player.SetPause(false);
+        desiredVolume = Math.Clamp(volume, 0, 100);
+        desiredMuted = muted;
+        if (!RestoredCompleted)
+        {
+            view.Visibility = Visibility.Visible;
+            ApplyAudio();
+            player.SetPause(false);
+        }
     }
 
     private void RequireVisit(VideoVisit token)
@@ -218,33 +284,64 @@ public sealed class PreparedVideo : IAsyncDisposable
     public VideoSnapshot Snapshot(VideoVisit token)
     {
         RequireVisit(token);
-        return new(token, PlaybackProgress.Video(Math.Max(0, player.Time)), Math.Max(0, player.Length),
-            player.State, player.Volume, player.Mute, player.Rate, player.IsSeekable,
+        return new(token, PlaybackProgress.Video(completedPosition ?? Math.Max(0, player.Time)), Math.Max(0, player.Length),
+            RestoredCompleted ? VLCState.Ended : player.State, RestoredCompleted || AudioUnavailable ? desiredVolume : player.Volume,
+            AudioUnavailable || RestoredCompleted || player.Mute, player.Rate, player.IsSeekable,
             Volatile.Read(ref failed) == 0 ? null : "현재 영상 재생 오류");
     }
 
     public PlaybackProgress CaptureProgress(VideoVisit token) => Snapshot(token).Progress;
-    public void SetPaused(VideoVisit token, bool paused) { RequireVisit(token); player.SetPause(paused); }
-    public void Play(VideoVisit token) { RequireVisit(token); if (!player.Play()) throw new InvalidOperationException("재생 실패"); }
+    public void SetPaused(VideoVisit token, bool paused)
+    {
+        RequireVisit(token);
+        if (RestoredCompleted) { if (!paused) Play(token); return; }
+        player.SetPause(paused);
+    }
+    public void Play(VideoVisit token)
+    {
+        RequireVisit(token);
+        if (RestoredCompleted)
+        {
+            completedPosition = null;
+            view.Visibility = Visibility.Visible;
+            ApplyAudio();
+            player.SetPause(false);
+        }
+        else if (!player.Play()) throw new InvalidOperationException("재생 실패");
+    }
+    private void ApplyAudio()
+    {
+        player.Volume = AudioUnavailable ? 0 : desiredVolume;
+        player.Mute = AudioUnavailable || desiredMuted;
+    }
     public bool Seek(VideoVisit token, long milliseconds)
     {
         RequireVisit(token);
         if (!player.IsSeekable) return false;
-        player.Time = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : Math.Max(0, milliseconds);
+        long target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : Math.Max(0, milliseconds);
+        if (RestoredCompleted && target == completedPosition) return true;
+        player.Time = target;
+        if (RestoredCompleted)
+        {
+            completedPosition = null;
+            view.Visibility = Visibility.Visible;
+            ApplyAudio();
+        }
         return true;
     }
-    public void SetVolume(VideoVisit token, int volume) { RequireVisit(token); player.Volume = Math.Clamp(volume, 0, 100); }
-    public void SetMuted(VideoVisit token, bool muted) { RequireVisit(token); player.Mute = muted; }
+    public void SetVolume(VideoVisit token, int volume) { RequireVisit(token); desiredVolume = Math.Clamp(volume, 0, 100); if (!RestoredCompleted) ApplyAudio(); }
+    public void SetMuted(VideoVisit token, bool muted) { RequireVisit(token); desiredMuted = muted; if (!RestoredCompleted) ApplyAudio(); }
     public bool SetRate(VideoVisit token, float rate) { RequireVisit(token); return player.SetRate(rate) == 0; }
     public TrackDescription[] AudioTracks(VideoVisit token) { RequireVisit(token); return player.AudioTrackDescription; }
     public TrackDescription[] SubtitleTracks(VideoVisit token) { RequireVisit(token); return player.SpuDescription; }
-    public bool SetAudioTrack(VideoVisit token, int id) { RequireVisit(token); return player.SetAudioTrack(id); }
+    public bool SetAudioTrack(VideoVisit token, int id) { RequireVisit(token); return !AudioUnavailable && player.SetAudioTrack(id); }
     public bool SetSubtitleTrack(VideoVisit token, int id) { RequireVisit(token); return player.SetSpu(id); }
 
     public async Task StopAsync(VideoVisit token)
     {
         RequireVisit(token);
         // Caller must serialize commands until completion. Polling/native access is suspended.
+        if (RestoredCompleted) return;
         retiring = true;
         player.Mute = true;
         try { await Task.Run(player.Stop); }

@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using LibVLCSharp.Shared;
 using LibVLCSharp.Shared.Structures;
 using Microsoft.Win32;
+using RandomMultimediaManager.Core;
 
 namespace RandomMultimediaManager.App.Video;
 
@@ -60,7 +61,7 @@ public partial class VideoValidationWindow : Window
     private async Task PrepareSelectedAsync(VideoOperation request, string path, bool hardware, CancellationToken token)
     {
         Status.Text = "대상 준비 중 — 기존 영상은 유지됩니다.";
-        var result = await PreparedVideo.PrepareAsync(VideoSurface, request, path, null, hardware, token);
+        var result = await PreparedVideo.PrepareAsync(VideoSurface, request, path, RestoreEnd.IsChecked == true ? PlaybackProgress.Video(long.MaxValue) : null, hardware, token);
         // A cancelled generation never gets to change status, display, sound, or the other slot.
         if (closing || operation != request || token.IsCancellationRequested)
         {
@@ -74,6 +75,7 @@ public partial class VideoValidationWindow : Window
             VideoPreparationStatus.Cancelled => "준비 취소",
             _ => $"준비 실패 (기존 영상 유지): {result.Error}"
         };
+        if (staged?.Notice is not null) Status.Text += "\n" + staged.Notice;
         if (staged is not null)
             Diagnostics.Text = $"libVLC {staged.NativeVersion}; HW 요청={staged.HardwareRequested}; " +
                 $"Ready decoded video/audio={staged.PreparedVideoBlocks}/{staged.PreparedAudioBlocks}\n" + string.Join('\n', staged.Diagnostics);
@@ -127,6 +129,8 @@ public partial class VideoValidationWindow : Window
         cancellation = null;
         if (old is not null) await old.DisposeAsync();
         Status.Text = $"활성: {System.IO.Path.GetFileName(next.Path)} / Visit {nextVisit.VisitId}";
+        AudioNotice.Text = next.Notice ?? "";
+        if (next.RestoredCompleted) Status.Text += " — 재생 완료 위치 복원. 재생을 누르면 처음부터 시작합니다.";
         RefreshTracks(this, new RoutedEventArgs());
     }
 
@@ -260,6 +264,7 @@ public partial class VideoValidationWindow : Window
         var owned = current;
         current = null;
         visit = null;
+        AudioNotice.Text = "";
         if (owned is not null) await owned.DisposeAsync();
     }
     public Task ShutdownAsync() => shutdown ??= ShutdownCoreAsync();
