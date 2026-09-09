@@ -215,6 +215,12 @@ public partial class ComicViewerWindow : Window
         if (Canvas is null || ViewerHost is null || ViewerHost.ActualWidth <= 0 || ViewerHost.ActualHeight <= 0)
             return;
 
+        if (!_viewModel.IsReady)
+        {
+            Canvas.Source = null;
+            return;
+        }
+
         DpiScale dpi = VisualTreeHelper.GetDpi(this);
         int width = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualWidth * dpi.DpiScaleX));
         int height = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualHeight * dpi.DpiScaleY));
@@ -222,15 +228,12 @@ public partial class ComicViewerWindow : Window
         using var canvas = new SKCanvas(frame);
         canvas.Clear(new SKColor(22, 22, 22));
 
-        if (_viewModel.IsReady)
-        {
-            if (_viewModel.DisplayMode == ComicDisplayMode.SinglePage)
-                DrawSingle(canvas, width, height);
-            else if (_viewModel.DisplayMode == ComicDisplayMode.TwoPage)
-                DrawSpread(canvas, width, height);
-            else
-                DrawVertical(canvas, width, height);
-        }
+        if (_viewModel.DisplayMode == ComicDisplayMode.SinglePage)
+            DrawSingle(canvas, width, height);
+        else if (_viewModel.DisplayMode == ComicDisplayMode.TwoPage)
+            DrawSpread(canvas, width, height);
+        else
+            DrawVertical(canvas, width, height);
 
         int bufferSize = checked(frame.RowBytes * frame.Height);
         BitmapSource source = BitmapSource.Create(
