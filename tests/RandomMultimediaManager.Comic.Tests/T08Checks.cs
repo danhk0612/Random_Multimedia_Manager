@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using RandomMultimediaManager.App.Media.Comic;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
@@ -7,6 +8,21 @@ namespace RandomMultimediaManager.Comic.Tests;
 
 internal static class T08Checks
 {
+    [ModuleInitializer]
+    internal static void Initialize()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "RandomMultimediaManager-T08-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            Run(root);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     public static void Run(string root)
     {
         PrepareReadyRequiresDecodedStartPage(root);
