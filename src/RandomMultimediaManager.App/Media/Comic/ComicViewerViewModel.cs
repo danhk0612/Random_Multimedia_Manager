@@ -228,7 +228,16 @@ public sealed class PreparedComic : IDisposable
         PlaybackProgress? progress,
         CancellationToken cancellationToken)
     {
-        ComicArchiveOpenResult open = await Task.Run(() => ComicArchive.Open(path, cancellationToken), cancellationToken);
+        ComicArchiveOpenResult open;
+        try
+        {
+            open = await Task.Run(() => ComicArchive.Open(path, cancellationToken), cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return new(ComicPrepareStatus.Cancelled);
+        }
+
         if (open.Status == ComicArchiveOpenStatus.Cancelled)
             return new(ComicPrepareStatus.Cancelled);
         if (open.Status != ComicArchiveOpenStatus.Opened || open.Archive is null)
@@ -345,6 +354,7 @@ public sealed class PreparedComic : IDisposable
         try { await EnsurePageAsync(index, _lifetime.Token); }
         catch (OperationCanceledException) { }
         catch (ObjectDisposedException) { }
+        catch (IOException) { }
     }
 
     private SKBitmap? Decode(int index, CancellationToken cancellationToken)
@@ -353,9 +363,21 @@ public sealed class PreparedComic : IDisposable
         ComicPageOpenResult page = _archive.OpenPage(index, cancellationToken);
         if (page.Status != ComicPageOpenStatus.Opened || page.Stream is null)
             return null;
+
         using Stream stream = page.Stream;
-        cancellationToken.ThrowIfCancellationRequested();
-        return SKBitmap.Decode(stream);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return SKBitmap.Decode(stream);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or ObjectDisposedException)
+        {
+            return null;
+        }
     }
 
     private void Touch(int index, CacheEntry entry)
