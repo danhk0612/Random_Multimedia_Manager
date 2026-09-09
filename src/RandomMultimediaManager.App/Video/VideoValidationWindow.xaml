@@ -12,8 +12,10 @@
                 <Button Content="미디어 모두 해제" Click="ReleaseMedia" Margin="6,0" />
                 <Button Content="전체화면" Click="ToggleFullscreen" />
                 <CheckBox x:Name="SoftwareOnly" Content="다음 준비: 소프트웨어 디코딩 검증" VerticalAlignment="Center" Margin="10,0" />
+                <CheckBox x:Name="RestoreEnd" Content="다음 준비: 끝 위치 복원 검증" VerticalAlignment="Center" Margin="10,0" />
             </WrapPanel>
             <TextBlock x:Name="Status" Text="T09 검증 창 — 파일 준비 후 별도로 활성화하세요. DB 기록 없음." Margin="0,7" TextWrapping="Wrap" />
+            <TextBlock x:Name="AudioNotice" TextWrapping="Wrap" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom">
             <WrapPanel x:Name="Controls" IsEnabled="False" Margin="0,7">

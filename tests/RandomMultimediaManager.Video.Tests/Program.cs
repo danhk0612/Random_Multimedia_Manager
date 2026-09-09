@@ -32,7 +32,8 @@ internal static class Program
     private static async Task RunAsync(Grid surface, string[] args)
     {
         string[] sources = args.Length == 0
-            ? [Path.Combine(AppContext.BaseDirectory, "Fixtures", "silent.mp4"), Path.Combine(AppContext.BaseDirectory, "Fixtures", "silent.mkv")]
+            ? [Path.Combine(AppContext.BaseDirectory, "Fixtures", "silent.mp4"), Path.Combine(AppContext.BaseDirectory, "Fixtures", "silent.mkv"),
+                Path.Combine(AppContext.BaseDirectory, "Fixtures", "audio.mp4")]
             : args;
         string temporary = Path.Combine(Path.GetTempPath(), "rmm-t09-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
@@ -55,6 +56,7 @@ internal static class Program
                     var result = await PreparedVideo.PrepareAsync(surface, token, copy, PlaybackProgress.Video(iteration * 1000), false, CancellationToken.None);
                     Check(result.Status == VideoPreparationStatus.Ready && result.Video is not null, $"Ready {Path.GetExtension(copy)}: {result.Error}");
                     current = result.Video!;
+                    Console.WriteLine($"AudioUnavailable={current.AudioUnavailable}; notice={current.Notice}");
                     Console.WriteLine($"Native {current.NativeVersion}; decoded={current.PreparedVideoBlocks}/{current.PreparedAudioBlocks}");
                     Check(!current.CanActivate(Operation()), "wrong operation cannot activate");
                     var visit = new VideoVisit(token, Guid.NewGuid());
@@ -101,10 +103,17 @@ internal static class Program
                     await candidate.DisposeAsync();
                     candidate = null;
                     Check(current.SetRate(visit, 1.5f), "rate accepted (actual speed needs observation)");
-                    if (current.AudioTracks(visit).Any(t => t.Id >= 0))
+                    if (!current.AudioUnavailable && current.AudioTracks(visit).Any(t => t.Id >= 0))
                     {
                         current.SetVolume(visit, 35);
                         Check(current.Snapshot(visit).Volume == 35, "volume roundtrip");
+                    }
+                    if (current.AudioUnavailable)
+                    {
+                        current.SetMuted(visit, false);
+                        current.SetVolume(visit, 80);
+                        Check(current.Snapshot(visit).Muted && !current.SetAudioTrack(visit, 0) && current.Notice is not null,
+                            "no endpoint stays video-only until reopen");
                     }
                     Console.WriteLine($"Tracks audio={current.AudioTracks(visit).Length}, subtitle={current.SubtitleTracks(visit).Length}");
                     await current.StopAsync(visit);
@@ -120,9 +129,30 @@ internal static class Program
                         var boundaryToken = Operation();
                         var boundary = await PreparedVideo.PrepareAsync(surface, boundaryToken, copy,
                             PlaybackProgress.Video(duration), false, CancellationToken.None);
-                        // Diagnostic only: this is an explicitly unresolved T09 gate, not a passing assertion.
-                        Console.WriteLine($"END-BOUNDARY duration={duration}; status={boundary.Status}; {boundary.Error}");
-                        if (boundary.Video is not null) await boundary.Video.DisposeAsync();
+                        Check(boundary.Status == VideoPreparationStatus.Ready && boundary.Video is not null,
+                            $"end boundary Ready: {boundary.Error}");
+                        candidate = boundary.Video!;
+                        var endVisit = new VideoVisit(boundaryToken, Guid.NewGuid());
+                        candidate.Activate(endVisit, 50, true);
+                        await Task.Delay(250);
+                        Check(candidate.Snapshot(endVisit).State == VLCState.Ended &&
+                            candidate.CaptureProgress(endVisit).VideoPositionMs == duration,
+                            "end position retained without auto replay");
+                        candidate.SetPaused(endVisit, true);
+                        await candidate.StopAsync(endVisit);
+                        Check(candidate.CaptureProgress(endVisit).VideoPositionMs == duration,
+                            "pause and stop retain restored end");
+                        bool rejected = false;
+                        try { candidate.Play(endVisit with { VisitId = Guid.NewGuid() }); }
+                        catch (InvalidOperationException) { rejected = true; }
+                        Check(rejected && candidate.RestoredCompleted, "stale visit cannot restart completed video");
+                        candidate.Play(endVisit);
+                        await Task.Delay(250);
+                        Check(candidate.Snapshot(endVisit).State == VLCState.Playing &&
+                            candidate.CaptureProgress(endVisit).VideoPositionMs < 1500,
+                            "explicit replay starts from beginning with same visit");
+                        await candidate.DisposeAsync();
+                        candidate = null;
                     }
                     await current.DisposeAsync();
                     await current.DisposeAsync();
