@@ -29,6 +29,7 @@ internal static class T08Checks
         CorruptStartPageFailsAndUnlocks(root);
         ProgressAndReadingDirection(root);
         PreparationCancellationDoesNotReplaceActive(root);
+        BoundedCacheEvictsOldPages(root);
         Console.WriteLine("PASS T08 prepared comic checks");
     }
 
@@ -117,6 +118,22 @@ internal static class T08Checks
         True(CanOpenExclusive(cancelledPath), "T08 cancelled preparation leaves no file lock");
     }
 
+    private static void BoundedCacheEvictsOldPages(string root)
+    {
+        string path = Path.Combine(root, "t08-cache-limit.cbz");
+        CreateLargeImageArchive(path, 17, 2048, 2048);
+        ComicPrepareResult result = PreparedComic.PrepareAsync(path, null, CancellationToken.None).GetAwaiter().GetResult();
+        Equal(ComicPrepareStatus.Ready, result.Status, "T08 large archive prepares without full extraction");
+        using PreparedComic prepared = result.Comic!;
+
+        for (int i = 1; i < 17; i++)
+            True(prepared.EnsurePageAsync(i).GetAwaiter().GetResult(), $"T08 large archive page {i + 1} decodes");
+
+        True(prepared.GetCachedPage(0) is null, "T08 256 MiB LRU evicts oldest decoded page");
+        prepared.Dispose();
+        True(CanOpenExclusive(path), "T08 large archive disposal releases file");
+    }
+
     private static void CreateImageArchive(string path, int count)
     {
         using ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create);
@@ -126,6 +143,20 @@ internal static class T08Checks
             bitmap.Erase(new SKColor((byte)(20 + i), (byte)(40 + i), (byte)(60 + i)));
             using SKData data = bitmap.Encode(SKEncodedImageFormat.Png, 90);
             ZipArchiveEntry entry = archive.CreateEntry($"{i + 1}.png", CompressionLevel.Fastest);
+            using Stream stream = entry.Open();
+            data.SaveTo(stream);
+        }
+    }
+
+    private static void CreateLargeImageArchive(string path, int count, int width, int height)
+    {
+        using ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create);
+        for (int i = 0; i < count; i++)
+        {
+            using var bitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+            bitmap.Erase(new SKColor((byte)(30 + i), (byte)(60 + i), (byte)(90 + i)));
+            using SKData data = bitmap.Encode(SKEncodedImageFormat.Png, 60);
+            ZipArchiveEntry entry = archive.CreateEntry($"{i + 1:00}.png", CompressionLevel.Fastest);
             using Stream stream = entry.Open();
             data.SaveTo(stream);
         }
