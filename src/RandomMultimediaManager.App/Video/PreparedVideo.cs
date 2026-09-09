@@ -41,6 +41,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private bool retiring;
     private int failed;
     private Task? disposal;
+    private string preparationStage = "native initialization";
 
     public VideoOperation Operation { get; }
     public string Path { get; }
@@ -101,13 +102,17 @@ public sealed class PreparedVideo : IAsyncDisposable
             cancellation.ThrowIfCancellationRequested();
             parent.UpdateLayout();
             await parent.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+            owned.preparationStage = "hidden HWND";
             owned.view.MediaPlayer = owned.player;
             if (owned.player.Hwnd == IntPtr.Zero)
                 throw new InvalidOperationException("숨김 WPF 영상 HWND 생성 실패: T02 준비 계약 검증 필요.");
             if (!owned.player.Play()) throw new InvalidOperationException("엔진이 재생 시작을 거부했습니다.");
+            owned.preparationStage = "video/audio decode and output";
             await owned.WaitForDecodedAsync(cancellation);
             owned.player.Mute = true;
+            owned.preparationStage = "restore position";
             await owned.RestorePositionAsync(progress?.VideoPositionMs ?? 0, cancellation);
+            owned.preparationStage = "pause confirmation";
             owned.player.SetPause(true);
             await owned.WaitAsync(() => owned.player.State == VLCState.Paused, cancellation);
             if (owned.media.Tracks.Any(t => t.TrackType == TrackType.Audio) &&
@@ -122,11 +127,13 @@ public sealed class PreparedVideo : IAsyncDisposable
         }
         catch (Exception ex)
         {
+            // Capture before Stop/Dispose replace the useful messages with teardown logs.
+            string evidence = owned is null ? "" : "\n" + owned.PreparationEvidence() +
+                "\n" + string.Join("\n", owned.Diagnostics.TakeLast(24));
             if (owned is not null) await owned.DisposeAsync();
             return cancellation.IsCancellationRequested
                 ? new(VideoPreparationStatus.Cancelled, null, null)
-                : new(VideoPreparationStatus.Failed, null, ex.Message +
-                    (owned is null ? "" : "\n" + string.Join("\n", owned.Diagnostics.TakeLast(12))));
+                : new(VideoPreparationStatus.Failed, null, ex.Message + evidence);
         }
     }
 
@@ -155,14 +162,52 @@ public sealed class PreparedVideo : IAsyncDisposable
             stats.DecodedVideo > 0 && (!hasAudio || (stats.DecodedAudio > 0 && stats.PlayedAudioBuffers > 0));
     }, cancellation);
 
+    private string PreparationEvidence()
+    {
+        var stats = media.Statistics;
+        bool hasAudio = media.Tracks.Any(t => t.TrackType == TrackType.Audio);
+        string audioHint = hasAudio && stats.PlayedAudioBuffers == 0
+            ? " 오디오 출력 버퍼가 준비되지 않았습니다. Windows 재생 장치 연결/활성 상태를 확인하세요."
+            : "";
+        return $"stage={preparationStage}; state={player.State}; time={player.Time}; length={player.Length}; " +
+            $"seekable={player.IsSeekable}; canPause={player.CanPause}; vout={player.VoutCount}; " +
+            $"decodedVideo={stats.DecodedVideo}; hasAudio={hasAudio}; decodedAudio={stats.DecodedAudio}; " +
+            $"playedAudio={stats.PlayedAudioBuffers}; mute={player.Mute}; volume={player.Volume}." + audioHint;
+    }
+
     private async Task RestorePositionAsync(long milliseconds, CancellationToken cancellation)
     {
-        // Restore while still hidden and silent. An unsupported seek falls back to the start.
-        if (!player.IsSeekable) return;
+        // Restore while hidden/silent. Never turn an exact-end position into a near-end threshold.
         long target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : milliseconds;
-        var before = media.Statistics.DecodedVideo;
-        player.Time = target;
-        await WaitAsync(() => media.Statistics.DecodedVideo > before, cancellation);
+        try
+        {
+            await WaitAsync(() => player.IsSeekable, cancellation);
+            target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : milliseconds;
+            var before = media.Statistics.DecodedVideo;
+            player.Time = target;
+            await WaitAsync(() => media.Statistics.DecodedVideo > before &&
+                Math.Abs(player.Time - target) <= 1000, cancellation);
+        }
+        catch (Exception ex) when (ex is TimeoutException ||
+            (ex is InvalidOperationException && player.State == VLCState.Ended))
+        {
+            cancellation.ThrowIfCancellationRequested();
+            CheckFailure();
+            // Exact-end restoration remains a documented contract gate, not a silent reset.
+            if (player.Length > 0 && target == player.Length)
+                throw new InvalidOperationException("길이 끝 위치의 Ready 복원을 확인하지 못했습니다. T11 통합 차단.", ex);
+            logs.Enqueue($"Restore fallback to start: {ex.Message}");
+            preparationStage = "restore fallback: restart from beginning";
+            await Task.Run(player.Stop);
+            cancellation.ThrowIfCancellationRequested();
+            player.Mute = true;
+            player.Volume = 0;
+            int beforeRestart = media.Statistics.DecodedVideo;
+            if (!player.Play()) throw new InvalidOperationException("처음부터 준비 재시작 실패.");
+            await WaitAsync(() => media.Statistics.DecodedVideo != beforeRestart, cancellation);
+            await WaitForDecodedAsync(cancellation);
+            // The ordinary preparation still requires decode/output and Paused before Ready.
+        }
     }
 
     private async Task WaitAsync(Func<bool> predicate, CancellationToken cancellation)

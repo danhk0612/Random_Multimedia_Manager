@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using LibVLCSharp.Shared;
 using RandomMultimediaManager.App.Video;
+using RandomMultimediaManager.Core;
 
 internal static class Program
 {
@@ -44,17 +45,22 @@ internal static class Program
             foreach (string source in sources)
             {
                 string copy = Path.Combine(temporary, Guid.NewGuid() + Path.GetExtension(source));
-                File.Copy(source, copy);
+                Console.WriteLine($"{DateTimeOffset.Now:O} Copying {Path.GetExtension(source)} test copy (playback stays muted).");
+                await Task.Run(() => File.Copy(source, copy));
+                Console.WriteLine($"{DateTimeOffset.Now:O} Copy complete.");
                 for (int iteration = 0; iteration < 3; iteration++)
                 {
+                    Console.WriteLine($"{DateTimeOffset.Now:O} {Path.GetExtension(source)} iteration {iteration + 1}/3");
                     var token = Operation();
-                    var result = await PreparedVideo.PrepareAsync(surface, token, copy, null, false, CancellationToken.None);
+                    var result = await PreparedVideo.PrepareAsync(surface, token, copy, PlaybackProgress.Video(iteration * 1000), false, CancellationToken.None);
                     Check(result.Status == VideoPreparationStatus.Ready && result.Video is not null, $"Ready {Path.GetExtension(copy)}: {result.Error}");
                     current = result.Video!;
                     Console.WriteLine($"Native {current.NativeVersion}; decoded={current.PreparedVideoBlocks}/{current.PreparedAudioBlocks}");
                     Check(!current.CanActivate(Operation()), "wrong operation cannot activate");
                     var visit = new VideoVisit(token, Guid.NewGuid());
                     current.Activate(visit, 50, true);
+                    Check(Math.Abs(current.Snapshot(visit).Progress.VideoPositionMs!.Value - iteration * 1000) <= 1000,
+                        "prepared resume position within 1 second");
                     await Task.Delay(250);
                     Check(current.Snapshot(visit).Visit == visit, "active visit identity");
                     Check(current.Seek(visit, 1000), "local seek accepted");
@@ -127,7 +133,7 @@ internal static class Program
             if (candidate is not null) await candidate.DisposeAsync();
             if (current is not null) await current.DisposeAsync();
             // This uniquely created directory contains only copies and generated corrupt fixtures.
-            Directory.Delete(temporary, true);
+            await Task.Run(() => Directory.Delete(temporary, true));
         }
         Console.WriteLine("Native probe complete. No audible-output, overlay, fullscreen or GPU success claim.");
     }
