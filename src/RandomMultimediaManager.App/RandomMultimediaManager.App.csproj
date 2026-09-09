@@ -14,7 +14,7 @@
     <PackageReference Include="LibVLCSharp" Version="[3.10.1]" />
     <PackageReference Include="LibVLCSharp.WPF" Version="[3.10.1]" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="[3.0.23.1]" />
-    <PackageReference Include="SkiaSharp.Views.WPF" Version="[4.151.2]" />
+    <PackageReference Include="SkiaSharp" Version="[4.151.2]" />
     <EmbeddedResource Include="Data/SchemaV1.sql" LogicalName="SchemaV1.sql" />
   </ItemGroup>
 </Project>
