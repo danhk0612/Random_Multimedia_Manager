@@ -1,0 +1,22 @@
+name: T10 external subtitle verification
+on:
+  pull_request:
+    paths:
+      - 'src/RandomMultimediaManager.App/Video/**'
+      - 'tests/RandomMultimediaManager.Subtitle.Tests/**'
+      - '.github/workflows/t10-subtitles.yml'
+permissions:
+  contents: read
+jobs:
+  subtitles:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet --info
+      - run: dotnet build RandomMultimediaManager.sln -c Release
+      - name: External SRT/SMI discovery encoding lifecycle
+        run: dotnet run --project tests/RandomMultimediaManager.Subtitle.Tests -c Release

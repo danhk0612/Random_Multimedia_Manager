@@ -9,12 +9,12 @@
 | T02 | 데이터와 감상 세션 계약 설계 | Astra | 계약 완료 | T00; D01/D02 확정·위임 정책 적용, T01과 설계 병렬 가능 |
 | T03 | SQLite 저장 기반 | Astra | 완료 (main 통합) | T01 완료 및 T02 계약 확정 |
 | T04 | 분류와 소스 폴더 UI | Sol | 완료 (사용자 Windows UI 확인, PR #9 main 통합 완료) | T03 |
-| T05 | 라이브러리 최초 및 수동 스캔 | Sol | 대기 | T03/T04 |
+| T05 | 라이브러리 최초 및 수동 스캔 | Sol | 준비 | T03/T04 |
 | T06 | 랜덤 및 Pending 세션 핵심 | Astra | 대기 | T02/T03/T05; D01 |
 | T07 | ZIP/CBZ 페이지 읽기 | Sol | 완료 (PR #6 main 통합 완료) | T01/T02/T03 |
-| T08 | 만화 표시와 조작 | Sol | 완료 (자동+사용자 Windows 수동 검증, PR #10 병합 대기) | T07; D06; T02 계약 |
+| T08 | 만화 표시와 조작 | Sol | 완료 (자동+사용자 Windows 수동 검증, PR #10 main 통합 완료) | T07; D06; T02 계약 |
 | T09 | LibVLC 영상 기반 검증 및 통합 | Astra | 완료 (잔여 검증 승인 생략, PR #8 main 통합 완료) | T01/T02/T03 |
-| T10 | 외부 SRT/SMI 자막 | Sol | 준비 (D07 작업 내 확정) | T09; D07 자막 결정 |
+| T10 | 외부 SRT/SMI 자막 | Sol | 완료 (사용자 확인, 일부 수동 검증 승인 생략, PR #11) | T09; D07 자막 결정 |
 | T11 | 공통 감상 UI와 진행 위치 연결 | Astra | 대기 | T06/T08/T09; T02 이어보기 계약 |
 | T12 | 삭제와 세션 상태 처리 | Astra | 대기 | T11; D05 |
 | T13 | 일반 단축키와 전체화면 UX | Sol | 대기 | T11/T12; 로컬 키 배정 결정 |
@@ -28,7 +28,13 @@
 
 ## 바로 다음 작업
 
-T04 PR #9 main 통합 완료. T08 PR #10과 T10 PR #11은 각각 완료 결과를 보존하며 통합한다. T05는 T04 선행이 충족되어 착수 가능하다. 이후 T06 → T11 순서이며 기존 선행 관계를 임의로 건너뛰지 않는다.
+T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과가 main에 통합되었다. T09 완료·승인 생략 범위도 유지한다.
+
+- 다음 착수: T05 라이브러리 최초/수동 스캔 — Sol. T03/T04 선행 충족.
+- 이후: T05 완료·main 통합 → T06 랜덤/Pending 핵심(Astra) → T11 공통 감상 UI/진행 저장(Astra). T08/T09는 이미 완료되어 T11은 T06을 기다린다.
+- 현재 남은 Task의 기존 선행 관계를 지키면 T05와 동시에 바로 시작할 독립 구현 Task는 없다. 병렬화를 위해 T06/T11 또는 T14를 앞당기거나 기능을 새로 쪼개지 않는다.
+- T05 중 공통 데이터 API/스키마/정책 변경이 필요하면 Astra 구조 판단 대상으로 보고한다. 자동 감지는 T18A, 실제 삭제는 T12, 트레이/빠른 숨김·종료는 T14~T16에 남긴다.
+- T09/T10의 사용자 승인 생략은 해당 기록 범위에만 적용하며 이후 검증을 생략하는 일반 승인이 아니다.
 
 ## T00 — 초기 기반 정리
 
@@ -84,7 +90,7 @@ T04 PR #9 main 통합 완료. T08 PR #10과 T10 PR #11은 각각 완료 결과�
 ## T05 — 라이브러리 최초 및 수동 스캔
 
 - 목적: 실제 파일을 인덱스에 반영.
-- 담당/상태: Sol / 대기.
+- 담당/상태: Sol / 준비.
 - 선행: T03/T04.
 - 범위/수정 영역: 스캔 구현·진행 UI·확정 데이터 API.
 - 완료 조건/검증: ZIP/CBZ와 확정 영상 확장자 등록, 재스캔 중복 방지, Missing 반영, 취소/접근 실패가 기록을 바꾸지 않음; DATA_AND_RANDOM_POLICY §8 T05의 경로/소스 사례 통과.
@@ -112,7 +118,7 @@ T04 PR #9 main 통합 완료. T08 PR #10과 T10 PR #11은 각각 완료 결과�
 ## T08 — 만화 표시와 조작
 
 - 목적: 자체 만화 감상 화면 완성.
-- 담당/상태: Sol / 완료 (PR #10 구현·Windows 자동 검증·사용자 Windows 수동 검증 완료, main 병합 대기).
+- 담당/상태: Sol / 완료 (PR #10 구현·Windows 자동 검증·사용자 Windows 수동 검증 완료, main 통합 완료).
 - 선행: T07; D06; T02 계약.
 - 범위/수정 영역: 만화 View/ViewModel·SkiaSharp 렌더링.
 - 완료 조건/검증: 페이지/두 페이지/세로 스크롤·읽기 방향·확대/맞춤·고품질 리샘플링을 실파일 확인; 인접 캐시 제한 및 파일 전환 후 리소스 해제 검증.
@@ -139,10 +145,14 @@ T04 PR #9 main 통합 완료. T08 PR #10과 T10 PR #11은 각각 완료 결과�
 ## T10 — 외부 SRT/SMI 자막
 
 - 목적: 한글 외부 자막 표시.
-- 담당/상태: Sol / 준비 (위임 기본값을 작업 내 확정).
+- 담당/상태: Sol / 완료 (PR #11, 사용자 Windows 확인; 수동 검증 2·3·5 승인 생략).
 - 선행: T09; D07 자막 결정.
 - 범위/수정 영역: 영상 자막 연결 및 관련 UI.
 - 완료 조건/검증: UTF-8 SRT·한글 SMI의 인코딩/싱크 실파일 검증; 수동 로드 및 확정된 자동 선택 확인; 자막 실패와 영상 실패 구분.
+- 구현: D07 기본값에 따라 같은 폴더의 정확 기본 이름 또는 점 접미사 SRT/SMI를 검색하고 `정확 SRT → 정확 SMI → 접미사 SRT → 접미사 SMI` 순으로 첫 후보를 자동 선택한다. UTF-8 SRT, UTF-8/CP949(EUC-KR 호환 범위) SMI를 지원하고 CP949/EUC-KR SMI는 영상 수명에 묶인 UTF-8 임시 SMI로 변환한다. 기존 활성 MediaPlayer에 자막을 추가하며 영상 Media/MediaPlayer/디코더를 재생성하지 않는다. 수동 로드·후보 선택·자막 끄기를 검증 UI에 연결했다.
+- 실제 자동 검증: Actions 34319687933, Windows Server 2025 10.0.26100 / .NET SDK 10.0.401. 솔루션 Release 빌드 경고 0/오류 0. 자막 없음·복수 후보/우선순위·UTF-8 SRT·한글 CP949/EUC-KR SMI 변환·SYNC 마크업 보존·잘못된 SRT 인코딩 실패 분리·LibVLC 트랙 로드/선택/끄기·pause/Visit 유지·임시 파일/원본 핸들 해제·다음 영상 잔류 방지 통과. 같은 코드의 T03 저장/셸 회귀 34319687867 및 T09 네이티브 회귀 34319687871도 성공했다.
+- 실제 사용자 확인: 한글 자막 재생, 자막 변경/선택, 자막 끄기 등 확인 가능한 UI 동작 정상.
+- 완료 승인: 수동 검증 2(UTF-8 SRT 한글 표시와 타임코드), 3(CP949/EUC-KR SMI 한글 표시와 `<SYNC>` 시점), 5(손상/잘못된 인코딩 자막 실패 후 현재 영상 유지)는 사용자 환경에서 테스트 불가하여 사용자가 생략하고 T10 완료를 승인했다. 해당 항목은 미검증이며 통과로 표기하지 않는다.
 - 수정하지 말아야 할 영역: ASS 등 추가 형식·엔진 교체·기록 정책.
 
 ## T11 — 공통 감상 UI와 진행 위치 연결
@@ -235,71 +245,31 @@ T04 PR #9 main 통합 완료. T08 PR #10과 T10 PR #11은 각각 완료 결과�
 - 완료 조건/검증: 공식 SDK/GPU/드라이버 조건, 현재 출력 결합 가능성·성능/복사비용·색/HDR·일반 재생 복귀 검증; 통합 여부와 별도 구현 Task 제안.
 - 수정하지 말아야 할 영역: 초기 엔진 선제 교체·검증 없이 VSR 지원 표기.
 
-## T01 새 Sol Chat 시작 지시문
+## T05 새 Sol Chat 시작 지시문
 
 ```text
-GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T01만 진행해.
-초기 준비 변경이 main에 병합되지 않았다면 setup/project-foundation 브랜치를 기준으로 삼고, 이미 병합됐다면 최신 main에서 작업 브랜치를 만들어.
-먼저 Git 상태와 PROJECT.md, REQUIREMENTS.md의 범위, ARCHITECTURE.md, CURRENT_STATE.md, TASKS.md의 T01, AI_WORKFLOW.md 및 관련 소스를 확인해.
-목표는 기존 최소 WPF 셸을 Windows x64/.NET 10 SDK에서 restore, Release build, 실행 및 닫기까지 검증하는 것이다.
-루트 README의 명령을 사용해. 오류가 있으면 솔루션과 App의 빌드/시작 관련 부분만 최소 수정해.
-DB, 패키지, 미디어 기능, 트레이, UI 기능, 새로운 아키텍처는 추가하지 마.
-Windows 실행 환경이 없으면 실행 성공으로 보고하지 말고 실제 수행한 검증과 남은 Windows 검증을 구분해. T01 완료 조건을 충족하지 못하면 완료 처리하지 마.
-결과에 맞게 CURRENT_STATE.md, TASKS.md와 필요한 경우 README만 갱신하고 커밋/브랜치 및 검증 결과를 보고해.
-다음 T02 구현까지 진행하지 마.
-```
+GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T05만 진행해.
 
-## T03 새 Astra Work 시작 지시문
+먼저 Git 상태·최신 main·관련 PR과 PROJECT.md, REQUIREMENTS.md, ARCHITECTURE.md, CURRENT_STATE.md, TASKS.md, AI_WORKFLOW.md, docs/DECISIONS.md, docs/DATA_AND_RANDOM_POLICY.md 및 분류 UI/Data/Core 코드를 확인해.
+T03과 T04 완료·main 통합을 확인한 뒤 최신 main에서 별도 T05 브랜치를 만들어. 다른 작업 브랜치·미커밋 변경은 건드리지 마.
 
-```text
-GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T03만 진행해.
-Git 상태·PR 병합 여부와 PROJECT.md, REQUIREMENTS.md, ARCHITECTURE.md, CURRENT_STATE.md,
-TASKS.md, AI_WORKFLOW.md, docs/DECISIONS.md, docs/DATA_AND_RANDOM_POLICY.md 및 관련 소스를 확인해.
-T01의 실제 Windows restore/Release build/실행/닫기 완료와 T02 계약 통합을 확인해.
-T01이 아직 검증 대기면 코드 구현을 시작하지 말고 부족한 검증만 보고해.
-모두 충족되면 해당 변경을 포함한 최신 기준에서 별도 브랜치를 만들어 T03만 구현해.
-T02 v1 스키마, SQLite 직접 접근, LocalAppData 설정 저장, 순차 migration,
-VisitId 멱등 저장과 기록/진행/존재 분리를 구현해.
-실제 모델과 함께 Core 및 필요한 테스트 프로젝트를 만들되 빈 Infrastructure/범용 추상화는 추가하지 마.
-문서 §8의 T03 검증을 수행해. 파일 삭제/저널 동작은 T12에 남기고 DB 정리 트랜잭션만 제공해.
-뷰어·플레이어·분류 UI·스캔·트레이·랜덤 정책 구현은 하지 마.
-CURRENT_STATE.md와 TASKS.md를 갱신하며 T01/T02 결과를 보존하고 커밋·원격·PR 및 실제 검증 결과를 보고해.
-T04 등 다음 Task로 이어서 진행하지 마.
-```
+목적: 분류의 활성 소스에서 로컬 미디어를 최초/수동 스캔하여 기존 저장 API로 인덱스에 반영한다.
+범위:
+- ZIP/CBZ 및 기준 문서에서 확정된 영상 확장자만 분류 타입에 맞게 수집한다. 확장자 목록이 미확정이면 기존 기획을 승인으로 추정하지 말고 Astra 결정 사항으로 보고해.
+- 하위 폴더 포함·활성 소스 설정, 정규화 Path/PathKey, 중첩 소스 중복 방지와 분류별 ItemId/상태 분리를 지켜.
+- T03 ApplyObservedItems 등 기존 API로 성공 관찰 범위만 원자적으로 반영하고 최초/수동 실행·진행/취소 UI를 최소 연결해.
+- 확정 부재만 Missing으로 반영해. 접근 거부·오프라인·취소·부분 실패를 파일 부재로 단정하지 마. 소스 제거/비활성은 Missing이 아니야.
+- 이동/이름 변경에 상태를 승계하지 않고 같은 경로 재등장·내용 교체는 T02 계약을 따라. 같은 PathKey의 다중 분류 Missing 반영도 기존 계약대로 수행해.
+- reparse point 파일/폴더/상위 경로는 따라가지 않고 Windows 대소문자 구분 디렉터리 등 미지원 경로를 안내해. File.Exists의 false만으로 부재/권한 실패를 구분하지 마.
 
-T03 통합 후 T04(Sol)/T07(Sol)/T09(Astra)는 서로 다른 영역에서 병렬 가능하다. 솔루션/프로젝트 참조·공통 모델 및 상태 문서는 통합 시 Astra가 대조한다. T05는 T04 이후, T06은 T05 이후다.
+완료 조건:
+Windows 테스트용 파일·DB에서 최초/재스캔 중복, 중첩 소스, 하위 포함, 다중 분류, 소스 비활성/제거, 접근 실패/취소/부분 실패, 이동/재등장/내용 교체, reparse 거부와 상태 보존을 검증해. docs/DATA_AND_RANDOM_POLICY.md §8 T05 사례를 포함해.
+실제 UI 실행·재시작 후 목록/저장 결과를 확인하고 자동 검사와 사용자 수동 결과를 구분해.
 
-## T04 잔여 검증 새 Sol Chat 지시문
+금지 영역:
+DB 스키마·공통 모델·랜덤/기록 정책 변경, 자동 파일 감지, fingerprint/이동 상태 승계, 파일 삭제, 만화/영상/자막·트레이 기능 수정.
+기존 T04 화면과 T08/T09 창 진입·종료 해제, 패키지 및 T10 자막 수명을 보존해.
+저장 API나 공통 정책 변경이 필요하면 임의 변경하지 말고 영향·필요 계약을 Astra 대상으로 보고해.
 
-```text
-T04의 남은 Windows UI 검증과 필요한 범위의 수정만 진행해.
-저장소: https://github.com/danhk0612/Random_Multimedia_Manager
-먼저 Git 상태·최신 main·관련 PR과 PROJECT.md, REQUIREMENTS.md, ARCHITECTURE.md, CURRENT_STATE.md, TASKS.md, AI_WORKFLOW.md, docs/DECISIONS.md 및 관련 코드를 확인해.
-최신 main에서 해당 Task의 별도 브랜치를 만들고 다른 작업 브랜치나 미커밋 변경은 건드리지 마.
-
-T03/T04 병합을 확인하고 docs/DATA_AND_RANDOM_POLICY.md와 CategoryEditorView/ViewModel을 읽어.
-분류 생성·이름·활성·Comic/Video 타입, 여러 소스 폴더 추가·수정·제거, 활성·하위 폴더 포함 옵션을 실제 입력/클릭으로 확인해. 저장 후 재시작, 중복 소스 옵션 보존, 중첩 허용, 항목이 있는 분류 타입 변경 제한도 확인해. 필요한 데이터는 테스트 DB/파일만 사용해.
-UI 검증에서 발견한 T04 문제만 수정해. DB 스키마·공통 모델·스캔·랜덤·만화·영상은 변경하지 마.
-Windows 수동 검증 환경이 없으면 구체적인 사용자 검증 절차를 제공하고 검증 대기를 유지해. T09 검증 생략 승인은 T04에 적용하지 마.
-실제 Windows 빌드·자동 검사·수동 확인을 구분하고 미수행을 통과로 기록하지 마.
-CURRENT_STATE.md, TASKS.md 및 영향을 받은 기준 문서만 갱신하고 커밋·PR·실제 검증·남은 제약을 보고해. 직접 병합하거나 다음 Task로 이어서 진행하지 마.
-```
-
-## T10 새 Sol Chat 지시문
-
-```text
-T10만 진행해. 목적은 기존 LibVLC 영상에 외부 SRT/SMI 자막을 연결하는 것이다.
-저장소: https://github.com/danhk0612/Random_Multimedia_Manager
-먼저 Git 상태·최신 main·관련 PR과 PROJECT.md, REQUIREMENTS.md, ARCHITECTURE.md, CURRENT_STATE.md, TASKS.md, AI_WORKFLOW.md, docs/DECISIONS.md 및 관련 코드를 확인해.
-최신 main에서 해당 Task의 별도 브랜치를 만들고 다른 작업 브랜치나 미커밋 변경은 건드리지 마.
-
-T09 PR #8 완료·main 통합을 확인하고 docs/DATA_AND_RANDOM_POLICY.md, docs/VIEWER_PLAYER_SPEC.md, docs/VIDEO_ENGINE_VALIDATION.md와 PreparedVideo/검증 창을 읽어.
-T09는 사용자 승인으로 완료됐다. 남은 수동 검증 생략을 성공으로 바꾸거나 T09 전체 검증을 다시 선행 조건으로 만들지 마.
-D07 위임 범위에서 같은 폴더/기본 이름의 자동 검색·후보 우선순위·복수 후보 처리·인코딩 기본값을 정해 문서화하고 구현해. SRT UTF-8 및 한글 SMI CP949/EUC-KR를 검증해.
-외부 자막 수동 로드·선택/끄기와 확정한 자동 선택을 기존 영상 UI에 연결해. 자막 실패는 별도 결과/안내로 다루며 영상 Ready 실패나 방문/기록 변경으로 처리하지 마.
-기존 작업/방문 토큰, 준비→활성·취소·해제, 장치 부재 영상 전용, 끝 위치 완료 복원 및 명시적 재생 정책을 보존해. 자막 적용 때문에 영상 파일/디코더를 재생성하거나 현재 재생 상태를 임의 변경하지 마.
-자막 없는 파일·복수 후보·손상/잘못된 인코딩·한글·싱크·파일 전환 후 이전 자막 잔류와 임시 변환 파일 사용 시 해제를 검증해.
-ASS/SSA/VTT·스타일/싱크 설정 기능·엔진 교체·VSR·DB·공통 세션·만화는 변경하지 마. 영상 내부 자막 API 추가는 가능하나 공통 인터페이스/엔진 수명 변경이 필요하면 Astra 판단 대상으로 보고해.
-실제 Windows 빌드·자동 검사·수동 확인을 구분하고 미수행을 통과로 기록하지 마.
-CURRENT_STATE.md, TASKS.md 및 영향을 받은 기준 문서만 갱신하고 커밋·PR·실제 검증·남은 제약을 보고해. 직접 병합하거나 다음 Task로 이어서 진행하지 마.
+CURRENT_STATE.md, TASKS.md와 필요한 기준 문서만 갱신하고 실제 검증·남은 제약·커밋·PR을 보고해. 직접 병합하거나 T06으로 이어서 진행하지 마.
 ```

@@ -26,6 +26,8 @@ public sealed record VideoSnapshot(VideoVisit Visit, PlaybackProgress Progress, 
 /// </summary>
 public sealed class PreparedVideo : IAsyncDisposable
 {
+    private sealed record LoadedExternalSubtitle(int TrackId, string EncodingName, string? TemporaryPath);
+
     private readonly Dispatcher dispatcher;
     private readonly Panel parent;
     private readonly LibVLC engine;
@@ -36,6 +38,8 @@ public sealed class PreparedVideo : IAsyncDisposable
     private readonly EventHandler<EventArgs> errorHandler;
     private readonly EventHandler<LogEventArgs> logHandler;
     private readonly CancellationToken preparationCancellation;
+    private readonly Dictionary<string, LoadedExternalSubtitle> loadedExternalSubtitles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<string> temporarySubtitleFiles = new();
     private VideoVisit? visit;
     private bool ready;
     private bool retiring;
@@ -336,6 +340,86 @@ public sealed class PreparedVideo : IAsyncDisposable
     public TrackDescription[] SubtitleTracks(VideoVisit token) { RequireVisit(token); return player.SpuDescription; }
     public bool SetAudioTrack(VideoVisit token, int id) { RequireVisit(token); return !AudioUnavailable && player.SetAudioTrack(id); }
     public bool SetSubtitleTrack(VideoVisit token, int id) { RequireVisit(token); return player.SetSpu(id); }
+    public int SelectedSubtitleTrack(VideoVisit token) { RequireVisit(token); return player.Spu; }
+    public bool DisableSubtitles(VideoVisit token)
+    {
+        RequireVisit(token);
+        return player.Spu < 0 || player.SetSpu(-1);
+    }
+
+    public async Task<ExternalSubtitleApplyResult> LoadExternalSubtitleAsync(VideoVisit token, string path)
+    {
+        RequireVisit(token);
+        string fullPath;
+        try { fullPath = ExternalSubtitleService.FromManualPath(path).Path; }
+        catch (Exception ex) { return new(false, ex.Message, path, null, null, null); }
+
+        if (loadedExternalSubtitles.TryGetValue(fullPath, out LoadedExternalSubtitle? loaded))
+        {
+            bool selected = player.Spu == loaded.TrackId || player.SetSpu(loaded.TrackId);
+            return new(selected, selected ? null : "이미 불러온 외부 자막을 다시 선택하지 못했습니다.",
+                fullPath, loaded.EncodingName, loaded.TrackId, loaded.TemporaryPath);
+        }
+
+        PreparedExternalSubtitle source;
+        try { source = await Task.Run(() => ExternalSubtitleService.PrepareForLoad(fullPath)); }
+        catch (Exception ex) { return new(false, $"자막 인코딩/읽기 실패: {ex.Message}", fullPath, null, null, null); }
+
+        try { RequireVisit(token); }
+        catch
+        {
+            if (source.IsTemporary) await Task.Run(() => ExternalSubtitleService.DeleteTemporary(source));
+            throw;
+        }
+
+        int previousSpu = player.Spu;
+        var previousTrackIds = player.SpuDescription.Select(track => track.Id).ToHashSet();
+        string uri = new Uri(source.LoadPath).AbsoluteUri;
+        if (!player.AddSlave(MediaSlaveType.Subtitle, uri, true))
+        {
+            if (source.IsTemporary) await Task.Run(() => ExternalSubtitleService.DeleteTemporary(source));
+            return new(false, "LibVLC가 외부 자막 추가를 거부했습니다.", fullPath, source.EncodingName, null, null);
+        }
+
+        if (source.IsTemporary)
+            temporarySubtitleFiles.Add(source.LoadPath);
+
+        int trackId = -1;
+        var watch = Stopwatch.StartNew();
+        while (watch.Elapsed < TimeSpan.FromSeconds(3))
+        {
+            RequireVisit(token);
+            int selected = player.Spu;
+            int[] addedTrackIds = player.SpuDescription
+                .Select(track => track.Id)
+                .Where(id => id >= 0 && !previousTrackIds.Contains(id))
+                .ToArray();
+            if (addedTrackIds.Length > 0)
+            {
+                trackId = addedTrackIds.Contains(selected) ? selected : addedTrackIds[0];
+                if (player.Spu != trackId && !player.SetSpu(trackId))
+                    return new(false, "외부 자막 트랙은 추가됐지만 선택하지 못했습니다.", fullPath,
+                        source.EncodingName, trackId, source.IsTemporary ? source.LoadPath : null);
+                break;
+            }
+            if (selected >= 0 && selected != previousSpu)
+            {
+                trackId = selected;
+                break;
+            }
+            await Task.Delay(25);
+        }
+
+        if (trackId < 0)
+        {
+            logs.Enqueue($"External subtitle accepted but track was not observable: {System.IO.Path.GetFileName(fullPath)}");
+            return new(false, "외부 자막을 추가했지만 선택 가능한 트랙을 확인하지 못했습니다.", fullPath,
+                source.EncodingName, null, source.IsTemporary ? source.LoadPath : null);
+        }
+
+        loadedExternalSubtitles[fullPath] = new(trackId, source.EncodingName, source.IsTemporary ? source.LoadPath : null);
+        return new(true, null, fullPath, source.EncodingName, trackId, source.IsTemporary ? source.LoadPath : null);
+    }
 
     public async Task StopAsync(VideoVisit token)
     {
@@ -372,5 +456,23 @@ public sealed class PreparedVideo : IAsyncDisposable
         view.Dispose();
         engine.Log -= logHandler;
         await Task.Run(() => { player.Dispose(); media.Dispose(); engine.Dispose(); });
+
+        string[] temporaryFiles = temporarySubtitleFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        temporarySubtitleFiles.Clear();
+        loadedExternalSubtitles.Clear();
+        await Task.Run(() =>
+        {
+            foreach (string temporaryFile in temporaryFiles)
+            {
+                try
+                {
+                    if (File.Exists(temporaryFile)) File.Delete(temporaryFile);
+                }
+                catch (Exception ex)
+                {
+                    logs.Enqueue($"Temporary subtitle cleanup failed: {temporaryFile}: {ex.Message}");
+                }
+            }
+        });
     }
 }

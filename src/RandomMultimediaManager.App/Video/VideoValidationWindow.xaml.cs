@@ -15,8 +15,11 @@ namespace RandomMultimediaManager.App.Video;
 // An engine validation harness, not the T11 session coordinator. IDs have no DB association.
 public partial class VideoValidationWindow : Window
 {
+    private sealed record ExternalSubtitleOption(string DisplayName, string? Path);
+
     private readonly Guid sessionId = Guid.NewGuid();
     private readonly DispatcherTimer timer;
+    private readonly List<ExternalSubtitleOption> externalOptions = new();
     private PreparedVideo? current;
     private PreparedVideo? staged;
     private VideoVisit? visit;
@@ -25,17 +28,20 @@ public partial class VideoValidationWindow : Window
     private Task preparing = Task.CompletedTask;
     private Task command = Task.CompletedTask;
     private Task? shutdown;
+    private IReadOnlyList<ExternalSubtitleCandidate> stagedSubtitleCandidates = Array.Empty<ExternalSubtitleCandidate>();
     private bool busy;
     private bool closing;
     private bool allowClose;
     private bool seeking;
     private bool refreshingTracks;
+    private bool refreshingExternalSubtitles;
     private WindowState previousState;
     private bool fullscreen;
 
     public VideoValidationWindow()
     {
         InitializeComponent();
+        ResetExternalSubtitleOptions(Array.Empty<ExternalSubtitleCandidate>());
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background,
             (_, _) => RefreshSnapshot(), Dispatcher);
         timer.Start();
@@ -49,6 +55,7 @@ public partial class VideoValidationWindow : Window
         var request = new VideoOperation(sessionId, Guid.NewGuid(), Guid.NewGuid());
         operation = request;
         cancellation = new CancellationTokenSource();
+        stagedSubtitleCandidates = Array.Empty<ExternalSubtitleCandidate>();
         busy = true;
         UpdateControls();
         preparing = PrepareSelectedAsync(request, dialog.FileName, SoftwareOnly.IsChecked != true, cancellation.Token);
@@ -77,8 +84,22 @@ public partial class VideoValidationWindow : Window
         };
         if (staged?.Notice is not null) Status.Text += "\n" + staged.Notice;
         if (staged is not null)
+        {
+            try
+            {
+                stagedSubtitleCandidates = ExternalSubtitleService.Discover(path);
+                Status.Text += stagedSubtitleCandidates.Count == 0
+                    ? "\n외부 자막 자동 검색: 후보 없음"
+                    : $"\n외부 자막 자동 검색: {stagedSubtitleCandidates.Count}개, 활성화 후 '{stagedSubtitleCandidates[0].DisplayName}' 자동 선택";
+            }
+            catch (Exception ex)
+            {
+                stagedSubtitleCandidates = Array.Empty<ExternalSubtitleCandidate>();
+                Status.Text += $"\n자막 자동 검색 실패 (영상 Ready 유지): {ex.Message}";
+            }
             Diagnostics.Text = $"libVLC {staged.NativeVersion}; HW 요청={staged.HardwareRequested}; " +
                 $"Ready decoded video/audio={staged.PreparedVideoBlocks}/{staged.PreparedAudioBlocks}\n" + string.Join('\n', staged.Diagnostics);
+        }
     }
 
     private async void ActivatePrepared(object sender, RoutedEventArgs e)
@@ -100,6 +121,7 @@ public partial class VideoValidationWindow : Window
         var oldVisit = visit;
         var previous = old is not null && oldVisit is not null ? old.Snapshot(oldVisit) : null;
         var nextVisit = new VideoVisit(next.Operation, Guid.NewGuid());
+        var subtitleCandidates = stagedSubtitleCandidates;
         try
         {
             if (old is not null && oldVisit is not null) { old.SetPaused(oldVisit, true); old.SetMuted(oldVisit, true); }
@@ -110,6 +132,7 @@ public partial class VideoValidationWindow : Window
         {
             staged = null;
             operation = null;
+            stagedSubtitleCandidates = Array.Empty<ExternalSubtitleCandidate>();
             await next.DisposeAsync();
             cancellation?.Dispose();
             cancellation = null;
@@ -125,13 +148,31 @@ public partial class VideoValidationWindow : Window
         Rate.SelectedIndex = 1;
         staged = null;
         operation = null;
+        stagedSubtitleCandidates = Array.Empty<ExternalSubtitleCandidate>();
         cancellation?.Dispose();
         cancellation = null;
         if (old is not null) await old.DisposeAsync();
         Status.Text = $"활성: {System.IO.Path.GetFileName(next.Path)} / Visit {nextVisit.VisitId}";
         AudioNotice.Text = next.Notice ?? "";
         if (next.RestoredCompleted) Status.Text += " — 재생 완료 위치 복원. 재생을 누르면 처음부터 시작합니다.";
+        ResetExternalSubtitleOptions(subtitleCandidates);
         RefreshTracks(this, new RoutedEventArgs());
+
+        if (subtitleCandidates.Count > 0)
+        {
+            ExternalSubtitleCandidate automatic = subtitleCandidates[0];
+            ExternalSubtitleApplyResult result = await next.LoadExternalSubtitleAsync(nextVisit, automatic.Path);
+            if (result.Success)
+            {
+                Status.Text += $"\n외부 자막 자동 선택: {automatic.DisplayName} ({result.EncodingName})";
+                SelectExternalSubtitlePath(automatic.Path);
+            }
+            else
+            {
+                Status.Text += $"\n자막 자동 선택 실패 (영상 유지): {result.Error}";
+            }
+            RefreshTracks(this, new RoutedEventArgs());
+        }
     }
 
     private UIElement CreateOverlay()
@@ -168,6 +209,7 @@ public partial class VideoValidationWindow : Window
     {
         var owned = staged;
         staged = null;
+        stagedSubtitleCandidates = Array.Empty<ExternalSubtitleCandidate>();
         if (owned is not null) await owned.DisposeAsync();
         cancellation?.Dispose();
         cancellation = null;
@@ -213,6 +255,100 @@ public partial class VideoValidationWindow : Window
     { if (!refreshingTracks && Audio.SelectedItem is TrackDescription track) Apply((v, t) => { if (!v.SetAudioTrack(t, track.Id)) Status.Text = "오디오 트랙 선택 실패"; }); }
     private void SubtitleChanged(object sender, SelectionChangedEventArgs e)
     { if (!refreshingTracks && Subtitles.SelectedItem is TrackDescription track) Apply((v, t) => { if (!v.SetSubtitleTrack(t, track.Id)) Status.Text = "자막 트랙 선택 실패"; }); }
+
+    private async void LoadExternalSubtitle(object sender, RoutedEventArgs e)
+    {
+        if (busy || closing || current is null || visit is null) return;
+        var dialog = new OpenFileDialog { Filter = "외부 자막|*.srt;*.smi|SRT|*.srt|SMI|*.smi" };
+        if (dialog.ShowDialog(this) != true) return;
+
+        ExternalSubtitleCandidate candidate;
+        try { candidate = ExternalSubtitleService.FromManualPath(dialog.FileName); }
+        catch (Exception ex) { Status.Text = $"자막 수동 로드 실패 (영상 유지): {ex.Message}"; return; }
+
+        AddExternalSubtitleOption(candidate);
+        busy = true;
+        UpdateControls();
+        command = ApplyExternalSubtitleAsync(candidate.Path, "수동 로드");
+        try { await command; SelectExternalSubtitlePath(candidate.Path); }
+        catch (Exception ex) { Status.Text = $"자막 수동 로드 실패 (영상 유지): {ex.Message}"; }
+        finally { busy = false; UpdateControls(); }
+    }
+
+    private async void ExternalSubtitleChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (refreshingExternalSubtitles || busy || closing || current is null || visit is null) return;
+        if (ExternalSubtitles.SelectedItem is not ExternalSubtitleOption option) return;
+        if (option.Path is null)
+        {
+            try
+            {
+                Status.Text = current.DisableSubtitles(visit)
+                    ? "외부/내장 자막 표시 끄기 — 영상 재생 상태 유지"
+                    : "자막 끄기 실패 — 영상 재생 상태 유지";
+                RefreshTracks(this, new RoutedEventArgs());
+            }
+            catch (Exception ex) { Status.Text = $"자막 끄기 실패 (영상 유지): {ex.Message}"; }
+            return;
+        }
+
+        busy = true;
+        UpdateControls();
+        command = ApplyExternalSubtitleAsync(option.Path, "후보 선택");
+        try { await command; }
+        catch (Exception ex) { Status.Text = $"자막 선택 실패 (영상 유지): {ex.Message}"; }
+        finally { busy = false; UpdateControls(); }
+    }
+
+    private async Task ApplyExternalSubtitleAsync(string path, string source)
+    {
+        if (current is null || visit is null) return;
+        ExternalSubtitleApplyResult result = await current.LoadExternalSubtitleAsync(visit, path);
+        Status.Text = result.Success
+            ? $"외부 자막 {source}: {System.IO.Path.GetFileName(path)} ({result.EncodingName}) — 영상 상태 유지"
+            : $"외부 자막 {source} 실패 (영상 유지): {result.Error}";
+        RefreshTracks(this, new RoutedEventArgs());
+    }
+
+    private void ResetExternalSubtitleOptions(IReadOnlyList<ExternalSubtitleCandidate> candidates)
+    {
+        refreshingExternalSubtitles = true;
+        try
+        {
+            externalOptions.Clear();
+            externalOptions.Add(new ExternalSubtitleOption("자막 끄기", null));
+            foreach (ExternalSubtitleCandidate candidate in candidates)
+                externalOptions.Add(new ExternalSubtitleOption(candidate.DisplayName, candidate.Path));
+            ExternalSubtitles.ItemsSource = null;
+            ExternalSubtitles.ItemsSource = externalOptions;
+            ExternalSubtitles.SelectedIndex = 0;
+        }
+        finally { refreshingExternalSubtitles = false; }
+    }
+
+    private void AddExternalSubtitleOption(ExternalSubtitleCandidate candidate)
+    {
+        if (externalOptions.Any(option => option.Path is not null && option.Path.Equals(candidate.Path, StringComparison.OrdinalIgnoreCase)))
+            return;
+        refreshingExternalSubtitles = true;
+        try
+        {
+            externalOptions.Add(new ExternalSubtitleOption(candidate.DisplayName + " (수동)", candidate.Path));
+            ExternalSubtitles.Items.Refresh();
+        }
+        finally { refreshingExternalSubtitles = false; }
+    }
+
+    private void SelectExternalSubtitlePath(string path)
+    {
+        ExternalSubtitleOption? option = externalOptions.FirstOrDefault(item =>
+            item.Path is not null && item.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+        if (option is null) return;
+        refreshingExternalSubtitles = true;
+        try { ExternalSubtitles.SelectedItem = option; }
+        finally { refreshingExternalSubtitles = false; }
+    }
+
     private void BeginSeek(object sender, MouseButtonEventArgs e) => seeking = true;
     private void EndSeek(object sender, MouseButtonEventArgs e)
     { Apply((v, t) => { if (!v.Seek(t, (long)Position.Value)) Status.Text = "탐색 불가"; }); seeking = false; }
@@ -233,6 +369,7 @@ public partial class VideoValidationWindow : Window
         PrepareButton.IsEnabled = !busy && !closing && staged is null;
         ActivateButton.IsEnabled = !busy && !closing && staged is not null;
         Controls.IsEnabled = !busy && !closing && current is not null;
+        ExternalSubtitles.IsEnabled = !busy && !closing && current is not null;
         Position.IsEnabled = !busy && !closing && current is not null;
     }
     private void ToggleFullscreen(object sender, RoutedEventArgs e)
@@ -251,7 +388,7 @@ public partial class VideoValidationWindow : Window
         busy = true;
         UpdateControls();
         command = ReleaseAllAsync();
-        try { await command; Status.Text = "모든 미디어 해제 완료. 테스트 복사본의 이동/삭제를 확인하세요."; }
+        try { await command; Status.Text = "모든 미디어/자막 해제 완료. 테스트 복사본의 이동/삭제를 확인하세요."; }
         catch (Exception ex) { Status.Text = $"해제 실패: {ex.Message}"; }
         finally { busy = false; UpdateControls(); }
     }
@@ -265,6 +402,7 @@ public partial class VideoValidationWindow : Window
         current = null;
         visit = null;
         AudioNotice.Text = "";
+        ResetExternalSubtitleOptions(Array.Empty<ExternalSubtitleCandidate>());
         if (owned is not null) await owned.DisposeAsync();
     }
     public Task ShutdownAsync() => shutdown ??= ShutdownCoreAsync();
