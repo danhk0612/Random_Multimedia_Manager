@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using RandomMultimediaManager.App.Data;
+using RandomMultimediaManager.App.Scanning;
 using RandomMultimediaManager.Core;
 
 namespace RandomMultimediaManager.App.ViewModels;
@@ -12,6 +13,8 @@ public sealed record EditorResult(bool Success, string Message);
 public sealed class CategoryEditorViewModel : INotifyPropertyChanged
 {
     private readonly LibraryDatabase database;
+    private readonly LibraryScanner scanner;
+    private CancellationTokenSource? scanCancellation;
     private Category? selectedCategory;
     private CategorySource? selectedSource;
     private Guid categoryDraftId;
@@ -23,10 +26,13 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
     private bool sourceIncludeSubdirectories = true;
     private bool sourceIsEnabled = true;
     private string statusMessage = string.Empty;
+    private string scanProgressMessage = string.Empty;
+    private bool isScanning;
 
     public CategoryEditorViewModel(LibraryDatabase database)
     {
         this.database = database;
+        scanner = new LibraryScanner(database);
         ReloadCategories();
     }
 
@@ -66,6 +72,8 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
     public bool SourceIncludeSubdirectories { get => sourceIncludeSubdirectories; set => Set(ref sourceIncludeSubdirectories, value); }
     public bool SourceIsEnabled { get => sourceIsEnabled; set => Set(ref sourceIsEnabled, value); }
     public string StatusMessage { get => statusMessage; private set => Set(ref statusMessage, value); }
+    public string ScanProgressMessage { get => scanProgressMessage; private set => Set(ref scanProgressMessage, value); }
+    public bool IsScanning { get => isScanning; private set => Set(ref isScanning, value); }
 
     public void BeginNewCategory()
     {
@@ -78,6 +86,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         Sources.Clear();
         BeginNewSourceDraft();
         StatusMessage = string.Empty;
+        ScanProgressMessage = string.Empty;
     }
 
     public EditorResult SaveCategory()
@@ -162,6 +171,48 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         }
     }
 
+    public async Task<EditorResult> ScanSelectedCategoryAsync()
+    {
+        if (SelectedCategory is null)
+            return SetResult(false, "스캔할 저장된 분류를 선택하세요.");
+        if (IsScanning)
+            return SetResult(false, "이미 스캔 중입니다.");
+
+        IsScanning = true;
+        scanCancellation = new CancellationTokenSource();
+        Category category = SelectedCategory;
+        ScanProgressMessage = "저장된 활성 소스 폴더를 확인하고 있습니다.";
+        var progress = new Progress<LibraryScanProgress>(x => ScanProgressMessage = x.Message);
+        try
+        {
+            LibraryScanResult result = await scanner.ScanCategoryAsync(category, progress, scanCancellation.Token);
+            if (result.Status == LibraryScanStatus.Cancelled)
+            {
+                ScanProgressMessage = "스캔을 취소했습니다. 이번 스캔 결과는 저장하지 않았습니다.";
+                return SetResult(false, ScanProgressMessage);
+            }
+
+            string warning = result.WarningCount == 0 ? string.Empty : $", 경고 {result.WarningCount}건";
+            ScanProgressMessage = $"스캔 완료: 미디어 {result.PresentCount}개 반영, Missing {result.MissingCount}개{warning}.";
+            if (result.WarningCount != 0)
+                ScanProgressMessage += $" 첫 경고: {result.Warnings[0]}";
+            return SetResult(true, ScanProgressMessage);
+        }
+        catch (Exception ex) when (IsExpectedScanFailure(ex))
+        {
+            ScanProgressMessage = $"스캔 결과를 저장하지 못했습니다: {ex.Message}";
+            return SetResult(false, ScanProgressMessage);
+        }
+        finally
+        {
+            scanCancellation?.Dispose();
+            scanCancellation = null;
+            IsScanning = false;
+        }
+    }
+
+    public void CancelScan() => scanCancellation?.Cancel();
+
     private void ReloadCategories()
     {
         Categories.Clear();
@@ -186,6 +237,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
             CategoryName = string.Empty;
             CategoryMediaType = MediaType.Comic;
             CategoryIsEnabled = true;
+            ScanProgressMessage = string.Empty;
             return;
         }
         categoryDraftId = category.Id;
@@ -193,6 +245,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         CategoryMediaType = category.MediaType;
         CategoryIsEnabled = category.IsEnabled;
         StatusMessage = string.Empty;
+        ScanProgressMessage = string.Empty;
     }
 
     private void LoadSourceDraft(CategorySource? source)
@@ -227,6 +280,10 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
 
     private static bool IsExpectedSaveFailure(Exception ex) =>
         ex is ArgumentException or InvalidOperationException or Microsoft.Data.Sqlite.SqliteException;
+
+    private static bool IsExpectedScanFailure(Exception ex) =>
+        ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException
+        or Microsoft.Data.Sqlite.SqliteException;
 
     private bool Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
