@@ -1,0 +1,43 @@
+name: T05 library scan verification
+on:
+  pull_request:
+    paths:
+      - 'src/RandomMultimediaManager.App/Data/**'
+      - 'src/RandomMultimediaManager.App/Scanning/**'
+      - 'src/RandomMultimediaManager.App/ViewModels/CategoryEditorViewModel.cs'
+      - 'src/RandomMultimediaManager.App/Views/CategoryEditorView.xaml*'
+      - 'tests/RandomMultimediaManager.Scanner.Tests/**'
+      - '.github/workflows/t05-scan.yml'
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet --info
+      - run: dotnet restore RandomMultimediaManager.sln
+      - run: dotnet build RandomMultimediaManager.sln -c Release --no-restore
+      - run: dotnet restore tests/RandomMultimediaManager.Scanner.Tests/RandomMultimediaManager.Scanner.Tests.csproj
+      - name: Basic scan and extension policy
+        timeout-minutes: 2
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- basic
+      - name: Missing and path-state policy
+        timeout-minutes: 2
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- state
+      - name: Cancellation policy
+        timeout-minutes: 2
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- cancel
+      - name: Access-denied preservation
+        timeout-minutes: 2
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- access
+      - name: Reparse partial-failure preservation
+        timeout-minutes: 2
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- reparse
+      - name: Case-sensitive directory rejection
+        timeout-minutes: 2
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- case
