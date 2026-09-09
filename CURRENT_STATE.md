@@ -17,7 +17,8 @@
 | 분류/소스 폴더 UI | T04 구현 및 Windows 자동 빌드·저장 계약 검증 완료, 실제 UI 수동 조작 검증 대기 |
 | 스캔·랜덤 | 미구현 |
 | 만화 ZIP/CBZ 페이지 읽기 기반 | T07 구현·Windows 자동 검증 완료 (PR #6 main 통합 완료) |
-| 만화 표시·SRT/SMI·이어보기 DB 연결 | 미구현 |
+| 만화 표시·조작 | T08 구현·Windows 자동 검증 완료, 실제 Windows UI 시각/입력 수동 검증 대기 (PR #10) |
+| 만화 이어보기 DB 연결 | 미구현, T11 범위 |
 | 영상 엔진·WPF 검증 호스트 | T09 완료 (잔여 수동 검증 사용자 승인 생략, PR #8 main 통합 완료) |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | 미구현 |
 | 단축키·트레이·빠른 숨김/종료 | 미구현 |
@@ -42,7 +43,7 @@
 
 T00/T01 완료, T02 계약 완료 및 main 통합. T03은 task/t03-sqlite-foundation에서 구현·검증 완료했으며 PR #4 main 통합 완료다.
 T04는 task/t04-category-source-ui / PR #5에서 구현 및 자동 검증을 완료했으나 실제 Windows UI 수동 조작 검증 전이므로 완료 처리하지 않는다. T07은 task/t07-zip-cbz-page-reader / PR #6에서 구현·Windows 자동 검증 완료했으며 main에 통합되었다. T09는 자동·사용자 검증 결과를 확인하고 남은 수동 검증은 사용자 승인으로 생략하여 완료했다. PR #8은 main에 통합되었으며 T09 자체의 T10/T11 선행 차단을 해제했다. 다른 선행 Task와 결정은 그대로 따른다.
-T08과 T10은 각각 D06/D07 위임 기본값을 작업 내 문서화하며 병렬 착수할 수 있다. T04 잔여 UI 검증도 병렬 가능하다. T05는 T04 완료·통합 후, T06은 T05 후, T11은 T06/T08 완료 후 진행한다. 구체적인 지시문은 TASKS.md를 따른다. T14 생명주기 상세(특히 숨김 상태 종료 저장 실패), T08 표시 기본값, T10 자막, T18 배포 검증은 해당 Task에 남긴다. T02 데이터 정책 자체의 추가 사용자 결정은 없다.
+T08은 task/t08-comic-viewer / PR #10에서 구현과 Windows 자동 검증을 완료했으나 실제 Windows UI에서 실파일 표시·모드 전환·휠/팬·시각 품질을 수동 확인하지 않았으므로 검증 대기다. D06 기본값은 docs/DECISIONS.md에 확정했다. T10과 T04 잔여 UI 검증은 병렬 가능하다. T05는 T04 완료·통합 후, T06은 T05 후, T11은 T06/T08 완료 후 진행한다. 구체적인 지시문은 TASKS.md를 따른다. T14 생명주기 상세(특히 숨김 상태 종료 저장 실패), T10 자막, T18 배포 검증은 해당 Task에 남긴다. T02 데이터 정책 자체의 추가 사용자 결정은 없다.
 T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 해당 Task의 선행 조건과 최신 기준 문서를 확인한다.
 
 ## T03 저장 구현
@@ -74,6 +75,20 @@ T01 완료 근거는 위 사용자 수동 검증 확인이다. 후속 작업은 
 - Windows Server 2025 x64 / .NET SDK 10.0.400 GitHub Actions에서 restore·Release build 및 T07 실행형 검증을 통과했다. 자연 정렬(1/2/10, 내부 폴더, 숫자 자릿수·선행 0·대소문자), 빈/이미지 없음/손상/암호화, 잘못된 페이지, 취소, 페이지·압축 소유권과 파일 잠금 해제를 확인했다. [T07 성공 실행 34174996255](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34174996255).
 - 같은 코드 헤드에서 기존 T03 회귀 workflow도 restore·Release build, Core/Data 검사, WPF 빈 창 2회 실행·닫기까지 성공했다. [회귀 성공 실행 34174996314](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34174996314).
 - PR #6 main 통합 완료. T08이나 다른 Task는 진행하지 않았다.
+
+## T08 만화 표시·조작 — 구현 완료, 수동 검증 대기
+
+- 기준 main `f17037b77a64c5cf7e42beb295f0246836675c72`에서 `task/t08-comic-viewer`를 분기했다. T07/PR #6의 main 통합을 확인한 뒤 작업했으며 DB·랜덤·기록·영상 구현은 변경하지 않았다.
+- `PreparedComic`은 T07 `ComicArchive.Opened` 뒤 복원 대상 시작 페이지를 SkiaSharp로 실제 디코딩해야 `Ready`를 반환한다. 준비와 활성화를 분리하고 준비 generation/취소 토큰으로 늦은 결과를 폐기한다. 새 준비 실패·취소는 기존 활성 만화를 교체하지 않는다.
+- 표시 모드는 한 페이지/두 페이지/세로 연속 스크롤, 읽기 방향은 좌→우/우→좌다. 원본/창/폭/높이 맞춤과 Custom 확대(10~800%), Ctrl+휠 확대, 일반 휠 이동/스크롤, 왼쪽 드래그 팬을 구현했다. Core `PlaybackProgress.Comic(page, offset)`을 입력/반환하지만 DB 저장과 공통 감상 세션 연결은 T11에 남겼다.
+- SkiaSharp 4.151.2 코어 패키지를 고정했다. `SkiaSharp.Views.WPF`는 .NET 10 복원에서 legacy OpenTK/NU1701 경고가 확인되어 사용하지 않고, SkiaSharp 오프스크린 BGRA 프레임을 Mitchell cubic sampling으로 렌더링한 뒤 WPF `BitmapSource`로 표시한다. 기존 SQLite·LibVLC 패키지 버전은 유지했다.
+- 현재 기준 앞 1/뒤 2 페이지를 비동기 프리로드하고 디코딩 이미지 LRU를 256 MiB로 제한한다. 전환/닫기에서 캐시 `SKBitmap`, 페이지 스트림, `ComicArchive`를 해제한다. 캐시 설정 UI, AI 확대, 추가 압축 형식은 추가하지 않았다.
+- MainWindow에는 `만화 뷰어` 진입만 추가했다. 기존 T04 `CategoryEditorView`와 T09 `VideoValidationWindow` 소유/`ShutdownAsync()` 대기 종료 경로를 보존하며, 메인 종료 시 만화 뷰어만 먼저 정상 닫아 리소스를 해제한다.
+- Windows Server 2025 x64 / .NET SDK 10.0.401 GitHub Actions 실행 `34320005257`: restore 성공, Release build 경고 0/오류 0. T08 자동 검사는 시작 페이지 디코딩 후 Ready, 손상 시작 이미지 DecodeFailed와 파일 잠금 해제, 페이지/세로 offset 복원, LTR/RTL spread, 페이지 경계 통과, 이미 취소된 준비의 Cancelled 반환과 기존 활성 보존, 종료 파일 잠금 해제, 17×2048² 이미지 압축에서 256 MiB LRU 오래된 페이지 퇴출을 통과했다. 기존 T07 검사 24개도 같은 실행에서 통과했다.
+- 자동 검사 도중 이미 취소된 준비에서 `TaskCanceledException`이 노출되는 결함을 발견해 `Cancelled` 결과로 정규화했고 재검증에서 통과했다.
+- 별도 회귀로 코드 헤드 `411955f`에서 T03 저장, T07 만화, T09 영상 workflow가 모두 성공했다. 최종 T08 코드 이후의 T07 workflow도 위와 같이 성공했으며 DB/영상 코드 자체는 수정하지 않았다.
+- **미검증:** 실제 사용자 Windows 화면에서 실 ZIP/CBZ를 열어 이미지가 시각적으로 올바르게 표시되는지, 한/두/세로 모드 전환과 읽기 방향, Ctrl+휠 확대·맞춤·팬, DPI별 시각 품질/입력 감각을 직접 확인하지 않았다. 자동 테스트 통과를 이 수동 검증 통과로 간주하지 않는다.
+- PR #10은 열려 있으며 직접 병합하지 않았다. 수동 검증 전까지 T08 상태는 완료가 아니라 검증 대기다.
 
 ## T09 영상 기반 — 완료
 
