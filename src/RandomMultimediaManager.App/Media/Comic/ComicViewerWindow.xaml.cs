@@ -312,7 +312,7 @@ public partial class ComicViewerWindow : Window
 
     private void UpdateUi()
     {
-        if (PageText is null)
+        if (PageText is null || ZoomText is null)
             return;
         PageText.Text = _viewModel.PageCount == 0
             ? "0 / 0"
