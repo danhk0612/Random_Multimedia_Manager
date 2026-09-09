@@ -368,7 +368,24 @@ public sealed class PreparedComic : IDisposable
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            return SKBitmap.Decode(stream);
+
+            using var encoded = new MemoryStream(
+                _archive.Pages[index].Length > 0 && _archive.Pages[index].Length <= int.MaxValue
+                    ? (int)_archive.Pages[index].Length
+                    : 0);
+            byte[] buffer = new byte[81920];
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int read = stream.Read(buffer, 0, buffer.Length);
+                if (read == 0)
+                    break;
+                encoded.Write(buffer, 0, read);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            encoded.Position = 0;
+            return SKBitmap.Decode(encoded);
         }
         catch (OperationCanceledException)
         {
