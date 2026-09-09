@@ -15,6 +15,7 @@ namespace RandomMultimediaManager.App.Media.Comic;
 public partial class ComicViewerWindow : Window
 {
     private static readonly string RenderLogPath = Path.Combine(Path.GetTempPath(), "RandomMultimediaManager-T08-render.log");
+    private static readonly string RenderFramePath = Path.Combine(Path.GetTempPath(), "RandomMultimediaManager-T08-frame.png");
     private readonly ComicViewerViewModel _viewModel = new();
     private CancellationTokenSource? _operation;
     private Point? _dragStart;
@@ -226,7 +227,7 @@ public partial class ComicViewerWindow : Window
         DpiScale dpi = VisualTreeHelper.GetDpi(this);
         int width = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualWidth * dpi.DpiScaleX));
         int height = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualHeight * dpi.DpiScaleY));
-        AppendRenderLog($"Render mode={_viewModel.DisplayMode} host={ViewerHost.ActualWidth:0.##}x{ViewerHost.ActualHeight:0.##} dpi={dpi.DpiScaleX:0.###}x{dpi.DpiScaleY:0.###} frame={width}x{height} imageControl={Canvas.ActualWidth:0.##}x{Canvas.ActualHeight:0.##}");
+        AppendRenderLog($"Render mode={_viewModel.DisplayMode} host={ViewerHost.ActualWidth:0.##}x{ViewerHost.ActualHeight:0.##} dpi={dpi.DpiScaleX:0.##}x{dpi.DpiScaleY:0.##} frame={width}x{height} imageControl={Canvas.ActualWidth:0.##}x{Canvas.ActualHeight:0.##}");
 
         using var frame = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(frame);
@@ -238,6 +239,9 @@ public partial class ComicViewerWindow : Window
             DrawSpread(canvas, width, height);
         else
             DrawVertical(canvas, width, height);
+
+        canvas.Flush();
+        DumpFrameDiagnostics(frame);
 
         int bufferSize = checked(frame.RowBytes * frame.Height);
         byte[] pixels = new byte[bufferSize];
@@ -259,7 +263,7 @@ public partial class ComicViewerWindow : Window
         if (bitmap is null)
             return;
         SKRect rect = CalculateDestination(bitmap, 0, 0, width, height);
-        AppendRenderLog($"Single page={_viewModel.CurrentPageIndex} bitmap={bitmap.Width}x{bitmap.Height} rect={FormatRect(rect)} fit={_viewModel.FitMode} zoom={_viewModel.Zoom:0.###}");
+        AppendRenderLog($"Single page={_viewModel.CurrentPageIndex} bitmap={bitmap.Width}x{bitmap.Height} color={bitmap.ColorType}/{bitmap.AlphaType} rect=({rect.Left:0.##},{rect.Top:0.##})-({rect.Right:0.##},{rect.Bottom:0.##}) {rect.Width:0.##}x{rect.Height:0.##} fit={_viewModel.FitMode} zoom={_viewModel.Zoom:0.###}");
         canvas.DrawBitmap(bitmap, rect, CreateHighQualitySampling());
     }
 
@@ -270,13 +274,11 @@ public partial class ComicViewerWindow : Window
         if (leftIndex >= 0 && _viewModel.GetPage(leftIndex) is SKBitmap left)
         {
             SKRect rect = CalculateDestination(left, 0, 0, half, height);
-            AppendRenderLog($"Spread left={leftIndex} bitmap={left.Width}x{left.Height} rect={FormatRect(rect)} fit={_viewModel.FitMode} zoom={_viewModel.Zoom:0.###}");
             canvas.DrawBitmap(left, rect, CreateHighQualitySampling());
         }
         if (rightIndex >= 0 && _viewModel.GetPage(rightIndex) is SKBitmap right)
         {
             SKRect rect = CalculateDestination(right, half, 0, half, height);
-            AppendRenderLog($"Spread right={rightIndex} bitmap={right.Width}x{right.Height} rect={FormatRect(rect)} fit={_viewModel.FitMode} zoom={_viewModel.Zoom:0.###}");
             canvas.DrawBitmap(right, rect, CreateHighQualitySampling());
         }
     }
@@ -298,7 +300,6 @@ public partial class ComicViewerWindow : Window
         if (bitmap is null)
             return;
         SKRect rect = CalculateDestination(bitmap, 0, y, width, height);
-        AppendRenderLog($"Vertical page={index} bitmap={bitmap.Width}x{bitmap.Height} anchor={y:0.##} rect={FormatRect(rect)} fit={_viewModel.FitMode} zoom={_viewModel.Zoom:0.###}");
         canvas.DrawBitmap(bitmap, rect, CreateHighQualitySampling());
     }
 
@@ -317,14 +318,31 @@ public partial class ComicViewerWindow : Window
 
         float drawWidth = (float)(bitmap.Width * scale);
         float drawHeight = (float)(bitmap.Height * scale);
-        DpiScale dpi = VisualTreeHelper.GetDpi(this);
-        float x = regionX + (regionWidth - drawWidth) / 2f + (float)(_viewModel.PanX * dpi.DpiScaleX);
-        float y = regionY + (regionHeight - drawHeight) / 2f + (float)(_viewModel.PanY * dpi.DpiScaleY);
+        float x = regionX + (regionWidth - drawWidth) / 2f + (float)(_viewModel.PanX * VisualTreeHelper.GetDpi(this).DpiScaleX);
+        float y = regionY + (regionHeight - drawHeight) / 2f + (float)(_viewModel.PanY * VisualTreeHelper.GetDpi(this).DpiScaleY);
         return new SKRect(x, y, x + drawWidth, y + drawHeight);
     }
 
-    private static string FormatRect(SKRect rect) =>
-        $"({rect.Left:0.##},{rect.Top:0.##})-({rect.Right:0.##},{rect.Bottom:0.##}) {rect.Width:0.##}x{rect.Height:0.##}";
+    private static void DumpFrameDiagnostics(SKBitmap frame)
+    {
+        try
+        {
+            SKColor top = frame.GetPixel(frame.Width / 2, Math.Min(1, frame.Height - 1));
+            SKColor middle = frame.GetPixel(frame.Width / 2, frame.Height / 2);
+            SKColor bottom = frame.GetPixel(frame.Width / 2, Math.Max(0, frame.Height - 2));
+            AppendRenderLog($"Frame pixels top={top} middle={middle} bottom={bottom}");
+
+            using SKImage image = SKImage.FromBitmap(frame);
+            using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+            using FileStream output = File.Create(RenderFramePath);
+            data.SaveTo(output);
+            AppendRenderLog($"Frame PNG={RenderFramePath} bytes={data.Size}");
+        }
+        catch (Exception ex)
+        {
+            AppendRenderLog($"Frame diagnostic failed: {ex}");
+        }
+    }
 
     private static void AppendRenderLog(string message)
     {
