@@ -12,7 +12,6 @@ namespace RandomMultimediaManager.App.Media.Comic;
 
 public partial class ComicViewerWindow : Window
 {
-    private static readonly SKSamplingOptions HighQualitySampling = new(SKCubicResampler.Mitchell);
     private readonly ComicViewerViewModel _viewModel = new();
     private CancellationTokenSource? _operation;
     private Point? _dragStart;
@@ -243,13 +242,16 @@ public partial class ComicViewerWindow : Window
         Canvas.Source = source;
     }
 
+    private static SKSamplingOptions CreateHighQualitySampling()
+        => new(new SKCubicResampler(1f / 3f, 1f / 3f));
+
     private void DrawSingle(SKCanvas canvas, int width, int height)
     {
         SKBitmap? bitmap = _viewModel.GetPage(_viewModel.CurrentPageIndex);
         if (bitmap is null)
             return;
         SKRect rect = CalculateDestination(bitmap, 0, 0, width, height);
-        canvas.DrawBitmap(bitmap, rect, HighQualitySampling);
+        canvas.DrawBitmap(bitmap, rect, CreateHighQualitySampling());
     }
 
     private void DrawSpread(SKCanvas canvas, int width, int height)
@@ -259,12 +261,12 @@ public partial class ComicViewerWindow : Window
         if (leftIndex >= 0 && _viewModel.GetPage(leftIndex) is SKBitmap left)
         {
             SKRect rect = CalculateDestination(left, 0, 0, half, height);
-            canvas.DrawBitmap(left, rect, HighQualitySampling);
+            canvas.DrawBitmap(left, rect, CreateHighQualitySampling());
         }
         if (rightIndex >= 0 && _viewModel.GetPage(rightIndex) is SKBitmap right)
         {
             SKRect rect = CalculateDestination(right, half, 0, half, height);
-            canvas.DrawBitmap(right, rect, HighQualitySampling);
+            canvas.DrawBitmap(right, rect, CreateHighQualitySampling());
         }
     }
 
@@ -285,7 +287,7 @@ public partial class ComicViewerWindow : Window
         if (bitmap is null)
             return;
         SKRect rect = CalculateDestination(bitmap, 0, y, width, height);
-        canvas.DrawBitmap(bitmap, rect, HighQualitySampling);
+        canvas.DrawBitmap(bitmap, rect, CreateHighQualitySampling());
     }
 
     private SKRect CalculateDestination(SKBitmap bitmap, float regionX, float regionY, float regionWidth, float regionHeight)
