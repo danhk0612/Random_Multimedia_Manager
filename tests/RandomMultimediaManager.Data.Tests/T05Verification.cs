@@ -15,13 +15,14 @@ internal static class T05Verification
         Run("T05 Missing, cross-category path state and disabled/removed sources", VerifyMissingAndSourceState);
         Run("T05 move, reappearance and content replacement", VerifyMoveReappearanceAndReplacement);
         Run("T05 cancellation preserves database state", VerifyCancellation);
-        Run("T05 inaccessible source preserves previous state", VerifyAccessFailure);
+        Run("T05 access denial preserves previous state", VerifyAccessFailure);
         Run("T05 reparse subtree preserves blocked scope while applying sibling files", VerifyReparsePartialSuccess);
         Run("T05 case-sensitive directories are rejected", VerifyCaseSensitiveDirectory);
     }
 
     private static void Run(string name, Action<string, string> test)
     {
+        Console.WriteLine("START: " + name);
         string directory = Path.Combine(Path.GetTempPath(), "rmm-t05-" + Guid.NewGuid());
         string media = Path.Combine(directory, "media");
         Directory.CreateDirectory(media);
@@ -171,22 +172,28 @@ internal static class T05Verification
 
     private static void VerifyAccessFailure(string dbPath, string media)
     {
-        string protectedRoot = @"C:\System Volume Information";
-        if (!Directory.Exists(@"C:\")) return;
+        string blocked = Directory.CreateDirectory(Path.Combine(media, "blocked")).FullName;
+        string path = Path.Combine(blocked, "existing.mp4");
+        File.WriteAllText(path, "existing");
         using var db = LibraryDatabase.Open(dbPath);
         var category = SaveCategory(db, "Denied", MediaType.Video);
-        var normalized = SourcePathRules.NormalizeLocalFolder(protectedRoot);
-        db.AddSource(new CategorySource(Guid.NewGuid(), category.Id, normalized.Path, normalized.PathKey, true, true));
-        string storedPath = Path.Combine(protectedRoot, "existing.mp4");
-        var stored = new MediaItem(Guid.NewGuid(), category.Id, MediaType.Video, storedPath,
-            storedPath.ToUpperInvariant(), 1, 1);
-        db.ApplyObservedItems(new[] { stored }, Array.Empty<Guid>());
-
+        AddSource(db, category, blocked, false, true);
         var scanner = new LibraryScanner(db);
-        LibraryScanResult result = Scan(scanner, category);
-        Check(result.WarningCount != 0, "Protected source should surface an unavailable/access warning.");
-        Check(!db.GetItems(category.Id).Single().IsMissing,
-            "Access failure must preserve previous existence state.");
+        Scan(scanner, category);
+        var item = db.GetItems(category.Id).Single();
+
+        RequireRun("icacls", blocked, "/inheritance:r", "/deny", Environment.UserName + ":(OI)(CI)F");
+        try
+        {
+            LibraryScanResult result = Scan(scanner, category);
+            Check(result.WarningCount != 0, "Access denial must surface a warning.");
+            Check(!db.GetItems(category.Id).Single(x => x.Id == item.Id).IsMissing,
+                "Access denial must preserve previous existence state.");
+        }
+        finally
+        {
+            RequireRun("icacls", blocked, "/remove:d", Environment.UserName, "/inheritance:e");
+        }
     }
 
     private static void VerifyReparsePartialSuccess(string dbPath, string media)
@@ -262,7 +269,7 @@ internal static class T05Verification
         var start = new ProcessStartInfo(fileName) { UseShellExecute = false, CreateNoWindow = true };
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
         using var process = Process.Start(start) ?? throw new Exception($"Could not start {fileName}.");
-        if (!process.WaitForExit(10000))
+        if (!process.WaitForExit(5000))
         {
             try { process.Kill(entireProcessTree: true); } catch { }
             throw new Exception($"{fileName} timed out.");
