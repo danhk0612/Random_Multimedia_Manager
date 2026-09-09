@@ -114,6 +114,16 @@ internal static class Program
                     while (current.Snapshot(visit).State != VLCState.Playing && DateTime.UtcNow < deadline)
                         await Task.Delay(25);
                     Check(current.Snapshot(visit).State == VLCState.Playing, "play after stop retains visit");
+                    if (iteration == 2)
+                    {
+                        long duration = current.Snapshot(visit).DurationMs;
+                        var boundaryToken = Operation();
+                        var boundary = await PreparedVideo.PrepareAsync(surface, boundaryToken, copy,
+                            PlaybackProgress.Video(duration), false, CancellationToken.None);
+                        // Diagnostic only: this is an explicitly unresolved T09 gate, not a passing assertion.
+                        Console.WriteLine($"END-BOUNDARY duration={duration}; status={boundary.Status}; {boundary.Error}");
+                        if (boundary.Video is not null) await boundary.Video.DisposeAsync();
+                    }
                     await current.DisposeAsync();
                     await current.DisposeAsync();
                     current = null;
