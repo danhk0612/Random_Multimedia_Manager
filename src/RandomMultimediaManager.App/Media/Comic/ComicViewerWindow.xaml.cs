@@ -2,6 +2,7 @@ using Microsoft.Win32;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -235,9 +236,11 @@ public partial class ComicViewerWindow : Window
             DrawVertical(canvas, width, height);
 
         int bufferSize = checked(frame.RowBytes * frame.Height);
+        byte[] pixels = new byte[bufferSize];
+        Marshal.Copy(frame.GetPixels(), pixels, 0, bufferSize);
         BitmapSource source = BitmapSource.Create(
             width, height, 96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY,
-            PixelFormats.Bgra32, null, frame.GetPixels(), bufferSize, frame.RowBytes);
+            PixelFormats.Bgra32, null, pixels, frame.RowBytes);
         source.Freeze();
         Canvas.Source = source;
     }
