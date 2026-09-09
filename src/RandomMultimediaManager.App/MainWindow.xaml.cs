@@ -1,15 +1,30 @@
-using System.Windows;
 using System.ComponentModel;
+using System.Windows;
 
 namespace RandomMultimediaManager.App;
 
 public partial class MainWindow : Window
 {
+    private Media.Comic.ComicViewerWindow? comicViewer;
     private Video.VideoValidationWindow? videoValidation;
     private bool waitingForVideoClose;
+
     public MainWindow()
     {
         InitializeComponent();
+    }
+
+    private void OpenComicViewer(object sender, RoutedEventArgs e)
+    {
+        if (comicViewer is not null)
+        {
+            comicViewer.Activate();
+            return;
+        }
+
+        comicViewer = new Media.Comic.ComicViewerWindow { Owner = this };
+        comicViewer.Closed += (_, _) => comicViewer = null;
+        comicViewer.Show();
     }
 
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
@@ -22,6 +37,8 @@ public partial class MainWindow : Window
 
     protected override async void OnClosing(CancelEventArgs e)
     {
+        comicViewer?.Close();
+
         if (videoValidation is not null)
         {
             e.Cancel = true;
