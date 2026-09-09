@@ -208,6 +208,7 @@ public sealed class PreparedComic : IDisposable
 
     private readonly ComicArchive _archive;
     private readonly object _sync = new();
+    private readonly object _archiveReadSync = new();
     private readonly Dictionary<int, CacheEntry> _cache = [];
     private readonly LinkedList<int> _lru = [];
     private readonly CancellationTokenSource _lifetime = new();
@@ -345,7 +346,10 @@ public sealed class PreparedComic : IDisposable
 
         foreach (CacheEntry entry in entries)
             entry.Bitmap.Dispose();
-        _archive.Dispose();
+
+        lock (_archiveReadSync)
+            _archive.Dispose();
+
         _lifetime.Dispose();
     }
 
@@ -360,32 +364,37 @@ public sealed class PreparedComic : IDisposable
     private SKBitmap? Decode(int index, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        ComicPageOpenResult page = _archive.OpenPage(index, cancellationToken);
-        if (page.Status != ComicPageOpenStatus.Opened || page.Stream is null)
-            return null;
 
-        using Stream stream = page.Stream;
+        byte[] encodedBytes;
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            using var encoded = new MemoryStream(
-                _archive.Pages[index].Length > 0 && _archive.Pages[index].Length <= int.MaxValue
-                    ? (int)_archive.Pages[index].Length
-                    : 0);
-            byte[] buffer = new byte[81920];
-            while (true)
+            lock (_archiveReadSync)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                int read = stream.Read(buffer, 0, buffer.Length);
-                if (read == 0)
-                    break;
-                encoded.Write(buffer, 0, read);
+                ComicPageOpenResult page = _archive.OpenPage(index, cancellationToken);
+                if (page.Status != ComicPageOpenStatus.Opened || page.Stream is null)
+                    return null;
+
+                using Stream stream = page.Stream;
+                using var encoded = new MemoryStream(
+                    _archive.Pages[index].Length > 0 && _archive.Pages[index].Length <= int.MaxValue
+                        ? (int)_archive.Pages[index].Length
+                        : 0);
+                byte[] buffer = new byte[81920];
+                while (true)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int read = stream.Read(buffer, 0, buffer.Length);
+                    if (read == 0)
+                        break;
+                    encoded.Write(buffer, 0, read);
+                }
+                encodedBytes = encoded.ToArray();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            encoded.Position = 0;
-            return SKBitmap.Decode(encoded);
+            using var completeStream = new MemoryStream(encodedBytes, writable: false);
+            return SKBitmap.Decode(completeStream);
         }
         catch (OperationCanceledException)
         {
