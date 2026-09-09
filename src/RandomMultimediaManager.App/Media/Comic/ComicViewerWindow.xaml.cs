@@ -2,29 +2,40 @@ using Microsoft.Win32;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
 using System.ComponentModel;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace RandomMultimediaManager.App.Media.Comic;
 
 public partial class ComicViewerWindow : Window
 {
-    private static readonly string RenderLogPath = Path.Combine(Path.GetTempPath(), "RandomMultimediaManager-T08-render.log");
-    private static readonly string RenderFramePath = Path.Combine(Path.GetTempPath(), "RandomMultimediaManager-T08-frame.png");
     private readonly ComicViewerViewModel _viewModel = new();
+    private readonly DispatcherTimer _resizeRenderTimer;
     private CancellationTokenSource? _operation;
     private Point? _dragStart;
     private double _dragPanX;
     private double _dragPanY;
     private bool _closing;
+    private WriteableBitmap? _surface;
+    private byte[]? _pixelBuffer;
 
     public ComicViewerWindow()
     {
+        _resizeRenderTimer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(40)
+        };
+        _resizeRenderTimer.Tick += (_, _) =>
+        {
+            _resizeRenderTimer.Stop();
+            RenderCanvas();
+        };
+
         InitializeComponent();
         UpdateUi();
     }
@@ -143,7 +154,13 @@ public partial class ComicViewerWindow : Window
         }
     }
 
-    private void ViewerSizeChanged(object sender, SizeChangedEventArgs e) => RenderCanvas();
+    private void ViewerSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!_viewModel.IsReady)
+            return;
+        _resizeRenderTimer.Stop();
+        _resizeRenderTimer.Start();
+    }
 
     private async void ViewerMouseWheel(object sender, MouseWheelEventArgs e)
     {
@@ -227,8 +244,6 @@ public partial class ComicViewerWindow : Window
         DpiScale dpi = VisualTreeHelper.GetDpi(this);
         int width = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualWidth * dpi.DpiScaleX));
         int height = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualHeight * dpi.DpiScaleY));
-        AppendRenderLog($"Render mode={_viewModel.DisplayMode} host={ViewerHost.ActualWidth:0.##}x{ViewerHost.ActualHeight:0.##} dpi={dpi.DpiScaleX:0.##}x{dpi.DpiScaleY:0.##} frame={width}x{height} imageControl={Canvas.ActualWidth:0.##}x{Canvas.ActualHeight:0.##}");
-
         using var frame = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(frame);
         canvas.Clear(new SKColor(22, 22, 22));
@@ -241,17 +256,37 @@ public partial class ComicViewerWindow : Window
             DrawVertical(canvas, width, height);
 
         canvas.Flush();
-        DumpFrameDiagnostics(frame);
 
         int bufferSize = checked(frame.RowBytes * frame.Height);
-        byte[] pixels = new byte[bufferSize];
-        Marshal.Copy(frame.GetPixels(), pixels, 0, bufferSize);
-        BitmapSource source = BitmapSource.Create(
-            width, height, 96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY,
-            PixelFormats.Bgra32, null, pixels, frame.RowBytes);
-        source.Freeze();
-        Canvas.Source = source;
-        AppendRenderLog($"Source pixel={source.PixelWidth}x{source.PixelHeight} dip={source.Width:0.##}x{source.Height:0.##} stride={frame.RowBytes}");
+        if (_pixelBuffer is null || _pixelBuffer.Length != bufferSize)
+            _pixelBuffer = new byte[bufferSize];
+        Marshal.Copy(frame.GetPixels(), _pixelBuffer, 0, bufferSize);
+
+        if (_surface is null ||
+            _surface.PixelWidth != width ||
+            _surface.PixelHeight != height ||
+            Math.Abs(_surface.DpiX - 96 * dpi.DpiScaleX) > 0.01 ||
+            Math.Abs(_surface.DpiY - 96 * dpi.DpiScaleY) > 0.01)
+        {
+            _surface = new WriteableBitmap(
+                width,
+                height,
+                96 * dpi.DpiScaleX,
+                96 * dpi.DpiScaleY,
+                PixelFormats.Bgra32,
+                null);
+            Canvas.Source = _surface;
+        }
+        else if (!ReferenceEquals(Canvas.Source, _surface))
+        {
+            Canvas.Source = _surface;
+        }
+
+        _surface.WritePixels(
+            new Int32Rect(0, 0, width, height),
+            _pixelBuffer,
+            frame.RowBytes,
+            0);
     }
 
     private static SKSamplingOptions CreateHighQualitySampling()
@@ -263,7 +298,6 @@ public partial class ComicViewerWindow : Window
         if (bitmap is null)
             return;
         SKRect rect = CalculateDestination(bitmap, 0, 0, width, height);
-        AppendRenderLog($"Single page={_viewModel.CurrentPageIndex} bitmap={bitmap.Width}x{bitmap.Height} color={bitmap.ColorType}/{bitmap.AlphaType} rect=({rect.Left:0.##},{rect.Top:0.##})-({rect.Right:0.##},{rect.Bottom:0.##}) {rect.Width:0.##}x{rect.Height:0.##} fit={_viewModel.FitMode} zoom={_viewModel.Zoom:0.###}");
         canvas.DrawBitmap(bitmap, rect, CreateHighQualitySampling());
     }
 
@@ -323,38 +357,6 @@ public partial class ComicViewerWindow : Window
         return new SKRect(x, y, x + drawWidth, y + drawHeight);
     }
 
-    private static void DumpFrameDiagnostics(SKBitmap frame)
-    {
-        try
-        {
-            SKColor top = frame.GetPixel(frame.Width / 2, Math.Min(1, frame.Height - 1));
-            SKColor middle = frame.GetPixel(frame.Width / 2, frame.Height / 2);
-            SKColor bottom = frame.GetPixel(frame.Width / 2, Math.Max(0, frame.Height - 2));
-            AppendRenderLog($"Frame pixels top={top} middle={middle} bottom={bottom}");
-
-            using SKImage image = SKImage.FromBitmap(frame);
-            using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
-            using FileStream output = File.Create(RenderFramePath);
-            data.SaveTo(output);
-            AppendRenderLog($"Frame PNG={RenderFramePath} bytes={data.Size}");
-        }
-        catch (Exception ex)
-        {
-            AppendRenderLog($"Frame diagnostic failed: {ex}");
-        }
-    }
-
-    private static void AppendRenderLog(string message)
-    {
-        try
-        {
-            File.AppendAllText(RenderLogPath, $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
-        }
-        catch
-        {
-        }
-    }
-
     private void UpdateUi()
     {
         if (PageText is null || ZoomText is null)
@@ -375,10 +377,13 @@ public partial class ComicViewerWindow : Window
             return;
         }
         _closing = true;
+        _resizeRenderTimer.Stop();
         CancellationTokenSource? operation = Interlocked.Exchange(ref _operation, null);
         operation?.Cancel();
         operation?.Dispose();
         _viewModel.Dispose();
+        _surface = null;
+        _pixelBuffer = null;
         Canvas.Source = null;
         base.OnClosing(e);
     }
