@@ -141,6 +141,17 @@ static void VerifyState(string dbPath, string media)
     Check(db.GetProgress(old.Id) is null, "Content metadata change must clear progress.");
     Check(db.GetHistory(old.Id).Count == 1 && db.GetItems(move.Id).Single(x => x.Id == old.Id).IsFavorite,
         "Content replacement must preserve history/preferences.");
+
+    string removedRoot = Directory.CreateDirectory(Path.Combine(media, "removed-root")).FullName;
+    File.WriteAllText(Path.Combine(removedRoot, "gone.mp4"), "gone");
+    var removedCategory = SaveCategory(db, "Removed root", MediaType.Video);
+    AddSource(db, removedCategory, removedRoot, true, true);
+    Scan(scanner, removedCategory);
+    Directory.Delete(removedRoot, recursive: true);
+    Scan(scanner, removedCategory);
+    Check(db.GetItems(removedCategory.Id).Single().IsMissing,
+        "Missing source beneath supported ancestors must still confirm Missing.");
+
 }
 
 static void VerifyCancellation(string dbPath, string media)
@@ -193,6 +204,7 @@ static void VerifyReparse(string dbPath, string media)
     File.WriteAllText(Path.Combine(target, "linked.mp4"), "linked");
     string junction = Path.Combine(media, "junction");
     RequireRun("cmd", "/c", "mklink", "/J", junction, target);
+    VerifyMissingSourceUnderUnsupportedParent(Path.Combine(Path.GetDirectoryName(media)!, "reparse-missing.db"), junction);
     File.WriteAllText(Path.Combine(media, "good.mkv"), "good");
     using var db = LibraryDatabase.Open(dbPath);
     var category = SaveCategory(db, "Reparse", MediaType.Video);
@@ -216,6 +228,7 @@ static void VerifyCaseSensitive(string dbPath, string media)
     RequireRun("fsutil", "file", "SetCaseSensitiveInfo", sensitive, "enable");
     try
     {
+        VerifyMissingSourceUnderUnsupportedParent(Path.Combine(Path.GetDirectoryName(media)!, "case-missing.db"), sensitive);
         File.WriteAllText(Path.Combine(sensitive, "case.mp4"), "case");
         using var db = LibraryDatabase.Open(dbPath);
         var category = SaveCategory(db, "Case", MediaType.Video);
@@ -228,6 +241,22 @@ static void VerifyCaseSensitive(string dbPath, string media)
     {
         RequireRun("fsutil", "file", "SetCaseSensitiveInfo", sensitive, "disable");
     }
+}
+
+static void VerifyMissingSourceUnderUnsupportedParent(string dbPath, string parent)
+{
+    string missingSource = Path.Combine(parent, "absent-child");
+    string oldPath = Path.Combine(missingSource, "old.mp4");
+    using var db = LibraryDatabase.Open(dbPath);
+    var category = SaveCategory(db, "Unsupported ancestor", MediaType.Video);
+    AddSource(db, category, missingSource, true, true);
+    var old = new MediaItem(Guid.NewGuid(), category.Id, MediaType.Video, oldPath,
+        oldPath.ToUpperInvariant(), 1, 1);
+    db.ApplyObservedItems(new[] { old }, Array.Empty<Guid>());
+    var result = Scan(new LibraryScanner(db), category);
+    Check(result.WarningCount != 0, "Unsupported ancestor must be reported before descendant absence.");
+    Check(!db.GetItems(category.Id).Single().IsMissing,
+        "Missing source under unsupported ancestor must preserve existing state.");
 }
 
 static Category SaveCategory(LibraryDatabase db, string name, MediaType type)

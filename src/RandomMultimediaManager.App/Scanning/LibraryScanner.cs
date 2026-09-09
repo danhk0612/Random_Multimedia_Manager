@@ -246,6 +246,21 @@ public sealed class LibraryScanner
                 problem = "드라이브가 준비되지 않아 상태를 변경하지 않습니다.";
                 return false;
             }
+            // Check existing ancestors from the drive down before a missing descendant
+            // can be evidence of absence. Unsupported ancestors must preserve stored state.
+            var ancestors = new Stack<DirectoryInfo>();
+            for (DirectoryInfo? directory = new(Path.GetFullPath(path)); directory is not null; directory = directory.Parent)
+                ancestors.Push(directory);
+            foreach (DirectoryInfo directory in ancestors)
+            {
+                FileAttributes ancestorAttributes = File.GetAttributes(directory.FullName);
+                if ((ancestorAttributes & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("reparse point 경로는 지원하지 않습니다.");
+                if ((ancestorAttributes & FileAttributes.Directory) == 0)
+                    throw new IOException("소스 상위 경로가 폴더가 아닙니다.");
+                if (WindowsDirectoryRules.IsCaseSensitive(directory.FullName))
+                    throw new IOException("Windows 대소문자 구분 디렉터리는 지원하지 않습니다.");
+            }
             FileAttributes attributes = File.GetAttributes(path);
             if ((attributes & FileAttributes.Directory) == 0)
             {
