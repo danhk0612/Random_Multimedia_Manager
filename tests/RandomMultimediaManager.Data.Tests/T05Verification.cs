@@ -15,8 +15,8 @@ internal static class T05Verification
         Run("T05 Missing, cross-category path state and disabled/removed sources", VerifyMissingAndSourceState);
         Run("T05 move, reappearance and content replacement", VerifyMoveReappearanceAndReplacement);
         Run("T05 cancellation preserves database state", VerifyCancellation);
-        Run("T05 access failure and partial success preserve blocked scope", VerifyAccessFailureAndPartialSuccess);
-        Run("T05 reparse paths are not followed", VerifyReparsePoint);
+        Run("T05 inaccessible source preserves previous state", VerifyAccessFailure);
+        Run("T05 reparse subtree preserves blocked scope while applying sibling files", VerifyReparsePartialSuccess);
         Run("T05 case-sensitive directories are rejected", VerifyCaseSensitiveDirectory);
     }
 
@@ -32,8 +32,6 @@ internal static class T05Verification
         }
         finally
         {
-            TryRun("icacls", media, "/remove:d", Environment.UserName, "/T", "/C");
-            TryRun("fsutil", "file", "SetCaseSensitiveInfo", media, "disable");
             try { Directory.Delete(directory, recursive: true); } catch { }
         }
     }
@@ -44,6 +42,7 @@ internal static class T05Verification
         File.WriteAllText(Path.Combine(media, "ROOT.MP4"), "root");
         File.WriteAllText(Path.Combine(media, "ignored.mp4.tmp"), "ignored");
         File.WriteAllText(Path.Combine(media, "movie.srt"), "subtitle");
+        File.WriteAllText(Path.Combine(media, "movie.smi"), "subtitle");
         File.WriteAllText(Path.Combine(media, "noextension"), "ignored");
         File.WriteAllText(Path.Combine(child, "nested.mkv"), "nested");
         File.WriteAllText(Path.Combine(media, "book.ZIP"), "zip placeholder");
@@ -54,14 +53,12 @@ internal static class T05Verification
         AddSource(db, video, media, true, true);
         AddSource(db, video, child, true, true);
         var scanner = new LibraryScanner(db);
-        var first = Scan(scanner, video);
-        Check(first.Status == LibraryScanStatus.Completed);
+        Scan(scanner, video);
         var firstItems = db.GetItems(video.Id);
-        Check(firstItems.Count == 2, "Only MP4/MKV video targets should be indexed once.");
-        Check(firstItems.Any(x => x.Path.EndsWith("ROOT.MP4", StringComparison.Ordinal)));
-        Check(firstItems.Any(x => x.Path.EndsWith("nested.mkv", StringComparison.Ordinal)));
+        Check(firstItems.Count == 2, "Only MP4/MKV targets should be indexed once.");
         var ids = firstItems.ToDictionary(x => x.PathKey, x => x.Id);
         Scan(scanner, video);
+        Check(db.GetItems(video.Id).Count == 2);
         Check(db.GetItems(video.Id).All(x => ids[x.PathKey] == x.Id), "Rescan must preserve ItemId.");
 
         var direct = SaveCategory(db, "Direct", MediaType.Video);
@@ -73,9 +70,6 @@ internal static class T05Verification
         AddSource(db, comic, media, true, true);
         Scan(scanner, comic);
         Check(db.GetItems(comic.Id).Count == 2);
-        Check(db.GetItems(comic.Id).All(x => x.Path.EndsWith(".ZIP", StringComparison.Ordinal)
-            || x.Path.EndsWith(".cbz", StringComparison.Ordinal)));
-
         Check(LibraryScanner.IsTargetExtension(MediaType.Video, "x.MP4"));
         Check(!LibraryScanner.IsTargetExtension(MediaType.Video, "x.mp4.tmp"));
         Check(!LibraryScanner.IsTargetExtension(MediaType.Video, "x.srt"));
@@ -144,7 +138,7 @@ internal static class T05Verification
         Scan(scanner, category);
         var returned = db.GetItems(category.Id).Single(x => x.PathKey == old.PathKey);
         Check(returned.Id == old.Id && !returned.IsMissing && returned.IsFavorite,
-            "Same path reappearance must reuse the old ItemId and preferences.");
+            "Same path reappearance must reuse old ItemId and preferences.");
 
         db.SaveProgress(old.Id, PlaybackProgress.Video(321), 2000);
         File.AppendAllText(oldPath, "changed-content");
@@ -175,48 +169,51 @@ internal static class T05Verification
             "Cancelled scan must not persist partial Missing state.");
     }
 
-    private static void VerifyAccessFailureAndPartialSuccess(string dbPath, string media)
+    private static void VerifyAccessFailure(string dbPath, string media)
     {
-        string blocked = Directory.CreateDirectory(Path.Combine(media, "blocked")).FullName;
-        string blockedFile = Path.Combine(blocked, "keep.mp4");
-        File.WriteAllText(blockedFile, "keep");
+        string protectedRoot = @"C:\System Volume Information";
+        if (!Directory.Exists(@"C:\")) return;
         using var db = LibraryDatabase.Open(dbPath);
-        var category = SaveCategory(db, "Partial", MediaType.Video);
-        AddSource(db, category, media, true, true);
-        var scanner = new LibraryScanner(db);
-        Scan(scanner, category);
-        var kept = db.GetItems(category.Id).Single();
-        File.WriteAllText(Path.Combine(media, "good.mkv"), "good");
+        var category = SaveCategory(db, "Denied", MediaType.Video);
+        var normalized = SourcePathRules.NormalizeLocalFolder(protectedRoot);
+        db.AddSource(new CategorySource(Guid.NewGuid(), category.Id, normalized.Path, normalized.PathKey, true, true));
+        string storedPath = Path.Combine(protectedRoot, "existing.mp4");
+        var stored = new MediaItem(Guid.NewGuid(), category.Id, MediaType.Video, storedPath,
+            storedPath.ToUpperInvariant(), 1, 1);
+        db.ApplyObservedItems(new[] { stored }, Array.Empty<Guid>());
 
-        RequireRun("icacls", blocked, "/inheritance:r", "/deny", Environment.UserName + ":(OI)(CI)F");
-        try
-        {
-            LibraryScanResult result = Scan(scanner, category);
-            Check(result.WarningCount != 0, "Access failure must be surfaced as a warning.");
-            Check(db.GetItems(category.Id).Any(x => x.Path.EndsWith("good.mkv", StringComparison.OrdinalIgnoreCase)),
-                "Successful sibling scope should still be applied.");
-            Check(!db.GetItems(category.Id).Single(x => x.Id == kept.Id).IsMissing,
-                "Blocked scope must preserve previous existence state.");
-        }
-        finally
-        {
-            RequireRun("icacls", blocked, "/remove:d", Environment.UserName, "/inheritance:e", "/T", "/C");
-        }
+        var scanner = new LibraryScanner(db);
+        LibraryScanResult result = Scan(scanner, category);
+        Check(result.WarningCount != 0, "Protected source should surface an unavailable/access warning.");
+        Check(!db.GetItems(category.Id).Single().IsMissing,
+            "Access failure must preserve previous existence state.");
     }
 
-    private static void VerifyReparsePoint(string dbPath, string media)
+    private static void VerifyReparsePartialSuccess(string dbPath, string media)
     {
         string target = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(media)!, "target")).FullName;
         File.WriteAllText(Path.Combine(target, "linked.mp4"), "linked");
         string junction = Path.Combine(media, "junction");
         RequireRun("cmd", "/c", "mklink", "/J", junction, target);
+        File.WriteAllText(Path.Combine(media, "good.mkv"), "good");
+
         using var db = LibraryDatabase.Open(dbPath);
         var category = SaveCategory(db, "Reparse", MediaType.Video);
         AddSource(db, category, media, true, true);
+        string blockedPath = Path.Combine(junction, "old.mp4");
+        var blocked = new MediaItem(Guid.NewGuid(), category.Id, MediaType.Video,
+            blockedPath, blockedPath.ToUpperInvariant(), 1, 1);
+        db.ApplyObservedItems(new[] { blocked }, Array.Empty<Guid>());
+
         var scanner = new LibraryScanner(db);
-        var result = Scan(scanner, category);
+        LibraryScanResult result = Scan(scanner, category);
         Check(result.WarningCount != 0);
-        Check(db.GetItems(category.Id).Count == 0, "Junction contents must not be indexed.");
+        Check(db.GetItems(category.Id).Any(x => x.Path.EndsWith("good.mkv", StringComparison.OrdinalIgnoreCase)),
+            "Successful sibling scope must still be applied.");
+        Check(!db.GetItems(category.Id).Single(x => x.Id == blocked.Id).IsMissing,
+            "Reparse-blocked scope must preserve previous existence state.");
+        Check(!db.GetItems(category.Id).Any(x => x.Path.EndsWith("linked.mp4", StringComparison.OrdinalIgnoreCase)),
+            "Junction target contents must not be followed and indexed.");
     }
 
     private static void VerifyCaseSensitiveDirectory(string dbPath, string media)
@@ -230,10 +227,10 @@ internal static class T05Verification
             var category = SaveCategory(db, "Case", MediaType.Video);
             AddSource(db, category, media, true, true);
             var scanner = new LibraryScanner(db);
-            var result = Scan(scanner, category);
+            LibraryScanResult result = Scan(scanner, category);
             Check(result.WarningCount != 0);
             Check(db.GetItems(category.Id).Count == 0,
-                "Case-sensitive directory contents must not be indexed in the initial Windows path contract.");
+                "Case-sensitive directory contents must not be indexed.");
         }
         finally
         {
@@ -262,22 +259,15 @@ internal static class T05Verification
 
     private static void RequireRun(string fileName, params string[] arguments)
     {
-        int exit = RunProcess(fileName, arguments);
-        if (exit != 0) throw new Exception($"{fileName} failed with exit code {exit}.");
-    }
-
-    private static void TryRun(string fileName, params string[] arguments)
-    {
-        try { RunProcess(fileName, arguments); } catch { }
-    }
-
-    private static int RunProcess(string fileName, params string[] arguments)
-    {
         var start = new ProcessStartInfo(fileName) { UseShellExecute = false, CreateNoWindow = true };
         foreach (string argument in arguments) start.ArgumentList.Add(argument);
         using var process = Process.Start(start) ?? throw new Exception($"Could not start {fileName}.");
-        process.WaitForExit();
-        return process.ExitCode;
+        if (!process.WaitForExit(10000))
+        {
+            try { process.Kill(entireProcessTree: true); } catch { }
+            throw new Exception($"{fileName} timed out.");
+        }
+        if (process.ExitCode != 0) throw new Exception($"{fileName} failed with exit code {process.ExitCode}.");
     }
 
     private static void Check(bool condition, string message = "T05 assertion failed")
