@@ -22,9 +22,17 @@ public partial class MainWindow : Window
             return;
         }
 
-        comicViewer = new Media.Comic.ComicViewerWindow { Owner = this };
-        comicViewer.Closed += (_, _) => comicViewer = null;
-        comicViewer.Show();
+        try
+        {
+            comicViewer = new Media.Comic.ComicViewerWindow { Owner = this };
+            comicViewer.Closed += (_, _) => comicViewer = null;
+            comicViewer.Show();
+        }
+        catch (Exception ex)
+        {
+            comicViewer = null;
+            MessageBox.Show(this, ex.ToString(), "만화 뷰어 시작 실패");
+        }
     }
 
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
