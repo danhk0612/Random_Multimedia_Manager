@@ -5,8 +5,9 @@
 - C# / .NET 10 / WPF, Windows x64용 앱 프로젝트 하나.
 - src/RandomMultimediaManager.App: App.xaml로 시작하여 MainWindow를 여는 최소 셸.
 - RandomMultimediaManager.sln: 솔루션 진입점.
-- T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. 만화 뷰어/랜덤 정책은 아직 없다.
-- T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 계약/Windows 실측은 검증 중이며 상세는 docs/VIDEO_ENGINE_VALIDATION.md. 제품 공통 감상 조정자는 아직 없다.
+- T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. 랜덤 정책은 아직 없다.
+- T08: App/Media/Comic에 T07 `ComicArchive`를 사용하는 준비/활성 분리, 제한 페이지 캐시, SkiaSharp 렌더링과 WPF 만화 뷰어가 있다. 공통 감상 세션/DB 진행 저장 연결은 T11에 남긴다.
+- T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 승인된 계약과 검증 결과는 docs/VIDEO_ENGINE_VALIDATION.md를 따른다. 제품 공통 감상 조정자는 아직 없다.
 - 셸의 일반 창 닫기는 WPF 기본 동작이다. 트레이/빠른 종료 제품 정책의 확정이 아니다.
 
 T02 계약에 사용자 승인된 VisitCommit 검증값을 보완하고 T03에서 net10.0 Core와 Core.Tests/Data.Tests를 추가했다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.
@@ -47,10 +48,12 @@ T02 확정 계약은 docs/DATA_AND_RANDOM_POLICY.md에 있다. (CategoryId, Path
 
 ## 미디어와 비동기
 
-- 압축 엔트리와 이미지 디코딩을 분리하고 현재/인접 페이지에 한정한 메모리 사용을 검증한다.
-- 파일 전환 시 이전 비동기 결과가 새 화면에 반영되지 않도록 취소/소유권을 정한다.
+- T07 압축 열기와 T08 이미지 디코딩을 분리한다. 압축 `Opened`는 Ready가 아니며 복원 대상 시작 페이지가 실제 디코딩된 뒤에만 만화 준비가 성공한다.
+- T08은 현재 페이지 기준 앞 1/뒤 2 페이지를 비동기 프리로드하고 디코딩 이미지 LRU 캐시를 256 MiB로 제한한다. 파일 전환/닫기 시 준비 작업을 취소하고 캐시 이미지·페이지 스트림·압축 소유권을 해제한다.
+- T08 WPF 화면은 SkiaSharp 코어에서 오프스크린 BGRA 프레임을 고품질 샘플링으로 그린 뒤 WPF `BitmapSource`로 표시한다. 별도 SkiaSharp.Views.WPF/OpenTK 호환 계층은 사용하지 않는다.
+- 파일 전환 시 이전 비동기 결과가 새 화면에 반영되지 않도록 준비 generation/취소와 소유권을 사용한다.
 - LibVLC 리소스 수명은 영상 구현 내부에 둔다. 공통 상태에는 필요한 명령과 결과만 노출한다.
-- WPF 영상 출력·전체화면·컨트롤 중첩·음소거·해제 후 파일 삭제 가능성을 T09에서 검증한다.
+- WPF 영상 출력·전체화면·컨트롤 중첩·음소거·해제 후 파일 삭제 가능성은 T09 결과를 따른다.
 - VSR 미지원/실패 시 일반 재생이 가능해야 한다. VSR용 렌더러 분리는 검증 결과 없이 선행 구현하지 않는다.
 
 ## 개발·검증 환경
