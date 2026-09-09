@@ -1,11 +1,12 @@
 using Microsoft.Win32;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
-using SkiaSharp.Views.Desktop;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace RandomMultimediaManager.App.Media.Comic;
 
@@ -50,7 +51,7 @@ public partial class ComicViewerWindow : Window
             await EnsureVisiblePagesAsync(next.Token);
             StatusText.Text = System.IO.Path.GetFileName(path);
             UpdateUi();
-            Canvas.InvalidateVisual();
+            RenderCanvas();
         }
         catch (OperationCanceledException)
         {
@@ -82,7 +83,7 @@ public partial class ComicViewerWindow : Window
         {
             await EnsureVisiblePagesAsync(token);
             UpdateUi();
-            Canvas.InvalidateVisual();
+            RenderCanvas();
         }
     }
 
@@ -116,7 +117,7 @@ public partial class ComicViewerWindow : Window
             if (_viewModel.IsReady)
                 await EnsureVisiblePagesAsync(_operation?.Token ?? CancellationToken.None);
             UpdateUi();
-            Canvas?.InvalidateVisual();
+            RenderCanvas();
         }
     }
 
@@ -125,7 +126,7 @@ public partial class ComicViewerWindow : Window
         if (DirectionBox.SelectedItem is ComboBoxItem item && Enum.TryParse(item.Tag?.ToString(), out ComicReadingDirection direction))
         {
             _viewModel.ReadingDirection = direction;
-            Canvas?.InvalidateVisual();
+            RenderCanvas();
         }
     }
 
@@ -135,9 +136,11 @@ public partial class ComicViewerWindow : Window
         {
             _viewModel.SetFitMode(mode);
             UpdateUi();
-            Canvas?.InvalidateVisual();
+            RenderCanvas();
         }
     }
+
+    private void ViewerSizeChanged(object sender, SizeChangedEventArgs e) => RenderCanvas();
 
     private async void ViewerMouseWheel(object sender, MouseWheelEventArgs e)
     {
@@ -148,7 +151,7 @@ public partial class ComicViewerWindow : Window
         {
             _viewModel.AdjustZoom(e.Delta);
             UpdateUi();
-            Canvas.InvalidateVisual();
+            RenderCanvas();
             e.Handled = true;
             return;
         }
@@ -158,7 +161,7 @@ public partial class ComicViewerWindow : Window
             await _viewModel.ScrollVerticalAsync(e.Delta > 0 ? -0.12 : 0.12, _operation?.Token ?? CancellationToken.None);
             await EnsureVisiblePagesAsync(_operation?.Token ?? CancellationToken.None);
             UpdateUi();
-            Canvas.InvalidateVisual();
+            RenderCanvas();
         }
         else
         {
@@ -184,7 +187,7 @@ public partial class ComicViewerWindow : Window
         Point current = e.GetPosition(ViewerHost);
         _viewModel.PanX = _dragPanX + current.X - start.X;
         _viewModel.PanY = _dragPanY + current.Y - start.Y;
-        Canvas.InvalidateVisual();
+        RenderCanvas();
     }
 
     private void ViewerMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -207,19 +210,34 @@ public partial class ComicViewerWindow : Window
         }
     }
 
-    private void PaintSurface(object? sender, SKPaintSurfaceEventArgs e)
+    private void RenderCanvas()
     {
-        SKCanvas canvas = e.Surface.Canvas;
-        canvas.Clear(new SKColor(22, 22, 22));
-        if (!_viewModel.IsReady)
+        if (Canvas is null || ViewerHost is null || ViewerHost.ActualWidth <= 0 || ViewerHost.ActualHeight <= 0)
             return;
 
-        if (_viewModel.DisplayMode == ComicDisplayMode.SinglePage)
-            DrawSingle(canvas, e.Info.Width, e.Info.Height);
-        else if (_viewModel.DisplayMode == ComicDisplayMode.TwoPage)
-            DrawSpread(canvas, e.Info.Width, e.Info.Height);
-        else
-            DrawVertical(canvas, e.Info.Width, e.Info.Height);
+        DpiScale dpi = VisualTreeHelper.GetDpi(this);
+        int width = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualWidth * dpi.DpiScaleX));
+        int height = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualHeight * dpi.DpiScaleY));
+        using var frame = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var canvas = new SKCanvas(frame);
+        canvas.Clear(new SKColor(22, 22, 22));
+
+        if (_viewModel.IsReady)
+        {
+            if (_viewModel.DisplayMode == ComicDisplayMode.SinglePage)
+                DrawSingle(canvas, width, height);
+            else if (_viewModel.DisplayMode == ComicDisplayMode.TwoPage)
+                DrawSpread(canvas, width, height);
+            else
+                DrawVertical(canvas, width, height);
+        }
+
+        int bufferSize = checked(frame.RowBytes * frame.Height);
+        BitmapSource source = BitmapSource.Create(
+            width, height, 96 * dpi.DpiScaleX, 96 * dpi.DpiScaleY,
+            PixelFormats.Bgra32, null, frame.GetPixels(), bufferSize, frame.RowBytes);
+        source.Freeze();
+        Canvas.Source = source;
     }
 
     private void DrawSingle(SKCanvas canvas, int width, int height)
@@ -227,7 +245,7 @@ public partial class ComicViewerWindow : Window
         SKBitmap? bitmap = _viewModel.GetPage(_viewModel.CurrentPageIndex);
         if (bitmap is null)
             return;
-        SKRect rect = CalculateDestination(bitmap, width, height, 0, 0, width, height);
+        SKRect rect = CalculateDestination(bitmap, 0, 0, width, height);
         canvas.DrawBitmap(bitmap, rect, HighQualitySampling);
     }
 
@@ -237,12 +255,12 @@ public partial class ComicViewerWindow : Window
         float half = width / 2f;
         if (leftIndex >= 0 && _viewModel.GetPage(leftIndex) is SKBitmap left)
         {
-            SKRect rect = CalculateDestination(left, width, height, 0, 0, half, height);
+            SKRect rect = CalculateDestination(left, 0, 0, half, height);
             canvas.DrawBitmap(left, rect, HighQualitySampling);
         }
         if (rightIndex >= 0 && _viewModel.GetPage(rightIndex) is SKBitmap right)
         {
-            SKRect rect = CalculateDestination(right, width, height, half, 0, half, height);
+            SKRect rect = CalculateDestination(right, half, 0, half, height);
             canvas.DrawBitmap(right, rect, HighQualitySampling);
         }
     }
@@ -263,12 +281,11 @@ public partial class ComicViewerWindow : Window
         SKBitmap? bitmap = _viewModel.GetPage(index);
         if (bitmap is null)
             return;
-        SKRect rect = CalculateDestination(bitmap, width, height, 0, y, width, height);
+        SKRect rect = CalculateDestination(bitmap, 0, y, width, height);
         canvas.DrawBitmap(bitmap, rect, HighQualitySampling);
     }
 
-    private SKRect CalculateDestination(SKBitmap bitmap, float surfaceWidth, float surfaceHeight,
-        float regionX, float regionY, float regionWidth, float regionHeight)
+    private SKRect CalculateDestination(SKBitmap bitmap, float regionX, float regionY, float regionWidth, float regionHeight)
     {
         double scale = _viewModel.FitMode switch
         {
@@ -278,15 +295,13 @@ public partial class ComicViewerWindow : Window
             ComicFitMode.Custom => _viewModel.Zoom,
             _ => Math.Min(regionWidth / bitmap.Width, regionHeight / bitmap.Height)
         };
-        if (_viewModel.FitMode == ComicFitMode.Custom)
-            scale = _viewModel.Zoom;
-        else
+        if (_viewModel.FitMode != ComicFitMode.Custom)
             scale *= _viewModel.Zoom;
 
         float drawWidth = (float)(bitmap.Width * scale);
         float drawHeight = (float)(bitmap.Height * scale);
-        float x = regionX + (regionWidth - drawWidth) / 2f + (float)_viewModel.PanX;
-        float y = regionY + (regionHeight - drawHeight) / 2f + (float)_viewModel.PanY;
+        float x = regionX + (regionWidth - drawWidth) / 2f + (float)(_viewModel.PanX * VisualTreeHelper.GetDpi(this).DpiScaleX);
+        float y = regionY + (regionHeight - drawHeight) / 2f + (float)(_viewModel.PanY * VisualTreeHelper.GetDpi(this).DpiScaleY);
         return new SKRect(x, y, x + drawWidth, y + drawHeight);
     }
 
@@ -314,6 +329,7 @@ public partial class ComicViewerWindow : Window
         operation?.Cancel();
         operation?.Dispose();
         _viewModel.Dispose();
+        Canvas.Source = null;
         base.OnClosing(e);
     }
 }
