@@ -52,6 +52,7 @@
                         <RowDefinition Height="150" />
                         <RowDefinition Height="12" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                     <ListBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" DisplayMemberPath="RootPath" />
@@ -79,6 +80,18 @@
                             <Button Width="90" Margin="0,0,8,0" Content="저장" Click="SaveSource_Click" />
                             <Button Width="90" Content="제거" Click="RemoveSource_Click" />
                         </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="3" Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Width="100" Content="수동 스캔" Click="ScanCategory_Click" />
+                        <Button Grid.Column="1" Width="80" Margin="8,0,12,0" Content="취소"
+                                IsEnabled="{Binding IsScanning}" Click="CancelScan_Click" />
+                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding ScanProgressMessage}" TextWrapping="Wrap" />
                     </Grid>
                 </Grid>
             </GroupBox>
