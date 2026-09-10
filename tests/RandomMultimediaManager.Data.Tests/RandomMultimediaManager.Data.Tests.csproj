@@ -8,6 +8,7 @@
   <ItemGroup><ProjectReference Include="../../src/RandomMultimediaManager.Core/RandomMultimediaManager.Core.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="[10.0.8]" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="[2.1.13]" />
+    <Compile Include="../../src/RandomMultimediaManager.App/Sessions/*.cs" Link="Sessions/%(Filename)%(Extension)" />
     <Compile Include="../../src/RandomMultimediaManager.App/Data/*.cs" Link="Data/%(Filename)%(Extension)" />
     <Compile Include="../../src/RandomMultimediaManager.App/Scanning/*.cs" Link="Scanning/%(Filename)%(Extension)" />
     <Compile Include="../../src/RandomMultimediaManager.App/ViewModels/CategoryEditorViewModel.cs" Link="ViewModels/CategoryEditorViewModel.cs" />

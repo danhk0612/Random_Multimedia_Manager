@@ -263,3 +263,19 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 패키지: [Microsoft.Data.Sqlite 10.0.8](https://www.nuget.org/packages/Microsoft.Data.Sqlite/10.0.8), .NET Standard 2.0 대상으로 net10.0 및 net10.0-windows 호환. 직접 참조는 정확한 버전으로 고정했다. [공식 트랜잭션 문서](https://learn.microsoft.com/en-us/dotnet/standard/data/sqlite/transactions)와 함께 2026-09-07 접근 확인.
 
 네이티브 번들은 [SQLitePCLRaw.bundle_e_sqlite3 2.1.13](https://www.nuget.org/packages/SQLitePCLRaw.bundle_e_sqlite3/2.1.13)으로 고정한다. 초기 복원에서 자동 선택된 2.1.11의 NU1903 경고를 확인하여 같은 2.1 계열 패치를 명시했다. 경고 억제는 하지 않는다.
+
+## T06 구현 API와 T11 인계
+
+- Core `CandidatePolicy.GetCandidates`는 고정 snapshot/Now/선택/Seen/격리를 받아 ItemId 중복 없는 후보를 반환한다. 균등 추첨은 App 조정자의 `Random.Shared.Next(candidateCount)` 한 번이다. `SessionPath`는 슬롯·cursor·Seen·고정 선택 집합·방문별 Pending·한도·삭제 tombstone을 소유한다. 세션 복원/DB schema 추가는 없다.
+- App `Sessions/SessionCoordinator`의 `StartRandomAsync`, `OpenManualAsync`, `PreviousAsync`, `NextAsync`, `SetSuppressedAsync`, `LeaveAsync`는 필수 CommandId를 받는다. 상태는 복사된 `View`로 조회한다. 동일 CommandId는 같은 Task/결과를 반환하며 현재 세션 최근 256개를 보존한다. Busy는 큐 적재 없이 반환한다. 실제 창/트레이/프로세스 종료는 연결하지 않았다.
+- `ISessionMediaPreparer.PrepareAsync(item, progress, SessionToken, cancellation)`은 숨김·음소거 및 시작 위치 디코딩을 끝낸 `ISessionMedia` 소유권을 결과로 전달한다. 조정자가 결과를 받은 뒤에는 준비자/호스트가 별도로 해제하지 않는다. 실패 결과가 리소스를 포함하더라도 조정자가 해제하며, 예외를 던지는 준비자는 아직 반환하지 않은 리소스를 자체 해제해야 한다.
+- `ISessionMedia.PauseAndCapture`는 기존 재생/조작을 중지하고 최종 위치를 반환하며 `Resume`은 저장이 안 된 것으로 확인된 방문의 기존 재생 상태를 복원한다. `Activate`는 새 열기가 아닌 논리적 소유권 전환이다. 활성화 후 엔진 오류는 새 Pending을 유지하고 Completed 결과의 Error로 안내한다. `DisposeAsync`는 소유 리소스를 모두 해제해야 한다.
+- T11은 기존 `PreparedComic`/`PreparedVideo`를 이 경계에 연결하는 어댑터를 구현한다. 조정자 호출과 미디어 메서드는 소유 UI Dispatcher에서 수행하며 조정자의 await는 그 문맥을 유지한다. SQLite 작업은 Task.Run으로 분리한다. VideoOperation의 SessionId/OperationId/ItemId와 VideoVisit.VisitId를 SessionToken에 매핑하고 기존 Ready·장치 부재·끝 위치·자막 실패 분리를 보존한다. T06은 엔진이나 화면을 수정하지 않았다.
+- `PreparingToken`과 `CancelOpening(sessionId, operationId)`는 준비 세대를 무효화한다. 늦은 Ready의 세션/작업/항목 토큰과 취소 여부를 검사하고 해제한다. 해제가 끝날 때까지 Busy여서 현재+준비 대상 두 개 한도를 유지한다. 저장 단계부터는 취소로 commit을 되돌리지 않는다.
+- `ObserveProgress`는 일치하는 활성 Session/Operation/Item/Visit 토큰의 최신 위치 하나만 메모리에서 받는다. 최종 저장은 반드시 PauseAndCapture 결과를 사용한다. T11의 5초 checkpoint/일시정지 저장·즐겨찾기/영구 제외 UI와 스캔/삭제 동시 쓰기는 Busy/토큰/격리와 같은 순서로 연결해야 한다. T06에서 checkpoint 타이머나 UI를 추가하지 않았다.
+- `FrozenCommit`은 최초 이탈 시각/위치/억제값을 고정한다. 저장 실패면 대상은 해제되고 SaveFailed에 기존 방문을 유지한다. `RetryAsync`는 원래 대상을 새로 준비한 후 동일 payload로 재시도한다. 재준비 실패도 저장 의도를 지우지 않는다. `ResumeAfterSaveFailureAsync`는 `LibraryDatabase.CheckVisitCommit`이 NotCommitted일 때만 저장 의도를 취소하고 기존 감상으로 복귀한다. Committed/PayloadMismatch/조회 오류는 복귀하지 않는다. 성공 확인된 방문은 원래 전환을 재시도하여 완료한다.
+- `CheckVisitCommit`은 기존 VisitCommit 해시를 읽기만 하며 `NotCommitted/Committed/PayloadMismatch`를 구분한다. 억제 방문도 확인 가능하다. commit 반환 유실은 같은 조회로 확인하고 조회도 실패하면 CommitUnknown으로 유지한다. schema/VisitPayload/기존 CommitVisit 의미는 변경하지 않았다.
+- `GetSessionSnapshot`은 하나의 짧은 SQLite 읽기 snapshot으로 분류·소스·항목·마지막 기록을 반환한다. 디코딩 동안 트랜잭션을 유지하지 않는다. 랜덤 선택은 디스크 재스캔을 수행하지 않으며 존재/디코딩 실패는 준비자가 Failed로 반환한다.
+- T12 결과 연결용 `ReportDeletionAsync`는 OS 삭제를 실행하지 않는다. Failed/Cancelled는 방문/억제/기록을 유지하고 Unknown은 경로를 격리한다. 현재 경로가 격리되면 이탈 기록 저장도 막는다. Succeeded는 같은 PathKey 슬롯들을 tombstone으로 바꾸고 해당 현재 미디어/Pending만 비운다. Seen/cursor는 보존하고 자동 다음 재생은 없다. DB 삭제 정리는 T12의 성공 저널→기존 ApplyDeletion 순서이며 완료 후 `ReleaseDeletionQuarantineAsync`를 호출한다. T12는 실제 삭제 시작/리소스 해제/동일 Visit 재열기/저널/시작 복구를 구현해야 한다. 이 API에 결과를 전달하기 전부터의 삭제 직렬화·격리는 T12 책임이며 결과 보고 API가 OS 단계 전체를 대신하지 않는다.
+
+검증 실행: `dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release`, `dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release`. Data.Tests는 App/Sessions와 실제 App/Data 소스를 링크하며 미디어만 테스트 대역이다. `.github/workflows/t06-session.yml`은 Windows x64/.NET 10 솔루션 Release 빌드와 이 검사들 및 T05 전체 스캔 회귀를 실행한다. 실제 성공 결과는 CURRENT_STATE.md에 기록한다.

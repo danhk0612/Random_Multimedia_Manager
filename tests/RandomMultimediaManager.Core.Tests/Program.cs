@@ -19,3 +19,4 @@ Reject(new AppSettings(36501).Validate);
 Reject(new AppSettings(7, (ResumeMode)100).Validate);
 if (new AppSettings() != new AppSettings(7, ResumeMode.Resume)) throw new Exception("Wrong defaults.");
 Console.WriteLine($"PASS: {count + 1} Core checks");
+T06Checks.Run();
