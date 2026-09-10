@@ -16,7 +16,7 @@
 | SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (main 통합 완료) |
 | 분류/소스 폴더 UI | T04 구현·자동 검증·사용자 Windows UI 수동 검증 완료 (PR #9 main 통합 완료) |
 | 라이브러리 최초/수동 스캔 | T05 구현·Windows 자동 검증·사용자 UI 확인 완료 (PR #12 main 통합 완료) |
-| 랜덤 후보·Pending 방문 핵심 | T06 구현·Windows 자동 검증 완료, PR #13 병합 대기; 화면 연결은 T11 |
+| 랜덤 후보·Pending 방문 핵심 | T06 구현·Windows 자동 검증 완료, PR #13 main 통합 완료; 화면 연결은 T11 |
 | 만화 ZIP/CBZ 페이지 읽기 기반 | T07 구현·Windows 자동 검증 완료 (PR #6 main 통합 완료) |
 | 만화 표시·조작 | T08 구현·Windows 자동 검증 및 사용자 Windows 수동 검증 완료 (PR #10 main 통합 완료) |
 | 만화/영상 이어보기 DB 연결 | 미구현, T11 범위 |
@@ -45,9 +45,9 @@
 
 T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과가 main에 통합되었다. T09 완료·승인 생략 범위도 유지한다. T05는 구현·검증 및 PR #12 main 통합을 완료했다.
 
-- T06 구현·Windows 자동 검증 완료 — PR #13 병합 대기.
-- 이후: T06 완료 → T11 공통 감상 UI/진행 저장(Astra). T08/T09는 이미 완료되어 T11은 T06을 기다린다.
-- T11은 T06 완료·main 통합 뒤 진행한다. T06 PR을 직접 병합하거나 T11 구현을 시작하지 않았다.
+- T06 구현·Windows 자동 검증 완료 — PR #13 main 통합 완료.
+- 다음 착수: T11 공통 감상 UI/진행 저장 — Astra. T06/T08/T09 main 통합으로 선행 조건을 충족했다.
+- T11 상세 시작 지시문은 TASKS.md를 따른다. 현재 함께 시작할 독립 구현 Task는 없으며 T11 완료 뒤 T12/T14/T17의 병렬 가능성을 재검토한다.
 - 자동 감지는 T18A, 실제 삭제는 T12, 트레이/빠른 숨김·종료는 T14~T16에 남긴다.
 - T09/T10의 사용자 승인 생략은 해당 기록 범위에만 적용하며 이후 검증을 생략하는 일반 승인이 아니다.
 
@@ -151,4 +151,4 @@ T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과가 main에 통합되었다
 - 고정 선택 분류, 균등 후보, 7일/0일/미래 UTC 경계, Back/Forward·수동 삽입·방문별 억제, 준비→고정 payload 저장→활성, Busy/중복 명령/토큰/취소/두 미디어 소유권, 저장 실패·성공 불명 확인·재시도 및 삭제 결과 전이를 검증한다. API/소유권과 실패 처리의 단일 인계는 DATA_AND_RANDOM_POLICY.md의 T06 구현 절이다.
 - Windows x64 (10.0.26100) / .NET SDK 10.0.401에서 코드 `381b9c4d97eff8764897cc98be7d820444b914fd`의 [T06 검증 34423475169](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475169)이 성공했다. 솔루션 restore·Release build 경고 0/오류 0, Core 기존 20개 + T06 후보/방문/10000 한도 검사, SQLite 기존 13개·T04 3개 + T06 통합 10개 시나리오, T05 스캔 6개 그룹이 통과했다. 미디어 실패/지연은 테스트 대역이며 실제 SQLite 저장을 사용한다. 사용자 수동 검증을 받았다고 표기하지 않는다. T11 화면/실제 엔진 어댑터 통합은 아직 없으며 T09/T10 승인 예외·미검증 범위는 그대로 유지한다.
 - 같은 코드의 [T03 저장/셸 회귀 34423475145](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475145), [T05 스캔 회귀 34423475155](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475155), [T09 영상 회귀 34423475200](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475200)도 성공했다. 이후 완료 반영 커밋은 문서만 변경한다.
-- T06 구현·지정 자동 검증 완료, PR #13 병합 대기. T11 착수 조건은 T06 main 통합이며 직접 병합/후속 구현은 수행하지 않았다.
+- T06 구현·지정 자동 검증 완료, PR #13 main 통합 완료. T11 착수 조건은 충족되었으며 실제 공통 화면 연결은 다음 Work 범위다.
