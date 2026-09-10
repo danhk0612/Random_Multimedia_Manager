@@ -1,0 +1,35 @@
+name: T06 random pending verification
+on:
+  pull_request:
+    paths:
+      - 'src/RandomMultimediaManager.Core/**'
+      - 'src/RandomMultimediaManager.App/Sessions/**'
+      - 'src/RandomMultimediaManager.App/Data/**'
+      - 'tests/RandomMultimediaManager.Core.Tests/**'
+      - 'tests/RandomMultimediaManager.Data.Tests/**'
+      - '.github/workflows/t06-session.yml'
+permissions:
+  contents: read
+jobs:
+  session:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet --info
+      - run: dotnet restore RandomMultimediaManager.sln
+      - run: dotnet build RandomMultimediaManager.sln -c Release --no-restore
+      - run: dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release --no-build
+      - run: dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release --no-build
+      - name: Scanner regression (Windows paths and file system)
+        shell: pwsh
+        run: |
+          dotnet restore tests/RandomMultimediaManager.Scanner.Tests
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($scenario in @('basic','state','cancel','access','reparse','case')) {
+            dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- $scenario
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

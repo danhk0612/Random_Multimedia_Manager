@@ -242,3 +242,5 @@ Run("concurrent duplicate requests create one history row", path =>
     Check(db.GetHistory(item.Id).Count == 1);
 });
 Console.WriteLine($"PASS: {passed} SQLite integration scenarios");
+
+await T06Verification.RunAsync();
