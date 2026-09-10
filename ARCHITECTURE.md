@@ -5,9 +5,9 @@
 - C# / .NET 10 / WPF, Windows x64용 앱 프로젝트 하나.
 - src/RandomMultimediaManager.App: App.xaml로 시작하여 MainWindow를 여는 최소 셸.
 - RandomMultimediaManager.sln: 솔루션 진입점.
-- T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. 랜덤 정책은 아직 없다.
+- T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. T06은 Core 순수 후보/세션 정책과 App/Sessions 조정자를 구현한다.
 - T08: App/Media/Comic에 T07 `ComicArchive`를 사용하는 준비/활성 분리, 제한 페이지 캐시, SkiaSharp 렌더링과 WPF 만화 뷰어가 있다. 공통 감상 세션/DB 진행 저장 연결은 T11에 남긴다.
-- T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 승인된 계약과 검증 결과는 docs/VIDEO_ENGINE_VALIDATION.md를 따른다. 제품 공통 감상 조정자는 아직 없다.
+- T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 승인된 계약과 검증 결과는 docs/VIDEO_ENGINE_VALIDATION.md를 따른다. T06의 엔진 독립 조정자에 실제 미디어 어댑터/화면을 연결하는 작업은 T11에 남긴다.
 - 셸의 일반 창 닫기는 WPF 기본 동작이다. 트레이/빠른 종료 제품 정책의 확정이 아니다.
 
 T02 계약에 사용자 승인된 VisitCommit 검증값을 보완하고 T03에서 net10.0 Core와 Core.Tests/Data.Tests를 추가했다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.

@@ -132,6 +132,37 @@ internal static class T06Verification
             Check(f.Db.GetHistory(f.A.Id).Count == 1, "lost acknowledgement confirmed by marker");
             await Expect(f.C.LeaveAsync(Id()));
         });
+        await Scenario("unavailable commit confirmation retains frozen visit", async f =>
+        {
+            await Expect(f.C.OpenManualAsync(Id(), f.A.Id));
+            f.UnavailableDb = true;
+            await Expect(f.C.OpenManualAsync(Id(), f.B.Id), SessionStatus.CommitUnknown);
+            await Expect(f.C.ResumeAfterSaveFailureAsync(Id()), SessionStatus.CommitUnknown);
+            await Expect(f.C.NextAsync(Id()), SessionStatus.Busy);
+            Check(f.C.View.FrozenCommit is not null && f.C.View.Pending!.ItemId == f.A.Id, "unconfirmed visit retained");
+            await f.P.LastActive!.DisposeAsync(); // Test fixture teardown, not a successful product leave.
+        });
+        await Scenario("four unsuppressed visits and 256-command cache", async f =>
+        {
+            var start = Id();
+            await Expect(f.C.OpenManualAsync(start, f.A.Id));
+            var initial = f.C.View.Pending;
+            await Expect(f.C.OpenManualAsync(start, f.A.Id));
+            Check(initial == f.C.View.Pending, "completed command not replayed");
+            await Expect(f.C.OpenManualAsync(Id(), f.B.Id));
+            await Expect(f.C.PreviousAsync(Id()));
+            await Expect(f.C.NextAsync(Id()));
+            await Expect(f.C.LeaveAsync(Id()));
+            Check(f.Db.GetHistory(f.A.Id).Concat(f.Db.GetHistory(f.B.Id)).Select(h => h.VisitId).Distinct().Count() == 4, "four durable visits");
+            await Expect(f.C.OpenManualAsync(Id(), f.A.Id));
+            var oldCommand = Id();
+            await Expect(f.C.SetSuppressedAsync(oldCommand, f.C.View.ActiveToken!, true));
+            for (int i = 0; i < 256; i++)
+                await Expect(f.C.SetSuppressedAsync(Id(), f.C.View.ActiveToken!, false));
+            await Expect(f.C.SetSuppressedAsync(oldCommand, f.C.View.ActiveToken!, true));
+            Check(f.C.View.Pending!.SuppressHistory, "old command expired after 256 entries");
+            await Expect(f.C.LeaveAsync(Id()));
+        });
         await Scenario("payload conflict blocks return and new visit", async f =>
         {
             await Expect(f.C.OpenManualAsync(Id(), f.A.Id));
@@ -151,6 +182,9 @@ internal static class T06Verification
             await Expect(f.C.OpenManualAsync(Id(), f.A.Id));
             await Expect(f.C.OpenManualAsync(Id(), f.B.Id));
             var visit = f.C.View.Pending;
+            await Expect(f.C.ReportDeletionAsync(Id(), f.B.PathKey, DeletionOutcome.Unknown));
+            await Expect(f.C.OpenManualAsync(Id(), f.D.Id), SessionStatus.CommitUnknown);
+            Check(f.Db.GetHistory(f.B.Id).Count == 0, "unknown deletion cannot create history");
             await Expect(f.C.ReportDeletionAsync(Id(), f.B.PathKey, DeletionOutcome.Failed));
             await Expect(f.C.ReportDeletionAsync(Id(), f.B.PathKey, DeletionOutcome.Cancelled));
             Check(f.C.View.Pending == visit && f.Db.GetHistory(f.A.Id).Count == 1, "delete failure/cancel preserves history");
@@ -187,7 +221,7 @@ internal static class T06Verification
         public MediaItem A, B, D;
         public long Now = 2000000000000;
         public List<int> DrawCounts = [];
-        public bool FailCommit, LoseAcknowledgement, ConflictCommit;
+        public bool FailCommit, LoseAcknowledgement, ConflictCommit, UnavailableDb;
         public Fixture()
         {
             Db = LibraryDatabase.Open(System.IO.Path.Combine(DirectoryPath, "library.db"));
@@ -199,6 +233,9 @@ internal static class T06Verification
             Db.ApplyObservedItems([A, B, D], []);
             C = new(Db, P, () => Now, n => { DrawCounts.Add(n); return 0; }, request =>
             {
+                Check(P.LastActive?.Paused == true, "pause/capture precedes commit");
+                Check(P.Last == P.LastActive || P.Last?.Activated == false, "prepared target is hidden until commit");
+                if (UnavailableDb) { Db.Dispose(); throw new Exception("database disconnected"); }
                 if (FailCommit) return new(CommitStatus.Failed);
                 if (ConflictCommit) { Db.CommitVisit(request with { ViewedAtUtc = request.ViewedAtUtc + 1 }); throw new Exception("conflict"); }
                 var result = Db.CommitVisit(request);
@@ -241,14 +278,14 @@ internal static class T06Verification
     sealed class FakeMedia(FakePreparer owner, SessionToken prepared, PlaybackProgress position) : ISessionMedia
     {
         public PlaybackProgress Position = position;
-        public bool Resumed;
+        public bool Resumed, Paused, Activated;
         private SessionToken? active;
         private bool disposed;
         public PlaybackProgress PauseAndCapture(SessionToken token)
-        { Check(token == active && !disposed, "capture current token"); return Position; }
-        public void Resume(SessionToken token) { Check(token == active && !disposed, "resume current token"); Resumed = true; }
+        { Check(token == active && !disposed, "capture current token"); Paused = true; return Position; }
+        public void Resume(SessionToken token) { Check(token == active && !disposed, "resume current token"); Resumed = true; Paused = false; }
         public void Activate(SessionToken token)
-        { Check(token with { VisitId = null } == prepared && !disposed, "activate prepared token"); active = token; owner.LastActive = this; }
+        { Check(token with { VisitId = null } == prepared && !disposed, "activate prepared token"); active = token; Activated = true; owner.LastActive = this; }
         public ValueTask DisposeAsync() { if (!disposed) { disposed = true; owner.Live--; } return ValueTask.CompletedTask; }
     }
 }

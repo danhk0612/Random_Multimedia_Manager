@@ -175,25 +175,25 @@ public sealed class SessionCoordinator
     // Busy remains until the preparer returns and its result has been disposed (maximum two owners).
     public bool CancelOpening(Guid sessionId, Guid operationId)
     {
-        CancellationTokenSource? source;
         lock (gate)
         {
             if (phase != SessionPhase.Opening || preparationToken?.SessionId != sessionId
                 || preparationToken.OperationId != operationId) return false;
             cancelled = true;
-            source = opening;
+            opening?.Cancel();
+            return true;
         }
-        source?.Cancel();
-        return true;
     }
     private SessionToken? preparationToken;
     public SessionToken? PreparingToken { get { lock (gate) return preparationToken; } }
 
-    private async Task<SessionResult> Move(Transition transition, bool retry = false)
+    private async Task<SessionResult> Move(Transition transition)
     {
         ISessionMedia? ready = null;
         try
         {
+            if (path?.Pending is not null && quarantined.Contains(path.Slots[path.Cursor].PathKey))
+                return new(SessionStatus.CommitUnknown, "Resolve the current path deletion before saving its visit.");
             var item = transition.Item;
             SessionToken? targetToken = null;
             if (item is not null)
@@ -267,7 +267,11 @@ public sealed class SessionCoordinator
                 frozen = null; failed = null; phase = RestingPhase;
                 if (newSession) { commands.Clear(); commandOrder.Clear(); Remember(runningCommand, runningTask!); }
             }
-            if (old is not null) await old.DisposeAsync();
+            if (old is not null)
+            {
+                try { await old.DisposeAsync(); }
+                catch (Exception ex) { activationError ??= ex.Message; }
+            }
             return new(SessionStatus.Completed, activationError);
         }
         finally
@@ -311,7 +315,7 @@ public sealed class SessionCoordinator
     {
         if (failed is null || frozen is null) return new(SessionStatus.NoOp);
         // Reuse the exact frozen payload, but prepare a fresh candidate because failure released it.
-        return await Move(failed, retry: true);
+        return await Move(failed);
     }, recovery: true);
 
     public Task<SessionResult> ResumeAfterSaveFailureAsync(Guid commandId) => Command(commandId, async () =>
