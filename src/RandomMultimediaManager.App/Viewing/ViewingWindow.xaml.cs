@@ -129,7 +129,12 @@ public partial class ViewingWindow : Window
     private async void Retry(object s, RoutedEventArgs e) => await Run(async () =>
     {
         await Navigate(() => Coordinator.RetryAsync(Guid.NewGuid()));
-        if (closing && Coordinator.View.SessionId is null) { allowClose = true; Close(); }
+        if (closing && Coordinator.View.Phase != SessionPhase.SaveFailed)
+        {
+            var leave = await Coordinator.LeaveAsync(Guid.NewGuid());
+            if (leave.Status is SessionStatus.Completed or SessionStatus.NoOp) { allowClose = true; Close(); }
+            else Status.Text = "닫기 전 저장을 다시 확인하세요. " + leave.Error;
+        }
     });
     private async void ResumeFailed(object s, RoutedEventArgs e) => await Run(async () =>
     {
@@ -258,7 +263,11 @@ public partial class ViewingWindow : Window
         {
             var result = await Coordinator.LeaveAsync(Guid.NewGuid());
             if (result.Status is SessionStatus.Completed or SessionStatus.NoOp) { allowClose = true; Close(); }
-            else { Status.Text = "닫기 전 저장이 필요합니다. 저장 재시도 또는 감상 복귀를 선택하세요. " + result.Error; }
+            else
+            {
+                Status.Text = "닫기 전 저장이 필요합니다. 저장 재시도 또는 감상 복귀를 선택하세요. " + result.Error;
+                if (Coordinator.View.Phase != SessionPhase.SaveFailed) closing = false;
+            }
         });
     }
 }

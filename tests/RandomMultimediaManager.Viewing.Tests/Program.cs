@@ -27,6 +27,17 @@ internal static class Program
     }
     private static void Check(bool condition, string message)
     { if (!condition) throw new InvalidOperationException(message); Console.WriteLine("PASS " + message); }
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        foreach (object child in LogicalTreeHelper.GetChildren(root))
+            if (child is DependencyObject node)
+            { yield return node; foreach (var descendant in Descendants(node)) yield return descendant; }
+    }
+    private static async Task Wait(Func<bool> condition)
+    {
+        var deadline=DateTime.UtcNow.AddSeconds(45);
+        while(!condition()) { if(DateTime.UtcNow>deadline) throw new TimeoutException("UI condition"); await Task.Delay(50); }
+    }
     private static async Task Verify(Grid surface)
     {
         string root = Path.Combine(Path.GetTempPath(), "rmm-t11-" + Guid.NewGuid());
@@ -104,6 +115,34 @@ internal static class Program
             using var cancelled=new CancellationTokenSource(); cancelled.Cancel();
             var cancelResult=await preparer.PrepareAsync(comic,null,new(Guid.NewGuid(),Guid.NewGuid(),comic.Id),cancelled.Token);
             Check(cancelResult.Status==PreparationStatus.Cancelled,"actual adapter cancellation");
+            db.SetRandomExcluded(comic.Id,false);
+            db.SaveSettings(new(0));
+            db.ApplyObservedItems([], [absent.Id]);
+            var ui = new ViewingWindow(db);
+            ui.Show();
+            await Wait(() => ((ListBox)ui.FindName("Categories")).Items.Count == 2
+                && ((FrameworkElement)ui.FindName("SessionControls")).IsEnabled);
+            var categories = (ListBox)ui.FindName("Categories");
+            categories.SelectAll();
+            void Click(string label) => Descendants(ui).OfType<Button>().Single(b => Equals(b.Content,label))
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Click("랜덤 시작");
+            await Wait(() => ui.Current is not null && ((FrameworkElement)ui.FindName("SessionControls")).IsEnabled);
+            var uiFirst=ui.Coordinator.View.ActiveToken!;
+            Check(ui.Coordinator.View.Selected.Count==2,"actual UI multi-category selection");
+            await Task.Delay(5500);
+            await Wait(() => ((FrameworkElement)ui.FindName("SessionControls")).IsEnabled);
+            Check(db.GetProgress(uiFirst.ItemId) is not null,"UI five-second progress checkpoint");
+            Click("다음");
+            await Wait(() => ui.Coordinator.View.ActiveToken != uiFirst && ((FrameworkElement)ui.FindName("SessionControls")).IsEnabled);
+            Check(ui.Current!.Item.Id!=uiFirst.ItemId,"UI mixed media next");
+            Click("이전");
+            await Wait(() => ui.Coordinator.View.ActiveToken?.ItemId==uiFirst.ItemId && ((FrameworkElement)ui.FindName("SessionControls")).IsEnabled);
+            Check(ui.Coordinator.View.ActiveToken!.VisitId!=uiFirst.VisitId,"UI back creates new visit");
+            bool closed=false; ui.Closed+=(_,_)=>closed=true;
+            ui.Close();
+            await Wait(()=>closed);
+            Check(ui.Coordinator.View.SessionId is null,"actual UI normal close finishes LeaveAsync");
         }
         finally { Directory.Delete(root,true); }
     }

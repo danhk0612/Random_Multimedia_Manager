@@ -152,3 +152,10 @@ T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과가 main에 통합되었다
 - Windows x64 (10.0.26100) / .NET SDK 10.0.401에서 코드 `381b9c4d97eff8764897cc98be7d820444b914fd`의 [T06 검증 34423475169](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475169)이 성공했다. 솔루션 restore·Release build 경고 0/오류 0, Core 기존 20개 + T06 후보/방문/10000 한도 검사, SQLite 기존 13개·T04 3개 + T06 통합 10개 시나리오, T05 스캔 6개 그룹이 통과했다. 미디어 실패/지연은 테스트 대역이며 실제 SQLite 저장을 사용한다. 사용자 수동 검증을 받았다고 표기하지 않는다. T11 화면/실제 엔진 어댑터 통합은 아직 없으며 T09/T10 승인 예외·미검증 범위는 그대로 유지한다.
 - 같은 코드의 [T03 저장/셸 회귀 34423475145](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475145), [T05 스캔 회귀 34423475155](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475155), [T09 영상 회귀 34423475200](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475200)도 성공했다. 이후 완료 반영 커밋은 문서만 변경한다.
 - T06 구현·지정 자동 검증 완료, PR #13 main 통합 완료. T11 착수 조건은 충족되었으며 실제 공통 화면 연결은 다음 Work 범위다.
+
+## T11 공통 감상 연결 — 구현 및 검증 진행 중, PR #14
+
+- 기준 main `d30ca0c`, T06 #13/T08 #10/T09 #8 통합 확인. `task/t11-common-viewing-ui`에서만 작업한다.
+- 공통 WPF 감상 창, T06 실제 엔진 어댑터, 설정/공통 조작/진행 checkpoint/정상 닫기를 연결했다. DB 스키마·랜덤/기록 정책은 유지한다.
+- Windows 자동 검증 실행 중. 아직 성공으로 확정하지 않는다. 실제 사용자 Windows UI 확인은 대기한다. 구현 경계·실행 방법·수동 절차는 [T11 검증](docs/T11_VIEWING_VALIDATION.md)에 있다.
+- PR #14는 초안이며 직접 병합하지 않았다. T12 등 후속 Task는 진행하지 않는다.
