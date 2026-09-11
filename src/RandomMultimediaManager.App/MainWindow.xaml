@@ -5,9 +5,10 @@
         Title="Random Multimedia Manager" Width="960" Height="640">
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right" Margin="12,6">
+            <Button Content="랜덤 감상" Padding="12,6" Margin="0,0,8,0" Click="OpenViewing" />
             <Button Content="만화 뷰어" Padding="12,6" Margin="0,0,8,0" Click="OpenComicViewer" />
             <Button Content="영상 기반 검증" Padding="12,6" Click="OpenVideoValidation" />
         </StackPanel>
-        <views:CategoryEditorView />
+        <views:CategoryEditorView x:Name="CategoryEditor" />
     </DockPanel>
 </Window>

@@ -1,0 +1,53 @@
+<Window x:Class="RandomMultimediaManager.App.Viewing.ViewingWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="랜덤 감상" Width="1200" Height="850" MinWidth="850" MinHeight="600" Closing="OnClosing">
+ <DockPanel Margin="8">
+  <StackPanel DockPanel.Dock="Top">
+   <WrapPanel x:Name="SessionControls">
+    <ListBox x:Name="Categories" SelectionMode="Multiple" DisplayMemberPath="Name" Width="220" Height="65" ToolTip="감상할 분류를 여러 개 선택하세요."/>
+    <Button Content="랜덤 시작" Click="Start" Margin="6"/>
+    <Button Content="이전" Click="Previous" Margin="3"/>
+    <Button Content="다음" Click="Next" Margin="3"/>
+    <CheckBox x:Name="Favorite" Content="즐겨찾기" Click="FavoriteChanged" Margin="6"/>
+    <CheckBox x:Name="Excluded" Content="영구 랜덤 제외" Click="ExcludedChanged" Margin="6"/>
+    <CheckBox x:Name="Suppressed" Content="이번 감상 기록 제외" Click="SuppressedChanged" Margin="6"/>
+    <Button Content="전체화면" Click="Fullscreen" Margin="3"/>
+   </WrapPanel>
+   <WrapPanel x:Name="SettingsControls" Margin="0,5">
+    <TextBlock Text="최근 감상 제외 (일)" VerticalAlignment="Center"/>
+    <TextBox x:Name="Days" Width="65" Margin="6,0"/>
+    <ComboBox x:Name="ResumeModeBox" Width="110" SelectedIndex="0"><ComboBoxItem Content="이어보기"/><ComboBoxItem Content="처음부터"/></ComboBox>
+    <Button Content="설정 저장" Click="SaveSettings" Margin="6,0"/>
+   </WrapPanel>
+   <WrapPanel>
+    <Button Content="준비 취소" Click="Cancel" Margin="0,3,6,3"/>
+    <Button x:Name="RetryButton" Content="저장 재시도" Click="Retry" Margin="0,3,6,3"/>
+    <Button x:Name="ResumeButton" Content="저장 취소 후 감상 복귀" Click="ResumeFailed" Margin="0,3,6,3"/>
+   </WrapPanel>
+   <TextBlock x:Name="Status" TextWrapping="Wrap" Margin="0,5"/>
+  </StackPanel>
+  <StackPanel x:Name="VideoControls" DockPanel.Dock="Bottom" Visibility="Collapsed">
+   <WrapPanel>
+    <Button Content="재생" Click="Play"/><Button Content="일시정지" Click="Pause" Margin="5,0"/><Button Content="정지" Click="Stop"/>
+    <Button Content="−10초" Click="SeekBack" Margin="5,0"/><Button Content="+10초" Click="SeekForward"/>
+    <TextBlock Text="볼륨" Margin="10,0,4,0"/><Slider x:Name="Volume" Minimum="0" Maximum="100" Value="70" Width="100" ValueChanged="VolumeChanged"/>
+    <CheckBox x:Name="Muted" Content="음소거" Click="Mute" Margin="5,0"/>
+    <ComboBox x:Name="Rate" SelectedIndex="1" SelectionChanged="RateChanged"><ComboBoxItem Content="0.5×"/><ComboBoxItem Content="1×"/><ComboBoxItem Content="1.5×"/><ComboBoxItem Content="2×"/></ComboBox>
+    <Button Content="트랙 새로고침" Click="RefreshTracks" Margin="5,0"/>
+    <ComboBox x:Name="AudioTracks" Width="140" DisplayMemberPath="Name" SelectionChanged="AudioTrackChanged"/>
+    <ComboBox x:Name="SubtitleTracks" Width="140" DisplayMemberPath="Name" SelectionChanged="SubtitleTrackChanged"/>
+   </WrapPanel>
+   <WrapPanel Margin="0,5">
+    <ComboBox x:Name="ExternalSubtitles" Width="240" DisplayMemberPath="DisplayName" SelectionChanged="ExternalChanged"/>
+    <Button Content="SRT/SMI 수동 열기" Click="LoadSubtitle" Margin="5,0"/><Button Content="자막 끄기" Click="DisableSubtitles"/>
+   </WrapPanel>
+   <Slider x:Name="Position" Minimum="0" Maximum="1" PreviewMouseLeftButtonDown="BeginSeek" PreviewMouseLeftButtonUp="EndSeek"/>
+   <TextBlock x:Name="TimeText" Margin="0,4"/>
+  </StackPanel>
+  <Grid Background="Black">
+   <Grid x:Name="VideoSurface"/>
+   <ContentControl x:Name="ComicSurface"/>
+  </Grid>
+ </DockPanel>
+</Window>

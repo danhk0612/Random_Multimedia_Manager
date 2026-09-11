@@ -6,8 +6,8 @@
 - src/RandomMultimediaManager.App: App.xaml로 시작하여 MainWindow를 여는 최소 셸.
 - RandomMultimediaManager.sln: 솔루션 진입점.
 - T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. T06은 Core 순수 후보/세션 정책과 App/Sessions 조정자를 구현한다.
-- T08: App/Media/Comic에 T07 `ComicArchive`를 사용하는 준비/활성 분리, 제한 페이지 캐시, SkiaSharp 렌더링과 WPF 만화 뷰어가 있다. 공통 감상 세션/DB 진행 저장 연결은 T11에 남긴다.
-- T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 승인된 계약과 검증 결과는 docs/VIDEO_ENGINE_VALIDATION.md를 따른다. T06의 엔진 독립 조정자에 실제 미디어 어댑터/화면을 연결하는 작업은 T11에 남긴다.
+- T08: App/Media/Comic에 T07 `ComicArchive`를 사용하는 준비/활성 분리, 제한 페이지 캐시, SkiaSharp 렌더링과 WPF 만화 뷰어가 있다. T11 ViewingWindow가 기존 표시 콘텐츠와 준비 객체를 연결하고 진행을 저장한다.
+- T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 승인된 계약과 검증 결과는 docs/VIDEO_ENGINE_VALIDATION.md를 따른다. T11 ViewingMedia 어댑터가 T06 조정자와 공통 화면을 연결하며 고정 영상 패널의 HWND를 준비부터 해제까지 유지한다.
 - 셸의 일반 창 닫기는 WPF 기본 동작이다. 트레이/빠른 종료 제품 정책의 확정이 아니다.
 
 T02 계약에 사용자 승인된 VisitCommit 검증값을 보완하고 T03에서 net10.0 Core와 Core.Tests/Data.Tests를 추가했다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.
@@ -64,3 +64,7 @@ Windows x64와 .NET 10 SDK에서 솔루션 빌드 및 앱 실행을 검증한다
 - [Microsoft WPF 개요](https://learn.microsoft.com/en-us/dotnet/desktop/wpf/overview/)
 
 위 공식 문서는 2026-09-07에 접근 확인했다. SDK/Windows 지원은 배포 시 재확인한다.
+
+## T11 공통 감상 호스트
+
+`App/Viewing`는 T06 정책을 재사용하고 메인 창에서 모달로 연다. 진행 중 스캔 완료 후 진입하며 감상 중 메인 스캔/편집을 차단하여 최종 방문 저장 이후에 스캔을 반영한다. Dispatcher의 Busy admission은 checkpoint와 탐색을 직렬화하며 진행 중 만화 페이지 작업을 최종 캡처 전에 기다린다. 저장 실패는 기존 FrozenCommit/재시도/rollback 복귀 API를 사용한다. 수동 검증 대기 및 실제 검증 근거는 CURRENT_STATE와 docs/T11_VIEWING_VALIDATION.md를 따른다.
