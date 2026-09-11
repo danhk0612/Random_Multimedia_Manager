@@ -16,13 +16,13 @@
 | SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (main 통합 완료) |
 | 분류/소스 폴더 UI | T04 구현·자동 검증·사용자 Windows UI 수동 검증 완료 (PR #9 main 통합 완료) |
 | 라이브러리 최초/수동 스캔 | T05 구현·Windows 자동 검증·사용자 UI 확인 완료 (PR #12 main 통합 완료) |
-| 랜덤 후보·Pending 방문 핵심 | T06 구현·Windows 자동 검증 완료, PR #13 main 통합 완료; 화면 연결은 T11 |
+| 랜덤 후보·Pending 방문 핵심 | T06 구현·Windows 자동 검증 완료, PR #13 main 통합 완료; T11 화면 연결 구현·자동 검증 통과, 수동 확인 대기 |
 | 만화 ZIP/CBZ 페이지 읽기 기반 | T07 구현·Windows 자동 검증 완료 (PR #6 main 통합 완료) |
 | 만화 표시·조작 | T08 구현·Windows 자동 검증 및 사용자 Windows 수동 검증 완료 (PR #10 main 통합 완료) |
-| 만화/영상 이어보기 DB 연결 | 미구현, T11 범위 |
+| 만화/영상 이어보기 DB 연결 | T11 구현·Windows 자동 검증 통과, 사용자 수동 확인 대기 (PR #14) |
 | 외부 SRT/SMI 자막 | T10 완료 (자동 검증 + 사용자 UI 검증, 일부 수동 항목 승인 생략, PR #11) |
 | 영상 엔진·WPF 검증 호스트 | T09 완료 (잔여 수동 검증 사용자 승인 생략, PR #8 main 통합 완료) |
-| 즐겨찾기·영구 제외·이번 제외·삭제 | T06 후보/이번 방문 억제·삭제 결과 전이 구현; 공통 UI/실제 삭제는 T11/T12 |
+| 즐겨찾기·영구 제외·이번 제외·삭제 | T06 후보/이번 방문 억제·삭제 결과 전이 구현; 공통 UI는 T11 구현·자동 검증 통과, 실제 삭제는 T12 |
 | 단축키·트레이·빠른 숨김/종료 | 미구현 |
 | VSR | 후순위, 가능성 미검증 |
 
@@ -153,9 +153,9 @@ T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과가 main에 통합되었다
 - 같은 코드의 [T03 저장/셸 회귀 34423475145](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475145), [T05 스캔 회귀 34423475155](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475155), [T09 영상 회귀 34423475200](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34423475200)도 성공했다. 이후 완료 반영 커밋은 문서만 변경한다.
 - T06 구현·지정 자동 검증 완료, PR #13 main 통합 완료. T11 착수 조건은 충족되었으며 실제 공통 화면 연결은 다음 Work 범위다.
 
-## T11 공통 감상 연결 — 구현 및 검증 진행 중, PR #14
+## T11 공통 감상 연결 — 구현·Windows 자동 검증 통과, 사용자 수동 확인 대기 (PR #14)
 
 - 기준 main `d30ca0c`, T06 #13/T08 #10/T09 #8 통합 확인. `task/t11-common-viewing-ui`에서만 작업한다.
 - 공통 WPF 감상 창, T06 실제 엔진 어댑터, 설정/공통 조작/진행 checkpoint/정상 닫기를 연결했다. DB 스키마·랜덤/기록 정책은 유지한다.
-- Windows 자동 검증 실행 중. 아직 성공으로 확정하지 않는다. 실제 사용자 Windows UI 확인은 대기한다. 구현 경계·실행 방법·수동 절차는 [T11 검증](docs/T11_VIEWING_VALIDATION.md)에 있다.
+- 코드 `99e7763862a87294c7bf4b45ed102bb3447a4ae8`에서 Windows x64 (10.0.26100) / .NET SDK 10.0.401의 [T11 검증 34538104897](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/34538104897)이 성공했다. 솔루션 Release 빌드, Core/Data/T06, 실제 엔진 어댑터/SQLite 및 공통 WPF 창 자동 조작, 만화·영상·자막 회귀가 통과했다. 같은 코드의 T03 저장/셸 `34538104907`, T07 만화 `34538104929`, T09 영상 `34538105041`도 성공했다. 실제 사용자 Windows UI 확인은 대기한다. 구현 경계·실행 방법·수동 절차는 [T11 검증](docs/T11_VIEWING_VALIDATION.md)에 있다.
 - PR #14는 초안이며 직접 병합하지 않았다. T12 등 후속 Task는 진행하지 않는다.
