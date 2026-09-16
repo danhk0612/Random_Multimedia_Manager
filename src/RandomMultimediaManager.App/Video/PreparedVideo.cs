@@ -35,6 +35,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private readonly MediaPlayer player;
     private readonly VideoView view;
     private readonly ConcurrentQueue<string> logs = new();
+    private readonly ConcurrentQueue<string> audioLogs = new();
     private readonly EventHandler<EventArgs> errorHandler;
     private readonly EventHandler<LogEventArgs> logHandler;
     private readonly CancellationToken preparationCancellation;
@@ -83,6 +84,13 @@ public sealed class PreparedVideo : IAsyncDisposable
         {
             logs.Enqueue($"{e.Level}: {e.Message}");
             while (logs.Count > 160) logs.TryDequeue(out _);
+            // Keep audio evidence separate from verbose GPU initialization messages.
+            if (new[] { "audio", "directsound", "ac3", "a52", "spdif" }.Any(term =>
+                e.Message.Contains(term, StringComparison.OrdinalIgnoreCase)))
+            {
+                audioLogs.Enqueue($"{e.Level}: {e.Message}");
+                while (audioLogs.Count > 120) audioLogs.TryDequeue(out _);
+            }
         };
         player.EncounteredError += errorHandler;
         engine.Log += logHandler;
@@ -292,6 +300,19 @@ public sealed class PreparedVideo : IAsyncDisposable
             RestoredCompleted ? VLCState.Ended : player.State, RestoredCompleted || AudioUnavailable ? desiredVolume : player.Volume,
             AudioUnavailable || RestoredCompleted || player.Mute, player.Rate, player.IsSeekable,
             Volatile.Read(ref failed) == 0 ? null : "현재 영상 재생 오류");
+    }
+
+    public string ActiveAudioDiagnostics(VideoVisit token)
+    {
+        RequireVisit(token);
+        var stats = media.Statistics;
+        string tracks = string.Join(", ", player.AudioTrackDescription.Select(t => $"{t.Id}:{t.Name}"));
+        return $"libVLC {NativeVersion}; HW requested={HardwareRequested}; phase=active\n" +
+            $"state={player.State}; time={player.Time}; AudioUnavailable={AudioUnavailable}; track={player.AudioTrack}; tracks=[{tracks}]\n" +
+            $"desired volume/mute={desiredVolume}/{desiredMuted}; actual volume/mute={player.Volume}/{player.Mute}\n" +
+            $"Ready decoded video/audio={PreparedVideoBlocks}/{PreparedAudioBlocks}; " +
+            $"now decoded video/audio={stats.DecodedVideo}/{stats.DecodedAudio}; playedAudio={stats.PlayedAudioBuffers}\n" +
+            "Audio log (bounded):\n" + string.Join('\n', audioLogs.ToArray());
     }
 
     public PlaybackProgress CaptureProgress(VideoVisit token) => Snapshot(token).Progress;
