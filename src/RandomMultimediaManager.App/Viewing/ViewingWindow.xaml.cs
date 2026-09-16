@@ -30,7 +30,7 @@ public partial class ViewingWindow : Window
     {
         this.database = database;
         InitializeComponent();
-        Coordinator = new(database, new ViewingMediaPreparer(VideoSurface, Activated, Released));
+        Coordinator = new(database, new ViewingMediaPreparer(VideoSurface, OnMediaActivated, Released));
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background,
             async (_, _) => await Tick(), Dispatcher);
         Loaded += async (_, _) => await Run(async () =>
@@ -44,7 +44,7 @@ public partial class ViewingWindow : Window
         timer.Start();
     }
 
-    private void Activated(ViewingMedia media)
+    private void OnMediaActivated(ViewingMedia media)
     {
         Current = media;
         ComicSurface.Content = media.ComicContent;
