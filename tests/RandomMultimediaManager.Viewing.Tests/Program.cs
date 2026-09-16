@@ -143,6 +143,30 @@ internal static class Program
             ui.Close();
             await Wait(()=>closed);
             Check(ui.Coordinator.View.SessionId is null,"actual UI normal close finishes LeaveAsync");
+            // No current visit means LeaveAsync completes synchronously; Close must still run
+            // after the original Closing event has unwound (one X, including NoCandidates).
+            foreach (bool noCandidates in new[] { false, true })
+            {
+                var empty = new ViewingWindow(db);
+                empty.Show();
+                await Wait(() => ((ListBox)empty.FindName("Categories")).Items.Count == 2
+                    && ((FrameworkElement)empty.FindName("SessionControls")).IsEnabled);
+                if (noCandidates)
+                {
+                    db.SetRandomExcluded(comic.Id,true);
+                    var choices=(ListBox)empty.FindName("Categories");
+                    choices.SelectedItem=choices.Items.Cast<Category>().Single(c=>c.Id==comicCategory.Id);
+                    Descendants(empty).OfType<Button>().Single(b=>Equals(b.Content,"랜덤 시작"))
+                        .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    await Wait(()=>((TextBlock)empty.FindName("Status")).Text.Contains("후보가 없습니다"));
+                    await Wait(()=>((FrameworkElement)empty.FindName("SessionControls")).IsEnabled);
+                }
+                bool emptyClosed=false; empty.Closed+=(_,_)=>emptyClosed=true;
+                empty.Close();
+                await Wait(()=>emptyClosed);
+                Check(true,noCandidates ? "one close after no candidates" : "one close before viewing");
+            }
+
         }
         finally { Directory.Delete(root,true); }
     }
