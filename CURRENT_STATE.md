@@ -164,5 +164,7 @@ T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과가 main에 통합되었다
 
 - 사용자 보고: 1·2 정상, 3 만화만 있는 분류의 랜덤 후보 없음, 4 일부 영상 무음, 5는 3으로 확인 불가, 6 미실행. 랜덤 감상 창 X를 두 번 눌러야 닫힘. 번호는 사용자 보고 그대로이며 미확인 항목을 통과로 처리하지 않는다.
 - `67c66ba`: WPF Activated 이름 충돌 CS0108 수정.
-- `3c237a1`: 활성 방문 없는 동기 LeaveAsync 완료가 Closing 이벤트 안에서 Close를 재호출하는 경로를 Dispatcher yield로 분리. `9c1c596`: 감상 전/후보 없음 이후 한 번 닫기 자동 회귀 추가. 해당 수정의 Windows 검증 결과는 아직 확인 전이다.
+- `3c237a1`: 활성 방문 없는 동기 LeaveAsync 완료가 Closing 이벤트 안에서 Close를 재호출하는 경로를 Dispatcher yield로 분리. `9c1c596`: 감상 전/후보 없음 이후 한 번 닫기 자동 회귀 추가. 해당 수정의 [Windows T11 검사](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35094695450)는 통과했다.
 - 만화 후보 없음은 사용자가 미스캔 원인으로 확인했다. 일부 AVI 무음은 기존 영상 검증 창에서도 재현되며 트랙 새로고침 후 동일하다. 같은 파일은 PotPlayer에서 정상이고 H.264/AC3 48kHz·2채널·448kbps이다. 활성 오디오 상태/보존 로그 진단과 합성 AVI 회귀를 추가했으며 원인 및 실제 소리 해결은 미확인이다. 정책/엔진을 추정 변경하지 않았다. T11과 PR #14는 완료/병합 대기다.
+
+- 오디오 진단/합성 AVI 코드 `df17c831`의 [T11 Windows 검사](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35097804090), [T09 영상](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35097804123), T03 `35097804355`, T07 `35097804544`, T10 `35097804168` 모두 성공. AVI 3회 반복 포함. 실행 로그는 `AudioUnavailable=True`로 실제 AC3 소리 출력은 미검증이며 사용자 문제 파일의 활성 진단 대기.
