@@ -258,6 +258,8 @@ public partial class ViewingWindow : Window
         if (closing) return;
         closing = true; Controls();
         Cancel(this,new RoutedEventArgs());
+        // Even an empty session returns synchronously. Exit WPF's Closing event before Close().
+        await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
         await command;
         await Run(async () =>
         {
