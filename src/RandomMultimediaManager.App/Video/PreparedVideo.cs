@@ -82,13 +82,14 @@ public sealed class PreparedVideo : IAsyncDisposable
         errorHandler = (_, _) => Interlocked.Exchange(ref failed, 1);
         logHandler = (sender, e) =>
         {
-            logs.Enqueue($"{e.Level}: {e.Message}");
+            string entry = $"{DateTimeOffset.UtcNow:O} {e.Level}: {e.Message}";
+            logs.Enqueue(entry);
             while (logs.Count > 160) logs.TryDequeue(out _);
             // Keep audio evidence separate from verbose GPU initialization messages.
             if (new[] { "audio", "directsound", "ac3", "a52", "spdif" }.Any(term =>
                 e.Message.Contains(term, StringComparison.OrdinalIgnoreCase)))
             {
-                audioLogs.Enqueue($"{e.Level}: {e.Message}");
+                audioLogs.Enqueue(entry);
                 while (audioLogs.Count > 120) audioLogs.TryDequeue(out _);
             }
         };
@@ -307,12 +308,14 @@ public sealed class PreparedVideo : IAsyncDisposable
         RequireVisit(token);
         var stats = media.Statistics;
         string tracks = string.Join(", ", player.AudioTrackDescription.Select(t => $"{t.Id}:{t.Name}"));
-        return $"libVLC {NativeVersion}; HW requested={HardwareRequested}; phase=active\n" +
+        return $"captured UTC={DateTimeOffset.UtcNow:O}; file={System.IO.Path.GetFileName(Path)}; visit={token.VisitId}\n" +
+            $"libVLC {NativeVersion}; HW requested={HardwareRequested}; phase=active\n" +
             $"state={player.State}; time={player.Time}; AudioUnavailable={AudioUnavailable}; track={player.AudioTrack}; tracks=[{tracks}]\n" +
             $"desired volume/mute={desiredVolume}/{desiredMuted}; actual volume/mute={player.Volume}/{player.Mute}\n" +
             $"Ready decoded video/audio={PreparedVideoBlocks}/{PreparedAudioBlocks}; " +
             $"now decoded video/audio={stats.DecodedVideo}/{stats.DecodedAudio}; playedAudio={stats.PlayedAudioBuffers}\n" +
-            "Audio log (bounded):\n" + string.Join('\n', audioLogs.ToArray());
+            "Audio log (bounded):\n" + string.Join('\n', audioLogs.ToArray()) +
+            "\nRecent full log (bounded):\n" + string.Join('\n', logs.ToArray());
     }
 
     public PlaybackProgress CaptureProgress(VideoVisit token) => Snapshot(token).Progress;
