@@ -168,3 +168,5 @@ T04(PR #9), T08(PR #10), T10(PR #11)의 완료 결과가 main에 통합되었다
 - 만화 후보 없음은 사용자가 미스캔 원인으로 확인했다. 일부 AVI 무음은 기존 영상 검증 창에서도 재현되며 트랙 새로고침 후 동일하다. 같은 파일은 PotPlayer에서 정상이고 H.264/AC3 48kHz·2채널·448kbps이다. 활성 오디오 상태/보존 로그 진단과 합성 AVI 회귀를 추가했으며 원인 및 실제 소리 해결은 미확인이다. 정책/엔진을 추정 변경하지 않았다. T11과 PR #14는 완료/병합 대기다.
 
 - 오디오 진단/합성 AVI 코드 `df17c831`의 [T11 Windows 검사](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35097804090), [T09 영상](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35097804123), T03 `35097804355`, T07 `35097804544`, T10 `35097804168` 모두 성공. AVI 3회 반복 포함. 실행 로그는 `AudioUnavailable=True`로 실제 AC3 소리 출력은 미검증이며 사용자 문제 파일의 활성 진단 대기.
+
+- AVI/AC3 후속 확인: 사용자 PC에서 정상 MP4와 합성 AC3(bsid 8/6)는 유음, 원본 AVI와 스트림 복사 MKV는 무음이며 PotPlayer에서는 정상이다. bsid 6 또는 첫 출력 생성 실패만으로 무음 원인을 확정할 수 없다. 진단은 현재 방문의 동일 MediaPlayer를 읽지만 텍스트 포커스 동안 갱신이 멈춘다. 수집 UTC·파일명·VisitId, 타임스탬프가 있는 최근 전체 로그를 추가했다. 재생 경로는 변경하지 않았고 해결은 미확인이다. 로컬 diff 검사 통과, 새 Windows 자동 검사 결과는 확인 대기다.
