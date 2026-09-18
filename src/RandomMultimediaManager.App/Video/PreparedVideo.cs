@@ -168,8 +168,12 @@ public sealed class PreparedVideo : IAsyncDisposable
     {
         LibVLCSharp.Shared.Core.Initialize();
         bool audioUnavailable = !WindowsAudioEndpoint.IsAvailable();
-        var engine = new LibVLC(true, audioUnavailable ? "--no-audio" : "--audio", "--aout=directsound,none", "--directx-volume=0",
-            "--no-spdif", "--no-volume-save", "--no-video-title-show", "--no-sub-autodetect-file", "--stats");
+        var options = new List<string> { audioUnavailable ? "--no-audio" : "--audio", "--aout=directsound,none", "--directx-volume=0",
+            "--no-spdif", "--no-volume-save", "--no-video-title-show", "--no-sub-autodetect-file", "--stats" };
+        // The native AVI demuxer can split AC3 frames and cause repeated audio format changes.
+        if (System.IO.Path.GetExtension(path).Equals(".avi", StringComparison.OrdinalIgnoreCase))
+            options.Add("--demux=avformat");
+        var engine = new LibVLC(true, options.ToArray());
         VlcMedia? media = null;
         MediaPlayer? player = null;
         try
