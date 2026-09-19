@@ -211,6 +211,15 @@ public sealed class PreparedVideo : IAsyncDisposable
     {
         // Restore while hidden/silent. Never turn an exact-end position into a near-end threshold.
         long target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : milliseconds;
+        // A freshly decoded start already satisfies the existing one-second restore tolerance.
+        // Freeze and recheck it before skipping a redundant seek (which can time out on AVI).
+        if (target == 0 && player.Time >= 0 && player.Time <= 1000)
+        {
+            player.SetPause(true);
+            await WaitAsync(() => player.State == VLCState.Paused, cancellation);
+            if (player.Time >= 0 && player.Time <= 1000) return;
+            player.SetPause(false);
+        }
         try
         {
             await WaitAsync(() => player.IsSeekable, cancellation);
