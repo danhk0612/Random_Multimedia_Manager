@@ -5,6 +5,7 @@ namespace RandomMultimediaManager.App;
 
 public partial class App : Application
 {
+    public Deletion.DeletionService Deletions { get; private set; } = null!;
     public LibraryDatabase Database { get; private set; } = null!;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -13,6 +14,11 @@ public partial class App : Application
         try
         {
             Database = await Task.Run(() => LibraryDatabase.Open());
+            Deletions = new(Database, new Deletion.DeletionJournal(System.IO.Path.Combine(
+                System.IO.Path.GetDirectoryName(LibraryDatabase.DefaultPath)!, "delete-journal")), Deletion.WindowsFileDeletion.DeleteAsync);
+            await Deletions.InitializeAsync();
+            await Deletion.DeletionDialogs.RecoverAsync(Deletions);
+            if (Deletions.GloballyBlocked) { Shutdown(1); return; }
             MainWindow = new MainWindow();
             MainWindow.Show();
         }

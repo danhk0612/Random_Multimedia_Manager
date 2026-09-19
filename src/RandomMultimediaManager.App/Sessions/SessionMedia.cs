@@ -25,7 +25,7 @@ public enum SessionStatus
     Completed, NoOp, NoCandidates, NoPrevious, SelectionRequired, SessionLimit,
     Busy, Stale, Failed, Cancelled, SaveFailed, CommitUnknown
 }
-public enum SessionPhase { Empty, Active, Opening, Saving, SaveFailed }
+public enum SessionPhase { Empty, Active, Opening, Saving, SaveFailed, Deleting }
 public sealed record SessionResult(SessionStatus Status, string? Error = null);
 public sealed record SessionView(Guid? SessionId, SessionPhase Phase, int Cursor,
     IReadOnlyList<SessionSlot> Slots, IReadOnlySet<Guid> Seen, IReadOnlySet<Guid> Selected,

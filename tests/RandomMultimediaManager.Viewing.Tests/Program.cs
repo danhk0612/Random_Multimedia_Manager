@@ -19,7 +19,7 @@ internal static class Program
         window.Loaded += async (_, _) =>
         {
             int code = 0;
-            try { await Verify(surface); }
+            try { await Verify(surface); await T12NativeVerification.Run(surface); }
             catch (Exception ex) { Console.Error.WriteLine(ex); code = 1; }
             finally { window.Close(); app.Shutdown(code); }
         };

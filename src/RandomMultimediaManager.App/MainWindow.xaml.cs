@@ -78,7 +78,7 @@ public partial class MainWindow : Window
         }
         // A modal owner keeps scan application after the final visit/checkpoint boundary.
         // No scan can invalidate progress while the session is using that observed item.
-        new Viewing.ViewingWindow(((App)Application.Current).Database) { Owner = this }.ShowDialog();
+        new Viewing.ViewingWindow(((App)Application.Current).Database, ((App)Application.Current).Deletions) { Owner = this }.ShowDialog();
     }
 
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
