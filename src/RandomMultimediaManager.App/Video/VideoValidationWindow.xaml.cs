@@ -50,7 +50,7 @@ public partial class VideoValidationWindow : Window
     private async void PrepareFile(object sender, RoutedEventArgs e)
     {
         if (busy || closing || staged is not null) return;
-        var dialog = new OpenFileDialog { Filter = "영상|*.mp4;*.mkv|모든 파일|*.*" };
+        var dialog = new OpenFileDialog { Filter = "영상|*.mp4;*.mkv;*.avi|모든 파일|*.*" };
         if (dialog.ShowDialog(this) != true) return;
         var request = new VideoOperation(sessionId, Guid.NewGuid(), Guid.NewGuid());
         operation = request;
@@ -357,6 +357,9 @@ public partial class VideoValidationWindow : Window
     {
         if (busy || closing || current is null || visit is null) return;
         var snapshot = current.Snapshot(visit);
+        // Focus freezes the diagnostic text so Ctrl+A/C copies one consistent sample.
+        if (staged is null && !Diagnostics.IsKeyboardFocusWithin)
+            Diagnostics.Text = current.ActiveAudioDiagnostics(visit);
         if (!seeking) { Position.Maximum = Math.Max(1, snapshot.DurationMs); Position.Value = snapshot.Progress.VideoPositionMs!.Value; }
         Position.IsEnabled = snapshot.Seekable;
         TimeText.Text = $"{TimeSpan.FromMilliseconds(snapshot.Progress.VideoPositionMs!.Value):hh\\:mm\\:ss} / " +

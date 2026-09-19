@@ -6,7 +6,7 @@
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="#303030" Padding="8">
             <WrapPanel VerticalAlignment="Center">
-                <Button Content="열기" Click="OpenFile" Margin="0,0,8,0" Padding="10,4" />
+                <Button x:Name="OpenButton" Content="열기" Click="OpenFile" Margin="0,0,8,0" Padding="10,4" />
                 <Button Content="◀" Click="PreviousPage" Margin="0,0,4,0" Padding="10,4" />
                 <Button Content="▶" Click="NextPage" Margin="0,0,12,0" Padding="10,4" />
                 <TextBlock x:Name="PageText" Foreground="White" VerticalAlignment="Center" Margin="0,0,12,0" />

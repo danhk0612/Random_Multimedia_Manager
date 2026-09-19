@@ -33,7 +33,8 @@ internal static class Program
     {
         string[] sources = args.Length == 0
             ? [Path.Combine(AppContext.BaseDirectory, "Fixtures", "silent.mp4"), Path.Combine(AppContext.BaseDirectory, "Fixtures", "silent.mkv"),
-                Path.Combine(AppContext.BaseDirectory, "Fixtures", "audio.mp4")]
+                Path.Combine(AppContext.BaseDirectory, "Fixtures", "audio.mp4"),
+                Path.Combine(AppContext.BaseDirectory, "Fixtures", "ac3.avi")]
             : args;
         string temporary = Path.Combine(Path.GetTempPath(), "rmm-t09-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(temporary);
@@ -65,6 +66,7 @@ internal static class Program
                         "prepared resume position within 1 second");
                     await Task.Delay(250);
                     Check(current.Snapshot(visit).Visit == visit, "active visit identity");
+                    Console.WriteLine(current.ActiveAudioDiagnostics(visit));
                     Check(current.Seek(visit, 1000), "local seek accepted");
                     current.SetPaused(visit, true);
                     await Task.Delay(100);

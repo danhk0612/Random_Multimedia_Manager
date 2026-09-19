@@ -21,6 +21,17 @@ public partial class ComicViewerWindow : Window
     private double _dragPanX;
     private double _dragPanY;
     private bool _closing;
+    private readonly HashSet<Task> pageOperations = [];
+    public Task WhenIdleAsync() => Task.WhenAll(pageOperations.ToArray());
+    private async Task Track(Func<Task> action)
+    {
+        var task = action();
+        pageOperations.Add(task);
+        try { await task; }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { StatusText.Text = ex.Message; }
+        finally { pageOperations.Remove(task); }
+    }
     private WriteableBitmap? _surface;
     private byte[]? _pixelBuffer;
 
@@ -73,6 +84,20 @@ public partial class ComicViewerWindow : Window
         }
     }
 
+    // T11 embeds the existing renderer without opening another file or window.
+    public FrameworkElement TakeSessionContent(PreparedComic comic, PlaybackProgress? progress)
+    {
+        OpenButton.Visibility = Visibility.Collapsed;
+        _viewModel.Activate(comic, progress);
+        var content = (FrameworkElement)Content;
+        Content = null;
+        content.KeyDown += OnKeyDown;
+        content.Loaded += (_, _) => { UpdateUi(); RenderCanvas(); };
+        return content;
+    }
+
+    public void ReleaseSessionContent() => Close();
+
     public PlaybackProgress GetProgress() => _viewModel.GetProgress();
 
     private async void OpenFile(object sender, RoutedEventArgs e)
@@ -85,8 +110,8 @@ public partial class ComicViewerWindow : Window
             await OpenAsync(dialog.FileName);
     }
 
-    private async void PreviousPage(object sender, RoutedEventArgs e) => await MoveAsync(-1);
-    private async void NextPage(object sender, RoutedEventArgs e) => await MoveAsync(1);
+    private async void PreviousPage(object sender, RoutedEventArgs e) => await Track(() => MoveAsync(-1));
+    private async void NextPage(object sender, RoutedEventArgs e) => await Track(() => MoveAsync(1));
 
     private async Task MoveAsync(int delta)
     {
@@ -129,7 +154,7 @@ public partial class ComicViewerWindow : Window
         {
             _viewModel.DisplayMode = mode;
             if (_viewModel.IsReady)
-                await EnsureVisiblePagesAsync(_operation?.Token ?? CancellationToken.None);
+                await Track(() => EnsureVisiblePagesAsync(_operation?.Token ?? CancellationToken.None));
             UpdateUi();
             RenderCanvas();
         }
@@ -178,14 +203,14 @@ public partial class ComicViewerWindow : Window
 
         if (_viewModel.DisplayMode == ComicDisplayMode.VerticalScroll)
         {
-            await _viewModel.ScrollVerticalAsync(e.Delta > 0 ? -0.12 : 0.12, _operation?.Token ?? CancellationToken.None);
-            await EnsureVisiblePagesAsync(_operation?.Token ?? CancellationToken.None);
+            await Track(() => _viewModel.ScrollVerticalAsync(e.Delta > 0 ? -0.12 : 0.12, _operation?.Token ?? CancellationToken.None));
+            await Track(() => EnsureVisiblePagesAsync(_operation?.Token ?? CancellationToken.None));
             UpdateUi();
             RenderCanvas();
         }
         else
         {
-            await MoveAsync(e.Delta > 0 ? -1 : 1);
+            await Track(() => MoveAsync(e.Delta > 0 ? -1 : 1));
         }
         e.Handled = true;
     }
@@ -220,12 +245,12 @@ public partial class ComicViewerWindow : Window
     {
         if (e.Key is Key.Right or Key.PageDown)
         {
-            await MoveAsync(_viewModel.ReadingDirection == ComicReadingDirection.LeftToRight ? 1 : -1);
+            await Track(() => MoveAsync(_viewModel.ReadingDirection == ComicReadingDirection.LeftToRight ? 1 : -1));
             e.Handled = true;
         }
         else if (e.Key is Key.Left or Key.PageUp)
         {
-            await MoveAsync(_viewModel.ReadingDirection == ComicReadingDirection.LeftToRight ? -1 : 1);
+            await Track(() => MoveAsync(_viewModel.ReadingDirection == ComicReadingDirection.LeftToRight ? -1 : 1));
             e.Handled = true;
         }
     }
@@ -241,7 +266,7 @@ public partial class ComicViewerWindow : Window
             return;
         }
 
-        DpiScale dpi = VisualTreeHelper.GetDpi(this);
+        DpiScale dpi = VisualTreeHelper.GetDpi(ViewerHost);
         int width = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualWidth * dpi.DpiScaleX));
         int height = Math.Max(1, (int)Math.Ceiling(ViewerHost.ActualHeight * dpi.DpiScaleY));
         using var frame = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
@@ -352,8 +377,8 @@ public partial class ComicViewerWindow : Window
 
         float drawWidth = (float)(bitmap.Width * scale);
         float drawHeight = (float)(bitmap.Height * scale);
-        float x = regionX + (regionWidth - drawWidth) / 2f + (float)(_viewModel.PanX * VisualTreeHelper.GetDpi(this).DpiScaleX);
-        float y = regionY + (regionHeight - drawHeight) / 2f + (float)(_viewModel.PanY * VisualTreeHelper.GetDpi(this).DpiScaleY);
+        float x = regionX + (regionWidth - drawWidth) / 2f + (float)(_viewModel.PanX * VisualTreeHelper.GetDpi(ViewerHost).DpiScaleX);
+        float y = regionY + (regionHeight - drawHeight) / 2f + (float)(_viewModel.PanY * VisualTreeHelper.GetDpi(ViewerHost).DpiScaleY);
         return new SKRect(x, y, x + drawWidth, y + drawHeight);
     }
 

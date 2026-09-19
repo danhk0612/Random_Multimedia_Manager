@@ -1,0 +1,26 @@
+name: T11 common viewing verification
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/RandomMultimediaManager.Viewing.Tests/**'
+      - '.github/workflows/t11-viewing.yml'
+permissions:
+  contents: read
+jobs:
+  viewing:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet --info
+      - run: dotnet build RandomMultimediaManager.sln -c Release
+      - run: dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release --no-build
+      - run: dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release --no-build
+      - run: dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release
+      - run: dotnet run --project tests/RandomMultimediaManager.Comic.Tests -c Release
+      - run: dotnet run --project tests/RandomMultimediaManager.Video.Tests -c Release
+      - run: dotnet run --project tests/RandomMultimediaManager.Subtitle.Tests -c Release

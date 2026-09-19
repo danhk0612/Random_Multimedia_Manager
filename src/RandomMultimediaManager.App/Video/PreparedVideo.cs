@@ -35,6 +35,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private readonly MediaPlayer player;
     private readonly VideoView view;
     private readonly ConcurrentQueue<string> logs = new();
+    private readonly ConcurrentQueue<string> audioLogs = new();
     private readonly EventHandler<EventArgs> errorHandler;
     private readonly EventHandler<LogEventArgs> logHandler;
     private readonly CancellationToken preparationCancellation;
@@ -81,8 +82,16 @@ public sealed class PreparedVideo : IAsyncDisposable
         errorHandler = (_, _) => Interlocked.Exchange(ref failed, 1);
         logHandler = (sender, e) =>
         {
-            logs.Enqueue($"{e.Level}: {e.Message}");
+            string entry = $"{DateTimeOffset.UtcNow:O} {e.Level}: {e.Message}";
+            logs.Enqueue(entry);
             while (logs.Count > 160) logs.TryDequeue(out _);
+            // Keep audio evidence separate from verbose GPU initialization messages.
+            if (new[] { "audio", "directsound", "ac3", "a52", "spdif" }.Any(term =>
+                e.Message.Contains(term, StringComparison.OrdinalIgnoreCase)))
+            {
+                audioLogs.Enqueue(entry);
+                while (audioLogs.Count > 120) audioLogs.TryDequeue(out _);
+            }
         };
         player.EncounteredError += errorHandler;
         engine.Log += logHandler;
@@ -159,8 +168,12 @@ public sealed class PreparedVideo : IAsyncDisposable
     {
         LibVLCSharp.Shared.Core.Initialize();
         bool audioUnavailable = !WindowsAudioEndpoint.IsAvailable();
-        var engine = new LibVLC(true, audioUnavailable ? "--no-audio" : "--audio", "--aout=directsound,none", "--directx-volume=0",
-            "--no-spdif", "--no-volume-save", "--no-video-title-show", "--no-sub-autodetect-file", "--stats");
+        var options = new List<string> { audioUnavailable ? "--no-audio" : "--audio", "--aout=directsound,none", "--directx-volume=0",
+            "--no-spdif", "--no-volume-save", "--no-video-title-show", "--no-sub-autodetect-file", "--stats" };
+        // The native AVI demuxer can split AC3 frames and cause repeated audio format changes.
+        if (System.IO.Path.GetExtension(path).Equals(".avi", StringComparison.OrdinalIgnoreCase))
+            options.Add("--demux=avformat");
+        var engine = new LibVLC(true, options.ToArray());
         VlcMedia? media = null;
         MediaPlayer? player = null;
         try
@@ -198,6 +211,15 @@ public sealed class PreparedVideo : IAsyncDisposable
     {
         // Restore while hidden/silent. Never turn an exact-end position into a near-end threshold.
         long target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : milliseconds;
+        // A freshly decoded start already satisfies the existing one-second restore tolerance.
+        // Freeze and recheck it before skipping a redundant seek (which can time out on AVI).
+        if (target == 0 && player.Time >= 0 && player.Time <= 1000)
+        {
+            player.SetPause(true);
+            await WaitAsync(() => player.State == VLCState.Paused, cancellation);
+            if (player.Time >= 0 && player.Time <= 1000) return;
+            player.SetPause(false);
+        }
         try
         {
             await WaitAsync(() => player.IsSeekable, cancellation);
@@ -292,6 +314,21 @@ public sealed class PreparedVideo : IAsyncDisposable
             RestoredCompleted ? VLCState.Ended : player.State, RestoredCompleted || AudioUnavailable ? desiredVolume : player.Volume,
             AudioUnavailable || RestoredCompleted || player.Mute, player.Rate, player.IsSeekable,
             Volatile.Read(ref failed) == 0 ? null : "현재 영상 재생 오류");
+    }
+
+    public string ActiveAudioDiagnostics(VideoVisit token)
+    {
+        RequireVisit(token);
+        var stats = media.Statistics;
+        string tracks = string.Join(", ", player.AudioTrackDescription.Select(t => $"{t.Id}:{t.Name}"));
+        return $"captured UTC={DateTimeOffset.UtcNow:O}; file={System.IO.Path.GetFileName(Path)}; visit={token.VisitId}\n" +
+            $"libVLC {NativeVersion}; HW requested={HardwareRequested}; phase=active\n" +
+            $"state={player.State}; time={player.Time}; AudioUnavailable={AudioUnavailable}; track={player.AudioTrack}; tracks=[{tracks}]\n" +
+            $"desired volume/mute={desiredVolume}/{desiredMuted}; actual volume/mute={player.Volume}/{player.Mute}\n" +
+            $"Ready decoded video/audio={PreparedVideoBlocks}/{PreparedAudioBlocks}; " +
+            $"now decoded video/audio={stats.DecodedVideo}/{stats.DecodedAudio}; playedAudio={stats.PlayedAudioBuffers}\n" +
+            "Audio log (bounded):\n" + string.Join('\n', audioLogs.ToArray()) +
+            "\nRecent full log (bounded):\n" + string.Join('\n', logs.ToArray());
     }
 
     public PlaybackProgress CaptureProgress(VideoVisit token) => Snapshot(token).Progress;

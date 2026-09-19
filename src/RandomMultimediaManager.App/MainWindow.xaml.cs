@@ -69,6 +69,18 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OpenViewing(object sender, RoutedEventArgs e)
+    {
+        if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel { IsScanning: true })
+        {
+            MessageBox.Show(this, "진행 중인 스캔이 끝난 뒤 감상을 시작하세요.", "랜덤 감상");
+            return;
+        }
+        // A modal owner keeps scan application after the final visit/checkpoint boundary.
+        // No scan can invalidate progress while the session is using that observed item.
+        new Viewing.ViewingWindow(((App)Application.Current).Database) { Owner = this }.ShowDialog();
+    }
+
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
     {
         if (videoValidation is not null) { videoValidation.Activate(); return; }
