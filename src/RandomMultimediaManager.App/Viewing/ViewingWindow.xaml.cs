@@ -88,7 +88,7 @@ public partial class ViewingWindow : Window
         var before = Current;
         Status.Text = "감상 전환 준비 중… 준비 중에는 ‘준비 취소’를 사용할 수 있습니다.";
         // Let WPF render the pending state before entering native preparation calls.
-        await Dispatcher.Yield(DispatcherPriority.Background);
+        await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
         var result = await action();
         Status.Text = result.Error ?? result.Status switch
         {
