@@ -28,7 +28,7 @@ dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release
 별도 작업 폴더에서 다음을 실행한다. 기존 미커밋 작업이 있는 폴더에는 적용하지 않는다.
 
 ```powershell
-git clone --branch task/t11-common-viewing-ui https://github.com/danhk0612/Random_Multimedia_Manager.git RMM-T11
+git clone --branch main https://github.com/danhk0612/Random_Multimedia_Manager.git RMM-T11
 cd RMM-T11
 git rev-parse HEAD
 dotnet --info
@@ -55,7 +55,9 @@ dotnet run --project src/RandomMultimediaManager.App -c Release
 
 결과는 사용한 HEAD, 항목별 통과/실패/미검증, 실패 단계와 메시지로 전달한다.
 
-## 현재 재개 순서 (2026-09-19)
+## 최종 확인 전 수동 검증 절차 (2026-09-19)
+
+아래 재개 당시의 대기 문구는 최종 검증 정리로 대체되었다. 절차는 재검증 참고용으로 보존한다.
 
 사용자 지시에 따라 AVI 무음 조사는 보류한다. AVI AVFormat 수정은 유지한다. 실제 제품 Windows 오디오 세션 음소거와 외부 비활성 창 자동 음소거 프로그램 사용은 확인됐으나 영상별 차이 및 최종 해결은 미확정이다. 추가 무음 진단을 T11 나머지 검증의 선행 조건으로 요구하지 않는다.
 
@@ -74,4 +76,4 @@ dotnet run --project src/RandomMultimediaManager.App -c Release
 
 사용자는 ‘테스트 하기 힘들거나 불가한 부분 제외하고 기본적인 작동은 확인했어’라고 보고했다. 기본 동작은 사용자 확인 완료로, 어렵거나 불가능한 추가 수동 검사는 사용자 보고에 따라 생략·미검증으로 남기고 T11 구현/검증을 마무리한다. 항목별 결과가 별도로 제공되지 않았으므로 이전 수동 표 전체를 통과로 바꾸지 않는다. 준비 실패/취소·누출 등 개별 미확인 항목에는 기존 자동 검사 근거만 적용한다. AVI 무음 조사는 보류이며 해결로 표기하지 않는다. 다음 전환 지연 보완은 별도 사용자 정상 확인을 유지한다.
 
-Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55`의 T11 `35417802799`, T09 `35417802748`, T03 `35417802743`, T07 `35417802827`, T10 `35417802745` 성공이다. 이번 변경은 검증 상태 문서만 갱신한다. PR #14 병합은 별도이며 직접 병합하지 않는다. 병합 전 작업 기준 브랜치는 `task/t11-common-viewing-ui`다. 후속 Task는 이번에 착수하지 않는다.
+Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55`의 T11 `35417802799`, T09 `35417802748`, T03 `35417802743`, T07 `35417802827`, T10 `35417802745` 성공이다. 이번 변경은 검증 상태 문서만 갱신한다. PR #14 main 통합 완료. 후속 검증과 개발은 최신 main을 기준으로 하며 다음 Task는 TASKS.md를 따른다.
