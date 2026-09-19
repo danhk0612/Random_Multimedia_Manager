@@ -68,3 +68,14 @@ Windows x64와 .NET 10 SDK에서 솔루션 빌드 및 앱 실행을 검증한다
 ## T11 공통 감상 호스트
 
 `App/Viewing`는 T06 정책을 재사용하고 메인 창에서 모달로 연다. 진행 중 스캔 완료 후 진입하며 감상 중 메인 스캔/편집을 차단하여 최종 방문 저장 이후에 스캔을 반영한다. Dispatcher의 Busy admission은 checkpoint와 탐색을 직렬화하며 진행 중 만화 페이지 작업을 최종 캡처 전에 기다린다. 저장 실패는 기존 FrozenCommit/재시도/rollback 복귀 API를 사용한다. 수동 검증 대기 및 실제 검증 근거는 CURRENT_STATE와 docs/T11_VIEWING_VALIDATION.md를 따른다.
+
+
+## T14 Windows 생명주기 계약
+
+T14 상세 기준은 docs/SHORTCUTS_AND_TRAY.md다. 앱 수준 생명주기는 Visible/Hidden/Closing/ExitBlocked/Exited 의미를 가지며 감상 세션의 Opening/Active/SaveFailed 및 T12 삭제 상태를 덮어쓰지 않는다.
+
+Quick Hide는 모든 앱 창을 숨기고 활성 영상에 앱 mute를 적용하지만 pause하거나 감상 기록을 확정하지 않는다. 복원 시 앱이 Hide 때문에 바꾼 mute와 창 표시 상태만 되돌리며 외부 프로그램의 음소거 상태를 추정 복원하지 않는다.
+
+정상 종료는 표시 숨김+앱 mute → 신규 명령 차단 → 준비 취소/진행 중 작업 경계 대기 → 기존 Pending의 정상 Leave 저장 → 미디어 해제 → DB/전역 키/트레이 정리 → WPF 종료 순서다. SaveFailed/CommitUnknown/해제 실패는 강제 종료하지 않고 ExitBlocked로 남겨 트레이 복원 후 기존 복구 UI를 사용한다.
+
+T12와의 병렬 경계는 삭제 계약을 변경하지 않는다. T12 통합 뒤 Deleting/Unknown/AppliedDeletion 관찰 지점과 미디어 해제 소유권만 대조한 후 T15/T16을 착수한다.
