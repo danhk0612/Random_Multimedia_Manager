@@ -56,11 +56,11 @@ public static class WindowsFileDeletion
             started = true;
             int hr = operation.PerformOperations();
             operation.GetAnyOperationsAborted(out bool aborted);
-            if (sink.Result == 0 && sink.Recycling) return new(DeletionOutcome.Succeeded);
+            if (sink.Result is >= 0 && sink.Recycling && sink.RecycledItem) return new(DeletionOutcome.Succeeded);
             if (sink.Vetoed) return new(DeletionOutcome.Failed, "휴지통으로 이동할 수 없습니다. 영구 삭제로 전환하지 않았습니다.");
             if (sink.Result is < 0) return new(DeletionOutcome.Failed, Marshal.GetExceptionForHR(sink.Result.Value)?.Message);
             if (aborted) return new(DeletionOutcome.Cancelled, "휴지통 이동이 취소되었습니다.");
-            return new(DeletionOutcome.Unknown, $"휴지통 작업 결과를 확인할 수 없습니다 (0x{hr:X8}).");
+            return new(DeletionOutcome.Unknown, $"휴지통 작업 결과를 확인할 수 없습니다 (perform=0x{hr:X8}, post={sink.Result:X8}, recycle={sink.Recycling}, item={sink.RecycledItem}).");
         }
         catch (Exception ex) { return new(started ? DeletionOutcome.Unknown : DeletionOutcome.Failed, ex.Message); }
         finally
@@ -95,7 +95,7 @@ public static class WindowsFileDeletion
         void SetProgressMessage([MarshalAs(UnmanagedType.LPWStr)] string message);
         void SetProgressDialog([MarshalAs(UnmanagedType.Interface)] object dialog);
         void SetProperties([MarshalAs(UnmanagedType.Interface)] object properties);
-        void SetOwnerWindow(uint owner);
+        void SetOwnerWindow(IntPtr owner);
         void ApplyPropertiesToItem([MarshalAs(UnmanagedType.Interface)] object item);
         void ApplyPropertiesToItems([MarshalAs(UnmanagedType.Interface)] object items);
         void RenameItem([MarshalAs(UnmanagedType.Interface)] object item, [MarshalAs(UnmanagedType.LPWStr)] string name, IFileOperationProgressSink sink);
@@ -136,13 +136,14 @@ public static class WindowsFileDeletion
         public int? Result { get; private set; }
         public bool Recycling { get; private set; }
         public bool Vetoed { get; private set; }
+        public bool RecycledItem { get; private set; }
         public int PreDeleteItem(uint flags, IntPtr item)
         {
             Recycling = (flags & 0x80) != 0; // TSF_DELETE_RECYCLE_IF_POSSIBLE
             Vetoed = !Recycling;
             return Recycling ? 0 : unchecked((int)0x80004005);
         }
-        public int PostDeleteItem(uint flags, IntPtr item, int result, IntPtr created) { Result = result; return 0; }
+        public int PostDeleteItem(uint flags, IntPtr item, int result, IntPtr created) { Result = result; RecycledItem = created != IntPtr.Zero; return 0; }
         public int StartOperations() => 0;
         public int FinishOperations(int result) => 0;
         public int PreRenameItem(uint f, IntPtr i, string n) => 0;
