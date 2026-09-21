@@ -16,10 +16,10 @@
 | T09 | LibVLC 영상 기반 검증 및 통합 | Astra | 완료 (잔여 검증 승인 생략, PR #8 main 통합 완료) | T01/T02/T03 |
 | T10 | 외부 SRT/SMI 자막 | Sol | 완료 (사용자 확인, 일부 수동 검증 승인 생략, PR #11) | T09; D07 자막 결정 |
 | T11 | 공통 감상 UI와 진행 위치 연결 | Astra | 완료 — 기본 동작 사용자 확인, 어려운 수동 검사 생략·미검증 (PR #14 main 통합 완료) | T06/T08/T09; T02 이어보기 계약 |
-| T12 | 삭제와 세션 상태 처리 | Astra | 착수 가능 | T11; D05 |
+| T12 | 삭제와 세션 상태 처리 | Astra | 완료 (PR #16 main 통합 완료, 잔여 수동 검증은 기본 완성 후 실사용으로 이관) | T11; D05 |
 | T13 | 일반 단축키와 전체화면 UX | Sol | 대기 | T11/T12; 로컬 키 배정 결정 |
-| T14 | 프로그램 생명주기 정책과 상태 설계 | Astra | 설계 완료 (PR 대기) | T11; D03/D04 |
-| T15 | 트레이 및 창 동작 | Astra | 대기 | T14 |
+| T14 | 프로그램 생명주기 정책과 상태 설계 | Astra | 설계 완료 (PR #15 main 통합) | T11; D03/D04 |
+| T15 | 트레이 및 창 동작 | Astra | 착수 가능 | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 대기 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 대기 | T11; T02 수동 방문 계약 |
 | T18A | 변경 감지와 경로 상태 갱신 | Astra | 대기 | T05/T12; T02 식별 계약 |
@@ -28,14 +28,13 @@
 
 ## 바로 다음 작업
 
-T11 PR #14 main 통합 완료. 기본 동작 사용자 확인과 어려운 수동 검사 생략·미검증을 구분한다. AVI 무음 조사는 보류이며 해결로 표기하지 않는다.
+T12 PR #16과 T14 PR #15를 main에 통합했다. 삭제/저장/종료 경계 대조는 docs/SHORTCUTS_AND_TRAY.md §6을 따른다.
 
-- 우선 구현: T12 삭제와 세션 상태 처리 — Astra.
-- T14 생명주기 정책/상태 설계 완료, PR 검토/통합 대기. 제품 코드·DB·T12 삭제 계약은 변경하지 않았다.
-- T17은 T11 선행은 충족했지만 T12와 ViewingWindow/수동 열기 진입·Busy/격리 경계가 겹칠 수 있어 이번에는 대기한다. T12 통합 후 공통 진입 계약을 확인하고 Sol 지시문을 확정한다.
-- T12와 T14는 각자 최신 main에서 별도 브랜치를 사용한다. 공통 CURRENT_STATE/TASKS 수정은 자기 Task 절만 갱신하고 상대 Task 상태를 덮어쓰지 않는다. 병합 시 양쪽 변경을 보존한다.
-- T14 완료만으로 T15/T16을 착수하지 않는다. T12 결과와 Deleting/Unknown/ApplyDeletion·미디어 해제 경계를 대조한 뒤 후속 구현을 배정한다.
-- T09/T10/T11의 수동 검사 생략은 기록된 범위에만 적용하며 후속 Task의 일반 검증 생략 승인이 아니다.
+- 다음은 T15 트레이 및 창 동작 — Astra Work. 최신 main에서 task/t15-tray-lifecycle 브랜치로 시작한다.
+- T16은 T15의 창/종료 조정 경로 통합 후 진행한다. 빠른 종료 키 기본값은 T16에서 D03/D04 위임 범위로 확정·기록한다.
+- T13/T17은 이번 T15와 MainWindow/ViewingWindow 및 표시·종료 진입점이 겹치므로 병렬 배정하지 않는다. T15 통합 후 수정 파일/계약을 대조해 병렬 가능성을 재평가한다. 이는 작업 배정 순서이며 기존 기능 선행 관계를 임의 변경하지 않는다.
+- T12 잔여 수동 검사는 사용자 지시에 따라 기본 완성 후 실사용 단계로 이관한다. 미검증을 통과로 쓰지 않는다. T09/T10/T11의 기존 검증 생략과 AVI 무음 조사 보류도 보존한다.
+
 
 ## T00 — 초기 기반 정리
 
@@ -186,11 +185,14 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T12 — 삭제와 세션 상태 처리
 
 - 목적: 실제 파일 제거와 DB/기록 상태 일치.
-- 담당/상태: Astra / 착수 가능.
+- 담당/상태: Astra / 완료 (PR #16 main 통합 완료, 잔여 수동 검증은 기본 완성 후 실사용으로 이관).
 - 선행: T11; D05.
 - 범위/수정 영역: 삭제 확인 UI·파일 작업·세션 연동.
 - 완료 조건/검증: 휴지통/영구삭제/취소, 파일 잠금·권한 실패, 삭제 성공 후 DB 실패 복구, 새 기록 억제와 이전/다음 검증; 테스트용 파일만 사용; §5 저널/격리/성공 불명 확인 절차와 §8 T12 실패 지점별 재시작 검증.
 - 수정하지 말아야 할 영역: 기존 사용자 미디어를 테스트로 삭제·삭제 기본값 임의 선택.
+
+- 완료 승인(2026-09-21): 사용자 지시에 따라 남은 수동 테스트는 기본 완성 후 실사용 중 진행하도록 분리하고 T12를 완료 처리한다. 자동 검증 통과 근거는 유지하고 수동 미검증은 통과로 바꾸지 않는다. PR 병합과 후속 Task 착수는 별도다.
+- 구현/API·복구 경계·자동/수동 절차: docs/T12_DELETION_VALIDATION.md. T14 PR #15 변경은 별도 보존하며 직접 병합하지 않는다.
 
 ## T13 — 일반 단축키와 전체화면 UX
 
@@ -204,20 +206,20 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T14 — 프로그램 생명주기 정책과 상태 설계
 
 - 목적: 종료·숨김·복원·트레이의 공통 정책 확정.
-- 담당/상태: Astra / 설계 완료, PR 검토·통합 대기.
+- 담당/상태: Astra / 설계 완료, PR #15 main 통합.
 - 선행: T11; D03/D04.
 - 범위/수정 영역: SHORTCUTS_AND_TRAY, ARCHITECTURE, DECISIONS, TASKS.
-- 완료 조건/검증: 완료. docs/SHORTCUTS_AND_TRAY.md에 기본 창/트레이·Ctrl+Shift+H·Quick Hide·정상 종료 순서, SaveFailed/CommitUnknown/해제 실패, Opening/Active/DB/T12 상태표와 T15/T16 구현·Windows 검증 경계를 확정했다. T12 통합 후 삭제 관찰 경계만 최종 대조한다.
+- 완료 조건/검증: 완료. docs/SHORTCUTS_AND_TRAY.md에 기본 창/트레이·Ctrl+Shift+H·Quick Hide·정상 종료 순서, SaveFailed/CommitUnknown/해제 실패, Opening/Active/DB/T12 상태표와 T15/T16 구현·Windows 검증 경계를 확정했다. T12 통합 경계 대조 완료. docs/SHORTCUTS_AND_TRAY.md §6을 따른다.
 - 수정하지 말아야 할 영역: 기존 감상/기록 의미 변경·미승인 기능·생명주기 기능 일괄 구현.
 
 ## T15 — 트레이 및 창 동작
 
 - 목적: 확정된 트레이/창 생명주기 구현.
-- 담당/상태: Astra / 대기.
-- 선행: T14.
-- 범위/수정 영역: Windows 트레이·창 관리·관련 설정.
+- 담당/상태: Astra / 착수 가능.
+- 선행: T14 통합 및 T12 통합 경계 대조 완료.
+- 범위/수정 영역: Windows 트레이·창 관리·기존 저장 경계를 지키는 최소 정상 종료 연결. 상세 단계 경계는 docs/SHORTCUTS_AND_TRAY.md §7.
 - 완료 조건/검증: 시작/최소화/닫기/복원·메뉴·종료·중복 요청을 확정 정책대로 Windows 확인.
-- 수정하지 말아야 할 영역: Windows 자동 시작 등록·미확정 메뉴 추가.
+- 수정하지 말아야 할 영역: 전역 키·Quick Hide·빠른 종료 전체 구현(T16), DB 스키마/삭제 계약/기록 의미 변경, Windows 자동 시작 등록·미확정 메뉴 추가.
 
 ## T16 — 빠른 숨김·음소거·종료
 
@@ -264,44 +266,27 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 완료 조건/검증: 공식 SDK/GPU/드라이버 조건, 현재 출력 결합 가능성·성능/복사비용·색/HDR·일반 재생 복귀 검증; 통합 여부와 별도 구현 Task 제안.
 - 수정하지 말아야 할 영역: 초기 엔진 선제 교체·검증 없이 VSR 지원 표기.
 
-## T12 새 Astra Work 시작 지시문
+## T15 새 Astra Work 시작 지시문
 
 ```text
-GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T12만 Astra Work로 진행해.
-AI_WORKFLOW.md 순서대로 최신 main, Git/PR 상태와 기준 문서를 읽고 T11 PR #14 통합을 확인해. docs/DATA_AND_RANDOM_POLICY.md §5·§8 및 T06/T11 실제 API, docs/DECISIONS.md D05, docs/T11_VIEWING_VALIDATION.md를 확인해. 별도 task/t12-file-deletion 브랜치를 사용하고 다른 작업/미커밋 변경을 보존해.
+GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T15만 Astra Work로 진행해.
 
-목적: 현재 파일 삭제와 Pending·실제 파일·DB 기록 상태를 일치시킨다.
+AI_WORKFLOW.md 순서대로 최신 main/Git/PR 상태, PROJECT/REQUIREMENTS/ARCHITECTURE/CURRENT_STATE/TASKS를 읽어. T12 PR #16과 T14 PR #15 통합을 확인하고 task/t15-tray-lifecycle 별도 브랜치를 사용해. 다른 작업과 미커밋 변경은 보존해.
+docs/SHORTCUTS_AND_TRAY.md §6·§7, DECISIONS D03/D04, DATA_AND_RANDOM_POLICY, T12_DELETION_VALIDATION 및 실제 App/MainWindow/ViewingWindow/SessionCoordinator/DeletionService를 확인해.
+
+목적: 트레이에서 앱을 숨기고 복원하며 기존 감상 데이터를 지키면서 정상 종료할 수 있게 한다.
 범위:
-- 확인 UI에 휴지통(기본)/명시적 영구 삭제/취소를 제공해. 휴지통 실패를 영구 삭제로 자동 전환하지 마.
-- 삭제 시작 전 동일 PathKey를 격리하고 대상 ItemId 집합·메타데이터를 캡처해. 신규 열기·스캔 반영·checkpoint·기록 저장과 삭제를 직렬화해.
-- §5의 durable Prepared/Succeeded/Failed/Cancelled/Unknown 저널, 파일 리소스 해제, OS 작업, ApplyDeletion/AppliedDeletion 멱등 정리 및 재시작 복구를 그대로 구현해.
-- 성공만 같은 경로의 모든 분류 기록/진행/VisitCommit을 제거하고 Missing 처리해. 선호/영구 제외는 보존하며 현재 Pending 억제·슬롯 tombstone·자동 다음 없음 정책을 유지해.
-- 실패/취소는 같은 Visit와 억제를 보존하고 필요 시 같은 방문으로 재열어. 부재만으로 삭제 성공을 추정하지 마. 성공 불명/손상 저널은 격리·사용자 확인 정책을 따라.
-- 실제 필요한 조정자/미디어 해제·재열기 연결만 변경하고 DB 스키마나 기존 기록 의미를 임의 변경하지 마.
+- 시작 시 메인 표시, 일반 최소화는 작업표시줄 유지, 메인 X는 트레이 숨김. 감상 창 X는 기존 정상 Leave를 유지해.
+- 트레이 아이콘/열기·복원/더블클릭/종료와 단일 창·종료 조정 경로를 구현해. 트레이 생성 실패 시 복원 경로 없이 창을 숨기지 마.
+- T16 소유인 모두 숨김+음소거 메뉴는 비활성·미구현 상태로 표시해. 음소거 없는 일반 숨김을 Quick Hide로 제공하지 마.
+- 트레이 종료는 실제 비동기 정상 종료로 연결해. 진행 중 스캔/감상/삭제 명령을 정리·대기하고 기존 Leave로 현재 방문을 저장한 뒤 소유 리소스를 해제해. Application.Shutdown을 먼저 호출하지 마.
+- 삭제 대기는 Phase만 보지 말고 명령 Task 및 DeletionService.Pending을 함께 확인해. 현재 Pending 격리는 종료 차단, 무관한 durable 복구 항목은 §6 조건으로 보존, Succeeded 정리 실패는 복구 전 종료 차단을 적용해.
+- SaveFailed/CommitUnknown/해제 실패에는 앱과 트레이 복원 경로를 보존하고 기존 재시도/복귀 UI에 접근할 수 있게 해. 중복 종료는 같은 작업으로 합치고 저장/해제를 중복 실행하지 마.
+- 필요한 최소 연결점만 추가해. 새 설정 저장이 DB 스키마 변경을 요구하면 이번에는 기본값만 구현하고 옵션 UI를 후속으로 명시해.
 
-완료 조건: 테스트용 복사본/임시 DB에서 휴지통·영구삭제·취소, 잠금/권한 실패, 같은 경로 다중 분류, 삭제 성공 뒤 DB 실패·재시작, Prepared 불명, Applied 이후 저널 제거 실패, 같은 경로 새 파일 자동 재삭제 방지를 검증해. §8 T12 전체 실패 지점과 Windows Release 빌드·영향받은 저장/세션/감상 회귀를 포함해. 실제 삭제 UI 확인과 자동 검증·미검증을 구분해. 사용자 원본 미디어를 테스트로 삭제하지 마.
+완료 조건: Windows x64/.NET 10 Release 빌드 및 시작·최소화·메인 X·감상 X·트레이 복원·중복 종료·트레이 해제를 검증해. Active/Opening/진행 중 스캔·삭제/저장 실패·현재 경로 Unknown/성공 뒤 DB 정리 실패에서 방문 보존과 종료 경계를 검증하고 영향받은 저장·세션·감상 회귀를 확인해. 가능한 자동 검증과 실제 사용자 확인/미검증을 구분해. 과거 검증 생략 승인을 T15 전체에 확대하지 마.
 
-병렬 T14는 생명주기 문서 설계만 한다. T14 문서/트레이/전역 키/빠른 종료·숨김 구현, T17 탐색 UI, 자동 감지·VSR·음소거 보류 조사와 관련 없는 리팩터링은 금지해.
-공통 계약 충돌은 이유/영향을 보고하고 임의 정책 변경을 하지 마.
-CURRENT_STATE.md/TASKS.md 자기 Task 절 및 실제 영향 문서를 갱신하고 커밋·PR·검증/남은 제약을 보고해. 직접 병합하거나 다음 Task를 구현하지 마.
-```
-
-## T14 새 Astra Work 시작 지시문
-
-```text
-GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T14만 Astra Work로 진행해. 이번 작업은 생명주기 정책과 상태 설계이며 제품 코드를 구현하지 않아.
-
-AI_WORKFLOW.md 순서대로 최신 main/Git/PR·기준 문서, docs/DECISIONS.md D03/D04, docs/SHORTCUTS_AND_TRAY.md, DATA_AND_RANDOM_POLICY.md와 실제 MainWindow/ViewingWindow/SessionCoordinator/미디어 해제 및 진행 중 T12 계약을 읽어. T11 PR #14 통합을 확인하고 task/t14-lifecycle-design 별도 브랜치를 사용해.
-
-목적: T15/T16이 저장소만 보고 구현할 수 있도록 모든 창·트레이·숨김/복원·빠른 정상 종료의 정책을 확정한다.
-범위:
-- 위임된 범위에서 최소화/닫기/시작·트레이 메뉴/복원·전역 키 기본값과 등록 충돌 처리를 결정하고 근거를 적어.
-- 숨김 시 pause 여부, 작업표시줄/트레이 표시, 복원 수단, 이전 재생/음소거/창 상태 복원을 명시해. 외부 자동 음소거 프로그램의 상태를 앱이 임의 해제하도록 설계하지 마.
-- 빠른 종료는 우선 모든 표시 숨김+앱 음소거 뒤 준비 취소·Pending 정상 저장·리소스 해제·종료 순서를 구체화해. 강제 Kill/시간초과 강제 종료·Pending 자동 폐기는 추가하지 마.
-- Active/Opening/SaveFailed/Closing 및 T12 Deleting·격리·복구, checkpoint/DB 작업, 중복 요청, 숨김 중 대화상자/새 창, 전체화면/다중 창의 상태표를 작성해. 저장/해제 실패 시 데이터 보존과 사용자 접근 경로를 명시해.
-- docs/SHORTCUTS_AND_TRAY.md를 단일 상세 기준으로 쓰고 ARCHITECTURE/DECISIONS/TASKS/CURRENT_STATE는 필요한 요약·참조만 갱신해. T15/T16 구현 범위·선행·완료 검증을 구체화해.
-
-금지: 제품 코드/패키지/DB 스키마/삭제 저널 계약 변경, T12 구현, 기존 기록 의미 변경, 새 기능 추가, AVI 무음 보류 조사 재개.
-T12와 병렬이므로 그 구현을 가정해 확정하지 말고 필요한 연결 계약과 최종 대조 항목을 표시해. 공통 상태 문서는 자기 Task만 갱신해.
-문서·실제 코드 정합성을 검토하고 커밋/PR을 보고해. 직접 병합하거나 T15/T16을 구현하지 마.
+금지: T16 전역 키/빠른 숨김·음소거/즉시 숨김 후 빠른 종료 전체 구현, DB 스키마·삭제 저널·기록 의미 변경, 강제 Kill/timeout, T13/T17/T18A/VSR, AVI 무음 조사, 무관한 리팩터링.
+구조적 충돌은 근거와 영향 범위를 보고하고 임의 정책 변경하지 마.
+CURRENT_STATE/TASKS와 영향 문서를 갱신하고 커밋·PR·검증 결과·남은 제약을 보고해. 직접 병합하거나 다음 Task를 구현하지 마.
 ```

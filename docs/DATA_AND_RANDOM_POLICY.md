@@ -279,3 +279,11 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 - T12 결과 연결용 `ReportDeletionAsync`는 OS 삭제를 실행하지 않는다. Failed/Cancelled는 방문/억제/기록을 유지하고 Unknown은 경로를 격리한다. 현재 경로가 격리되면 이탈 기록 저장도 막는다. Succeeded는 같은 PathKey 슬롯들을 tombstone으로 바꾸고 해당 현재 미디어/Pending만 비운다. Seen/cursor는 보존하고 자동 다음 재생은 없다. DB 삭제 정리는 T12의 성공 저널→기존 ApplyDeletion 순서이며 완료 후 `ReleaseDeletionQuarantineAsync`를 호출한다. T12는 실제 삭제 시작/리소스 해제/동일 Visit 재열기/저널/시작 복구를 구현해야 한다. 이 API에 결과를 전달하기 전부터의 삭제 직렬화·격리는 T12 책임이며 결과 보고 API가 OS 단계 전체를 대신하지 않는다.
 
 검증 실행: `dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release`, `dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release`. Data.Tests는 App/Sessions와 실제 App/Data 소스를 링크하며 미디어만 테스트 대역이다. `.github/workflows/t06-session.yml`은 Windows x64/.NET 10 솔루션 Release 빌드와 이 검사들 및 T05 전체 스캔 회귀를 실행한다. 실제 성공 결과는 CURRENT_STATE.md에 기록한다.
+
+## T12 구현 API와 복구 연결
+
+- `DeletionService`/`DeletionJournal`은 앱이 공유하고, 시작 시 `InitializeAsync`로 저널 격리·DB 복구를 수행한 후 메인 창을 공개한다. OS 삭제는 `WindowsFileDeletion`의 명시적 실행 경로만 호출한다. 복구는 DB 정리만 재실행한다.
+- `SessionCoordinator.DeleteCurrentAsync`는 기존 CommandId/Busy admission 안에서 Prepared→미디어 해제→OS→결과/DB 정리를 수행한다. 성공은 Pending 제거와 슬롯 tombstone, 실패/취소는 같은 Visit 재열기다. `ResolveDeletionAsync`는 사용자 확인/정리 재시도와 활성 방문을 연결한다.
+- `LibraryDatabase.CaptureDeletion`은 기존 DB writer lock 안에서 캡처와 격리를 원자적으로 수행한다. `IsDeletionBlocked`/`DeletionPaths`를 후보·신규 열기에 연결하며 스캔/진행/방문 쓰기도 같은 격리를 확인한다. 스키마 및 ApplyDeletion 의미는 변경하지 않았다.
+- AppliedDeletion 표식은 저널 파일 제거 후에도 보존한다. 저널 제거 직후 전원 단절에 따른 파일 재등장에도 기존 멱등 표식을 적용한다. 삭제 저널 파일 자체는 성공 정리 후 제거한다.
+- 구체적인 오류·재시작·사용자 확인 및 검증 범위는 docs/T12_DELETION_VALIDATION.md. T14 생명주기 문서의 최종 연결은 T12 통합 후 대조하며 트레이/빠른 종료를 구현하지 않았다.

@@ -64,6 +64,7 @@ public sealed partial class LibraryDatabase
         {
             foreach (var item in presentItems)
             {
+                RequireDeletionPathWritable(item.PathKey);
                 Execute(transaction, """
                     DELETE FROM PlaybackProgress WHERE MediaItemId IN
                     (SELECT Id FROM MediaItem WHERE CategoryId=$category AND PathKey=$key
@@ -77,17 +78,22 @@ public sealed partial class LibraryDatabase
                     ("$size", item.FileSize), ("$time", item.LastWriteTimeUtc));
             }
             foreach (var id in confirmedMissingIds)
+            {
+                RequireDeletionItemWritable(transaction, id);
                 RequireOne(Execute(transaction, "UPDATE MediaItem SET IsMissing=1 WHERE Id=$id;", ("$id", Id(id))));
+            }
             return 0;
         });
     }
     public void SetFavorite(Guid itemId, bool desiredValue) => Write(transaction =>
     {
+        RequireDeletionItemWritable(transaction, itemId);
         RequireOne(Execute(transaction, "UPDATE MediaItem SET IsFavorite=$value WHERE Id=$id;",
             ("$id", Id(itemId)), ("$value", desiredValue))); return 0;
     });
     public void SetRandomExcluded(Guid itemId, bool desiredValue) => Write(transaction =>
     {
+        RequireDeletionItemWritable(transaction, itemId);
         RequireOne(Execute(transaction, "UPDATE MediaItem SET IsRandomExcluded=$value WHERE Id=$id;",
             ("$id", Id(itemId)), ("$value", desiredValue))); return 0;
     });

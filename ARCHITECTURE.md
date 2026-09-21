@@ -78,4 +78,4 @@ Quick Hide는 모든 앱 창을 숨기고 활성 영상에 앱 mute를 적용하
 
 정상 종료는 표시 숨김+앱 mute → 신규 명령 차단 → 준비 취소/진행 중 작업 경계 대기 → 기존 Pending의 정상 Leave 저장 → 미디어 해제 → DB/전역 키/트레이 정리 → WPF 종료 순서다. SaveFailed/CommitUnknown/해제 실패는 강제 종료하지 않고 ExitBlocked로 남겨 트레이 복원 후 기존 복구 UI를 사용한다.
 
-T12와의 병렬 경계는 삭제 계약을 변경하지 않는다. T12 통합 뒤 Deleting/Unknown/AppliedDeletion 관찰 지점과 미디어 해제 소유권만 대조한 후 T15/T16을 착수한다.
+T12와의 병렬 경계는 삭제 계약을 변경하지 않는다. T12 통합 경계 대조를 완료했다. docs/SHORTCUTS_AND_TRAY.md §6의 현재 Pending 격리·삭제 명령 대기·Succeeded 정리·해제 소유권 규칙을 따라 T15부터 진행한다.

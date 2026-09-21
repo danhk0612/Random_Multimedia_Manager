@@ -15,6 +15,7 @@ public sealed partial class LibraryDatabase
             byte[] hash = VisitPayload.Hash(request);
             return Write(transaction =>
             {
+                RequireDeletionItemWritable(transaction, request.ItemId);
                 var existing = Scalar(transaction, "SELECT PayloadHash FROM VisitCommit WHERE VisitId=$id;",
                     ("$id", Id(request.VisitId))) as byte[];
                 if (existing != null)
@@ -40,7 +41,7 @@ public sealed partial class LibraryDatabase
     public void SaveProgress(Guid itemId, PlaybackProgress progress, long updatedAtUtc)
     {
         progress.Validate();
-        Write(transaction => { SaveProgress(transaction, itemId, progress, updatedAtUtc); return 0; });
+        Write(transaction => { RequireDeletionItemWritable(transaction, itemId); SaveProgress(transaction, itemId, progress, updatedAtUtc); return 0; });
     }
     private void SaveProgress(SqliteTransaction transaction, Guid itemId,
         PlaybackProgress progress, long updatedAtUtc) => Execute(transaction, """

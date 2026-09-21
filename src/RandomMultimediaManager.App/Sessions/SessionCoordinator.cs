@@ -6,7 +6,7 @@ namespace RandomMultimediaManager.App.Sessions;
 // One coordinator owns all session mutations and at most current + prepared media.
 // T11 calls this from its dispatcher; async continuations retain that context. Admission is
 // thread-safe, rejects Busy immediately, and never queues another navigation operation.
-public sealed class SessionCoordinator
+public sealed partial class SessionCoordinator
 {
     private readonly object gate = new();
     private readonly LibraryDatabase database;
@@ -145,7 +145,8 @@ public sealed class SessionCoordinator
         snapshot ??= await Task.Run(database.GetSessionSnapshot);
         var settings = await Task.Run(database.GetSettings);
         var candidates = CandidatePolicy.GetCandidates(snapshot, destination.Selected, destination.Seen,
-            quarantined, now, settings.HistoryExclusionDays);
+            quarantined.Concat(database.DeletionPaths).ToHashSet(), now, settings.HistoryExclusionDays);
+        if (database.IsDeletionBlocked("")) return new(SessionStatus.CommitUnknown, "삭제 복구 확인이 필요합니다.");
         if (candidates.Count == 0) return new(SessionStatus.NoCandidates);
         return await Move(new(destination, candidates[draw(candidates.Count)], VisitOrigin.Random));
     }
@@ -163,7 +164,8 @@ public sealed class SessionCoordinator
     {
         lock (gate)
         {
-            if (busy || phase != SessionPhase.Active || !Matches(token)) return false;
+            if (busy || phase != SessionPhase.Active || !Matches(token)
+                || database.IsDeletionBlocked(path!.Slots[path.Cursor].PathKey)) return false;
             progress.Validate();
             if (progress.MediaType != latestProgress?.MediaType) return false;
             latestProgress = progress;
@@ -192,13 +194,13 @@ public sealed class SessionCoordinator
         ISessionMedia? ready = null;
         try
         {
-            if (path?.Pending is not null && quarantined.Contains(path.Slots[path.Cursor].PathKey))
+            if (path?.Pending is not null && (quarantined.Contains(path.Slots[path.Cursor].PathKey) || database.IsDeletionBlocked(path.Slots[path.Cursor].PathKey)))
                 return new(SessionStatus.CommitUnknown, "Resolve the current path deletion before saving its visit.");
             var item = transition.Item;
             SessionToken? targetToken = null;
             if (item is not null)
             {
-                if (item.IsMissing || quarantined.Contains(item.PathKey))
+                if (item.IsMissing || quarantined.Contains(item.PathKey) || database.IsDeletionBlocked(item.PathKey))
                     return new(SessionStatus.Failed, "Item is missing or quarantined.");
                 var settings = await Task.Run(database.GetSettings);
                 var progress = settings.ResumeMode == ResumeMode.Resume
@@ -230,7 +232,8 @@ public sealed class SessionCoordinator
             {
                 if (frozen is null)
                 {
-                    var position = current!.PauseAndCapture(activeToken!);
+                    var position = (releasedItem is null ? current?.PauseAndCapture(activeToken!) : null) ?? latestProgress
+                        ?? throw new InvalidOperationException("보존된 진행 위치가 없습니다.");
                     position.Validate();
                     lock (gate)
                     {
@@ -264,7 +267,7 @@ public sealed class SessionCoordinator
                     try { current!.Activate(activeToken); }
                     catch (Exception ex) { activationError = ex.Message; }
                 }
-                frozen = null; failed = null; phase = RestingPhase;
+                frozen = null; failed = null; releasedItem = null; releasedState = null; phase = RestingPhase;
                 if (newSession) { commands.Clear(); commandOrder.Clear(); Remember(runningCommand, runningTask!); }
             }
             if (old is not null)
@@ -326,7 +329,7 @@ public sealed class SessionCoordinator
         catch (Exception ex) { return new(SessionStatus.CommitUnknown, ex.Message); }
         if (check != VisitCommitCheck.NotCommitted)
             return new(SessionStatus.CommitUnknown, "Committed or conflicting visit: retry the original transition.");
-        current!.Resume(activeToken!);
+        current?.Resume(activeToken!);
         lock (gate) { frozen = null; failed = null; phase = RestingPhase; }
         return new(SessionStatus.Completed);
     }, recovery: true);
