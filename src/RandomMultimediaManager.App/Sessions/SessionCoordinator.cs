@@ -232,7 +232,7 @@ public sealed partial class SessionCoordinator
             {
                 if (frozen is null)
                 {
-                    var position = current?.PauseAndCapture(activeToken!) ?? latestProgress
+                    var position = (releasedItem is null ? current?.PauseAndCapture(activeToken!) : null) ?? latestProgress
                         ?? throw new InvalidOperationException("보존된 진행 위치가 없습니다.");
                     position.Validate();
                     lock (gate)
@@ -267,7 +267,7 @@ public sealed partial class SessionCoordinator
                     try { current!.Activate(activeToken); }
                     catch (Exception ex) { activationError = ex.Message; }
                 }
-                frozen = null; failed = null; phase = RestingPhase;
+                frozen = null; failed = null; releasedItem = null; releasedState = null; phase = RestingPhase;
                 if (newSession) { commands.Clear(); commandOrder.Clear(); Remember(runningCommand, runningTask!); }
             }
             if (old is not null)

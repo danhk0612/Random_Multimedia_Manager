@@ -12,13 +12,13 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
     Func<DeletionRecord, Task<FileDeletionResult>> deleteFile)
 {
     public IReadOnlyList<DeletionRecovery> Pending { get; private set; } = [];
-    public bool GloballyBlocked => Pending.Any(p => p.Record is null);
+    public bool GloballyBlocked => Pending.Any(p => p.PathKey is null);
     public async Task InitializeAsync()
     {
         Pending = await Task.Run(journal.ReadAll);
         database.BlockDeletionRecovery(GloballyBlocked);
         foreach (var entry in Pending)
-            if (entry.Record is { } r) database.QuarantineDeletion(r.PathKey);
+            if (entry.PathKey is { } key) database.QuarantineDeletion(key);
         foreach (var entry in Pending.ToArray())
             if (entry.Record is { Phase: DeletionPhase.Succeeded or DeletionPhase.Failed or DeletionPhase.Cancelled })
                 await CompleteAsync(entry.Record);
@@ -36,7 +36,7 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
             // No OS call occurred. A replacement whose acknowledgement was lost must still be
             // accounted for before lifting isolation.
             Pending = await Task.Run(journal.ReadAll);
-            if (!Pending.Any(p => p.Record?.PathKey == pathKey || p.Record is null)) database.ReleaseDeletion(pathKey);
+            if (!Pending.Any(p => p.PathKey == pathKey || p.PathKey is null)) database.ReleaseDeletion(pathKey);
             database.BlockDeletionRecovery(GloballyBlocked);
             throw;
         }
@@ -80,7 +80,7 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
                 return new(record, DeletionOutcome.Unknown, false, "삭제 성공 여부를 확인하세요.");
             await Task.Run(() => journal.Remove(journal.FileFor(record)));
             Pending = Pending.Where(p => p.Record?.OperationId != record.OperationId).ToArray();
-            if (!Pending.Any(p => p.Record?.PathKey == record.PathKey)) database.ReleaseDeletion(record.PathKey);
+            if (!Pending.Any(p => p.PathKey == record.PathKey)) database.ReleaseDeletion(record.PathKey);
             // Leave AppliedDeletion markers durable. Removing one before a directory deletion
             // is persisted could replay cleanup against a later file at this path after power loss.
             return new(record, record.Phase == DeletionPhase.Succeeded ? DeletionOutcome.Succeeded :
@@ -98,8 +98,11 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
             await Task.Run(() => journal.Remove(entry.File));
             Pending = Pending.Where(p => p.File != entry.File).ToArray();
             database.BlockDeletionRecovery(GloballyBlocked);
+            if (entry.PathKey is { } key && !Pending.Any(p => p.PathKey == key)) database.ReleaseDeletion(key);
             return new(null, DeletionOutcome.Failed, true);
         }
+        if (entry.Record.Phase is DeletionPhase.Succeeded or DeletionPhase.Failed or DeletionPhase.Cancelled)
+            return await CompleteAsync(entry.Record);
         return await RecordResultAsync(entry.Record, new(succeeded ? DeletionOutcome.Succeeded : DeletionOutcome.Failed));
     }
 }

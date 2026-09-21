@@ -82,7 +82,7 @@ internal static class T12NativeVerification
             dialog.Loaded+=(_,_)=>{
                 var panel=(StackPanel)dialog.Content;
                 Check(panel.Children.OfType<RadioButton>().First().IsChecked==true,"confirmation defaults to recycle");
-                dialog.Dispatcher.BeginInvoke(()=>dialog.Close(),DispatcherPriority.Background);
+                dialog.Dispatcher.BeginInvoke(new Action(dialog.Close),DispatcherPriority.Background);
             };
             dialog.ShowDialog();
             Check(dialog.Selection is null,"closing confirmation cancels without mutation");

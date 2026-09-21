@@ -133,6 +133,51 @@ internal static class T12Verification
             await f.Service.ConfirmAsync(f.Service.Pending.Single(), false);
             Check(!f.Service.GloballyBlocked && !f.Db.IsDeletionBlocked(f.B.PathKey), "explicit failure preserves all");
         });
+        await Scenario("live Unknown retains visit and explicit failure reopens it", async f =>
+        {
+            await Done(f.C.OpenManualAsync(Guid.NewGuid(), f.A.Id));
+            await Done(f.C.SetSuppressedAsync(Guid.NewGuid(), f.C.View.ActiveToken!, true));
+            var visit=f.C.View.Pending;
+            f.Outcome=DeletionOutcome.Unknown;
+            Check((await f.C.DeleteCurrentAsync(Guid.NewGuid(),f.Service,DeletionMode.Recycle)).Status==SessionStatus.CommitUnknown,"unknown reported");
+            Check(f.C.View.Pending==visit && f.Db.IsDeletionBlocked(f.A.PathKey),"unknown retains suppression and visit");
+            Check((await f.C.LeaveAsync(Guid.NewGuid())).Status==SessionStatus.CommitUnknown,"no record while unknown");
+            await Done(f.C.ResolveDeletionAsync(Guid.NewGuid(),f.Service,f.Service.Pending.Single(),false));
+            Check(f.C.View.Pending==visit && !f.Db.IsDeletionBlocked(f.A.PathKey),"failure confirmation reopens same visit");
+            await Done(f.C.LeaveAsync(Guid.NewGuid()));
+            Check(f.Db.GetHistory(f.A.Id).Count==1,"past history unchanged");
+        });
+        await Scenario("failed result journal write keeps quarantine until restart confirmation", async f =>
+        {
+            await Done(f.C.OpenManualAsync(Guid.NewGuid(),f.A.Id));
+            f.Outcome=DeletionOutcome.Failed; f.Journal.FailPhase=DeletionPhase.Failed;
+            await f.C.DeleteCurrentAsync(Guid.NewGuid(),f.Service,DeletionMode.Recycle);
+            Check(f.Db.IsDeletionBlocked(f.A.PathKey) && f.C.View.Pending is not null,"failed acknowledgement keeps Pending");
+            f.Journal.FailPhase=null; await f.Restart();
+            Check(f.Service.Pending.Single().Record!.Phase==DeletionPhase.Prepared,"durable phase remains Prepared");
+            await f.Service.ConfirmAsync(f.Service.Pending.Single(),false);
+            Check(f.Db.GetHistory(f.A.Id).Count==1 && f.OsCalls==1,"no recovery deletion or history removal");
+        });
+        await Scenario("failed journal removal retry reopens original visit", async f =>
+        {
+            await Done(f.C.OpenManualAsync(Guid.NewGuid(),f.A.Id)); var visit=f.C.View.Pending;
+            f.Outcome=DeletionOutcome.Cancelled; f.Journal.FailRemove=true;
+            await f.C.DeleteCurrentAsync(Guid.NewGuid(),f.Service,DeletionMode.Recycle);
+            Check(f.Service.Pending.Count==1 && f.Db.IsDeletionBlocked(f.A.PathKey),"terminal phase retained");
+            f.Journal.FailRemove=false;
+            await Done(f.C.ResolveDeletionAsync(Guid.NewGuid(),f.Service,f.Service.Pending.Single(),false));
+            Check(f.C.View.Pending==visit && f.Preparer.Last is not null,"same visit after cleanup retry");
+        });
+        await Scenario("corrupt target metadata with readable path isolates only that path", async f =>
+        {
+            var record=await f.Service.PrepareAsync(f.A.PathKey,DeletionMode.Recycle);
+            string file=f.Journal.FileFor(record);
+            File.WriteAllText(file,File.ReadAllText(file).Replace("\"Version\": 1","\"Version\": 99"));
+            await f.Restart();
+            Check(!f.Service.GloballyBlocked && f.Db.IsDeletionBlocked(f.A.PathKey) && !f.Db.IsDeletionBlocked(f.B.PathKey),"known corrupt path scoped quarantine");
+            await f.Service.ConfirmAsync(f.Service.Pending.Single(),false);
+            Check(!f.Db.IsDeletionBlocked(f.A.PathKey),"explicit failure lifts scoped hold");
+        });
         await Scenario("duplicate / Busy throughout OS and checkpoint isolation", async f =>
         {
             await Done(f.C.OpenManualAsync(Guid.NewGuid(), f.A.Id));

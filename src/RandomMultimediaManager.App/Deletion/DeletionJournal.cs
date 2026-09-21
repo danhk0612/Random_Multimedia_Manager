@@ -11,7 +11,10 @@ public enum DeletionPhase { Prepared, Succeeded, Failed, Cancelled, Unknown }
 public sealed record DeletionTarget(Guid ItemId, long FileSize, long LastWriteTimeUtc);
 public sealed record DeletionRecord(int Version, Guid OperationId, string PathKey, string Path,
     DeletionTarget[] Targets, DeletionMode Mode, long CreatedAtUtc, DeletionPhase Phase);
-public sealed record DeletionRecovery(string File, DeletionRecord? Record, string? Error);
+public sealed record DeletionRecovery(string File, DeletionRecord? Record, string? Error, string? RecoveredPathKey = null)
+{
+    public string? PathKey => Record?.PathKey ?? RecoveredPathKey;
+}
 
 public class DeletionJournal(string directory)
 {
@@ -51,7 +54,19 @@ public class DeletionJournal(string directory)
                     throw new InvalidDataException("삭제 저널 ID가 일치하지 않습니다.");
                 result.Add(new(file, record, null));
             }
-            catch (Exception ex) { result.Add(new(file, null, ex.Message)); }
+            catch (Exception ex)
+            {
+                string? key = null;
+                try
+                {
+                    using var json = JsonDocument.Parse(File.ReadAllText(file));
+                    string? path = json.RootElement.GetProperty("Path").GetString();
+                    string? candidate = json.RootElement.GetProperty("PathKey").GetString();
+                    if (!string.IsNullOrWhiteSpace(path) && candidate == path.ToUpperInvariant()) key = candidate;
+                }
+                catch { /* No reliable path: hold the entire library. */ }
+                result.Add(new(file, null, ex.Message, key));
+            }
         }
         return result;
     }

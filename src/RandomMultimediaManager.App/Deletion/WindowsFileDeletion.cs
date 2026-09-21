@@ -41,7 +41,7 @@ public static class WindowsFileDeletion
             return new(DeletionOutcome.Failed, new Win32Exception(error).Message, error is 2 or 3);
         }
         IFileOperation? operation = null;
-        object? item = null;
+        IShellItem? item = null;
         var sink = new RecycleSink();
         bool started = false;
         try
@@ -74,7 +74,17 @@ public static class WindowsFileDeletion
     [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DeleteFile(string path);
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = true)]
     private static extern int SHCreateItemFromParsingName(string path, IntPtr context, ref Guid iid,
-        [MarshalAs(UnmanagedType.Interface)] out object item);
+        out IShellItem item);
+
+    [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellItem
+    {
+        void BindToHandler(IntPtr context, ref Guid handler, ref Guid iid, out IntPtr result);
+        void GetParent(out IShellItem parent);
+        void GetDisplayName(uint kind, out IntPtr name);
+        void GetAttributes(uint mask, out uint attributes);
+        void Compare(IShellItem other, uint hint, out int order);
+    }
 
     [ComImport, Guid("947AAB5F-0A5C-4C13-B4D6-4BF7836FC9F8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IFileOperation
@@ -94,7 +104,7 @@ public static class WindowsFileDeletion
         void MoveItems([MarshalAs(UnmanagedType.Interface)] object items, [MarshalAs(UnmanagedType.Interface)] object destination);
         void CopyItem([MarshalAs(UnmanagedType.Interface)] object item, [MarshalAs(UnmanagedType.Interface)] object destination, [MarshalAs(UnmanagedType.LPWStr)] string name, IFileOperationProgressSink sink);
         void CopyItems([MarshalAs(UnmanagedType.Interface)] object items, [MarshalAs(UnmanagedType.Interface)] object destination);
-        void DeleteItem([MarshalAs(UnmanagedType.Interface)] object item, IFileOperationProgressSink sink);
+        void DeleteItem(IShellItem item, IFileOperationProgressSink sink);
         void DeleteItems([MarshalAs(UnmanagedType.Interface)] object items);
         void NewItem([MarshalAs(UnmanagedType.Interface)] object destination, uint attributes, [MarshalAs(UnmanagedType.LPWStr)] string name, [MarshalAs(UnmanagedType.LPWStr)] string template, IFileOperationProgressSink sink);
         [PreserveSig] int PerformOperations();
