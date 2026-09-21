@@ -43,8 +43,8 @@ internal static class T12NativeVerification
             string protectedDir=Path.Combine(root,"protected"); Directory.CreateDirectory(protectedDir);
             string protectedFile=Path.Combine(protectedDir,"denied.txt"); File.WriteAllText(protectedFile,"temporary ACL test");
             var identity=WindowsIdentity.GetCurrent().User!;
-            var directoryInfo=new DirectoryInfo(protectedDir); var originalDir=directoryInfo.GetAccessControl();
-            var fileInfo=new FileInfo(protectedFile); var originalFile=fileInfo.GetAccessControl();
+            var directoryInfo=new DirectoryInfo(protectedDir);
+            var fileInfo=new FileInfo(protectedFile);
             try
             {
                 var ds=directoryInfo.GetAccessControl(); ds.AddAccessRule(new FileSystemAccessRule(identity,FileSystemRights.DeleteSubdirectoriesAndFiles,AccessControlType.Deny)); directoryInfo.SetAccessControl(ds);
@@ -55,7 +55,15 @@ internal static class T12NativeVerification
                     Check(denied.Outcome!=DeletionOutcome.Succeeded && File.Exists(protectedFile),mode+" permission denied preserves file");
                 }
             }
-            finally { fileInfo.SetAccessControl(originalFile); directoryInfo.SetAccessControl(originalDir); }
+            finally
+            {
+                var fs=fileInfo.GetAccessControl();
+                fs.RemoveAccessRuleSpecific(new FileSystemAccessRule(identity,FileSystemRights.Delete,AccessControlType.Deny));
+                fileInfo.SetAccessControl(fs);
+                var ds=directoryInfo.GetAccessControl();
+                ds.RemoveAccessRuleSpecific(new FileSystemAccessRule(identity,FileSystemRights.DeleteSubdirectoriesAndFiles,AccessControlType.Deny));
+                directoryInfo.SetAccessControl(ds);
+            }
 
             using var db=LibraryDatabase.Open(Path.Combine(root,"library.db"));
             var cat=new Category(Guid.NewGuid(),"T12",MediaType.Comic); db.SaveCategory(cat);
