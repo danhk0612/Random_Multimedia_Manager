@@ -244,3 +244,5 @@ Run("concurrent duplicate requests create one history row", path =>
 Console.WriteLine($"PASS: {passed} SQLite integration scenarios");
 
 await T06Verification.RunAsync();
+
+await T12Verification.RunAsync();

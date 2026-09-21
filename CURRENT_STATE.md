@@ -14,6 +14,7 @@
 |---|---|
 | WPF 시작/빈 메인창 코드 | Windows 복원·Release 빌드·실행·닫기 정상 (사용자 확인) |
 | SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (main 통합 완료) |
+| 실제 파일 삭제·저널 복구 | T12 완료 (PR #16 병합 대기, 잔여 수동 검증은 기본 완성 후 실사용으로 이관) |
 | 분류/소스 폴더 UI | T04 구현·자동 검증·사용자 Windows UI 수동 검증 완료 (PR #9 main 통합 완료) |
 | 라이브러리 최초/수동 스캔 | T05 구현·Windows 자동 검증·사용자 UI 확인 완료 (PR #12 main 통합 완료) |
 | 랜덤 후보·Pending 방문 핵심 | T06 구현·Windows 자동 검증 완료, PR #13 main 통합 완료; T11 완료, 기본 동작 사용자 확인·어려운 수동 검사 생략, PR #14 main 통합 완료 |
@@ -25,6 +26,15 @@
 | 즐겨찾기·영구 제외·이번 제외·삭제 | T06 후보/이번 방문 억제·삭제 결과 전이 구현; 공통 UI는 T11 구현·자동 검증 통과, 실제 삭제는 T12 |
 | 단축키·트레이·빠른 숨김/종료 | 미구현 |
 | VSR | 후순위, 가능성 미검증 |
+
+## T12 삭제·복구 구현
+
+- 브랜치 `task/t12-file-deletion`, PR #16. 최신 main `a09009f`와 T11 PR #14 통합을 기준으로 T12만 구현했다.
+- 확인 UI의 휴지통 기본/명시적 영구삭제/취소, PathKey 격리, durable 저널, 기존 ApplyDeletion/AppliedDeletion, 동일 방문 복귀 및 시작 복구를 연결했다. DB 스키마와 기존 기록 의미는 유지한다.
+- 검증 코드 `a5ae8ff449dde5717843447b6d2f860cfa2a8055`: Windows x64/.NET 10 Release 빌드 경고 0·오류 0. T12 저장/복구 21개 시나리오 및 실제 휴지통·영구삭제·잠금/ACL·미디어 해제·취소 복귀·확인창 검사가 통과했다.
+- Windows 실행 근거: [T11/T12 감상·삭제 및 만화/영상/자막 회귀 35549911943](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911943), [T03 저장 35549911940](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911940), [T05 스캔 35549911953](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911953), [T06 세션 35549911980](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911980), [T09 영상 35549911936](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911936).
+- 2026-09-21 사용자 지시에 따라 T12를 완료 처리한다. 사용자 Windows 삭제 UI 수동 검증은 미실시이며 기본 완성 후 실사용 검증으로 이관했다. 미검증을 통과로 표기하지 않으며 PR #16 검토/통합은 별도 대기한다.
+- 상세 구현/검증 및 T14 후속 연결점은 docs/T12_DELETION_VALIDATION.md. 병렬 T14 문서와 상태 절은 수정하지 않았다.
 
 ## 검증
 
@@ -45,7 +55,7 @@
 
 T11 PR #14 main 통합 완료. 기본 동작 사용자 확인과 어려운 수동 검사 생략·미검증을 구분한다. AVI 무음 조사는 보류이며 해결로 표기하지 않는다.
 
-- 우선 구현: T12 삭제와 세션 상태 처리 — Astra.
+- T12 삭제와 세션 상태 처리 — 완료, PR #16 병합 대기. 잔여 수동 검증은 사용자 승인으로 기본 완성 후 실사용 중 진행한다.
 - 병렬 가능: T14 생명주기 정책/상태 설계 — Astra, 문서 설계만. 제품 코드·DB·T12 삭제 계약은 변경하지 않는다.
 - T17은 T11 선행은 충족했지만 T12와 ViewingWindow/수동 열기 진입·Busy/격리 경계가 겹칠 수 있어 이번에는 대기한다. T12 통합 후 공통 진입 계약을 확인하고 Sol 지시문을 확정한다.
 - T12와 T14는 각자 최신 main에서 별도 브랜치를 사용한다. 공통 CURRENT_STATE/TASKS 수정은 자기 Task 절만 갱신하고 상대 Task 상태를 덮어쓰지 않는다. 병합 시 양쪽 변경을 보존한다.

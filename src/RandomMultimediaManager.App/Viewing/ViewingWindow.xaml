@@ -12,6 +12,7 @@
     <CheckBox x:Name="Favorite" Content="즐겨찾기" Click="FavoriteChanged" Margin="6"/>
     <CheckBox x:Name="Excluded" Content="영구 랜덤 제외" Click="ExcludedChanged" Margin="6"/>
     <CheckBox x:Name="Suppressed" Content="이번 감상 기록 제외" Click="SuppressedChanged" Margin="6"/>
+    <Button x:Name="DeleteButton" Content="삭제…" Click="DeleteCurrent" Margin="3"/>
     <Button Content="전체화면" Click="Fullscreen" Margin="3"/>
    </WrapPanel>
    <WrapPanel x:Name="SettingsControls" Margin="0,5">
@@ -21,6 +22,7 @@
     <Button Content="설정 저장" Click="SaveSettings" Margin="6,0"/>
    </WrapPanel>
    <WrapPanel>
+    <Button x:Name="RecoveryButton" Content="삭제 복구 확인/재시도" Click="RecoverDeletion" Margin="0,3,6,3"/>
     <Button Content="준비 취소" Click="Cancel" Margin="0,3,6,3"/>
     <Button x:Name="RetryButton" Content="저장 재시도" Click="Retry" Margin="0,3,6,3"/>
     <Button x:Name="ResumeButton" Content="저장 취소 후 감상 복귀" Click="ResumeFailed" Margin="0,3,6,3"/>

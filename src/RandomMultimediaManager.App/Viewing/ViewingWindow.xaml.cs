@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using RandomMultimediaManager.App.Deletion;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,6 +17,7 @@ namespace RandomMultimediaManager.App.Viewing;
 public partial class ViewingWindow : Window
 {
     private readonly LibraryDatabase database;
+    private readonly DeletionService? deletions;
     public SessionCoordinator Coordinator { get; }
     public ViewingMedia? Current { get; private set; }
     private readonly DispatcherTimer timer;
@@ -26,9 +28,10 @@ public partial class ViewingWindow : Window
     private SessionToken? savedToken;
     private WindowState previousState;
 
-    public ViewingWindow(LibraryDatabase database)
+    public ViewingWindow(LibraryDatabase database, DeletionService? deletions = null)
     {
         this.database = database;
+        this.deletions = deletions;
         InitializeComponent();
         Coordinator = new(database, new ViewingMediaPreparer(VideoSurface, OnMediaActivated, Released));
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background,
@@ -62,6 +65,9 @@ public partial class ViewingWindow : Window
     }
     private void Controls()
     {
+        DeleteButton.IsEnabled = !busy && !closing && Current is not null && deletions is not null
+            && !database.IsDeletionBlocked(Current.Item.PathKey);
+        RecoveryButton.IsEnabled = !busy && !closing && deletions?.Pending.Count > 0;
         bool failed = Coordinator.View.Phase == SessionPhase.SaveFailed;
         SessionControls.IsEnabled = SettingsControls.IsEnabled = !busy && !closing && !failed;
         VideoControls.IsEnabled = !busy && !closing && !failed;
@@ -124,6 +130,29 @@ public partial class ViewingWindow : Window
             }
         }
     }
+    private async void DeleteCurrent(object s, RoutedEventArgs e) => await Run(async () =>
+    {
+        if (Current is null || deletions is null) return;
+        var dialog = new DeleteConfirmationWindow(Current.Item.Path) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Selection is not { } mode) return;
+        Status.Text = "삭제 중… 결과와 저널 저장이 끝날 때까지 기다려 주세요.";
+        await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
+        var result = await Coordinator.DeleteCurrentAsync(Guid.NewGuid(), deletions, mode);
+        Status.Text = result.Error ?? result.Status.ToString();
+        Suppressed.IsChecked = Coordinator.View.Pending?.SuppressHistory == true;
+        if (Current?.Video is { } video)
+        {
+            var snapshot = video.Snapshot(Current.VideoVisit);
+            Volume.Value = snapshot.Volume; Muted.IsChecked = snapshot.Muted;
+        }
+    });
+    private async void RecoverDeletion(object s, RoutedEventArgs e) => await Run(async () =>
+    {
+        if (deletions is null) return;
+        await DeletionDialogs.RecoverAsync(deletions, this, Coordinator);
+        Status.Text = deletions.Pending.Count == 0 ? "삭제 복구 처리를 완료했습니다." : "미해결 삭제 경로의 격리를 유지합니다.";
+        Suppressed.IsChecked = Coordinator.View.Pending?.SuppressHistory == true;
+    });
     private async void Start(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.StartRandomAsync(Guid.NewGuid(), Categories.SelectedItems.Cast<Category>().Select(c => c.Id))));
     private async void Next(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.NextAsync(Guid.NewGuid())));
     private async void Previous(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.PreviousAsync(Guid.NewGuid())));

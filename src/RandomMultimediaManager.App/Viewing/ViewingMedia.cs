@@ -32,7 +32,7 @@ public sealed class ViewingMediaPreparer(Grid videoSurface, Action<ViewingMedia>
     }
 }
 
-public sealed class ViewingMedia : ISessionMedia
+public sealed class ViewingMedia : ISessionMedia, IDeletionMediaState
 {
     private readonly SessionToken preparation;
     private readonly Action<ViewingMedia> activated;
@@ -102,6 +102,15 @@ public sealed class ViewingMedia : ISessionMedia
             if (paused.State == VLCState.Playing) Video.SetPaused(VideoVisit, false);
         }
         paused = null;
+    }
+    public object? CaptureDeletionState() => Video?.Snapshot(VideoVisit);
+    public void RestoreDeletionState(object? state)
+    {
+        if (Video is null || state is not VideoSnapshot snapshot) return;
+        Video.SetVolume(VideoVisit, snapshot.Volume);
+        Video.SetMuted(VideoVisit, snapshot.Muted);
+        Video.SetRate(VideoVisit, snapshot.Rate);
+        Video.SetPaused(VideoVisit, snapshot.State != VLCState.Playing);
     }
     public async ValueTask DisposeAsync()
     {
