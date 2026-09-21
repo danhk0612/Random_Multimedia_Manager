@@ -53,6 +53,14 @@ internal static class T12Verification
             await Done(f.C.LeaveAsync(Guid.NewGuid()));
             Check(f.Db.GetHistory(f.A.Id).Any(h => h.VisitId == visit), "leave commits retained visit");
         });
+        await Scenario("resource release failure never enters OS and retains Pending", async f =>
+        {
+            await Done(f.C.OpenManualAsync(Guid.NewGuid(),f.A.Id)); var visit=f.C.View.Pending;
+            f.Preparer.Last!.FailDispose=true;
+            var result=await f.C.DeleteCurrentAsync(Guid.NewGuid(),f.Service,DeletionMode.Recycle);
+            Check(f.OsCalls==0 && f.C.View.Pending==visit && f.Db.GetHistory(f.A.Id).Count==1,"release failure preserves visit and history");
+            Check(result.Error is not null,"release error shown");
+        });
         await Scenario("Prepared write failure prevents OS", async f =>
         {
             await Done(f.C.OpenManualAsync(Guid.NewGuid(), f.A.Id));
@@ -104,6 +112,18 @@ internal static class T12Verification
             f.Journal.FailRemove = false;
             await f.Restart();
             Check(f.Service.Pending.Count == 0 && !f.Db.IsDeletionBlocked(f.A.PathKey) && f.OsCalls == 1, "idempotent cleanup");
+        });
+        await Scenario("reappearing completed journal cannot erase later visits", async f =>
+        {
+            var record=await f.Service.PrepareAsync(f.A.PathKey,DeletionMode.Permanent);
+            var result=await f.Service.RecordResultAsync(record,await f.Service.ExecuteAsync(record));
+            Check(result.Resolved,"initial deletion completed");
+            File.WriteAllText(f.A.Path,"new replacement"); f.Db.ApplyObservedItems([f.A],[]);
+            var laterVisit=Guid.NewGuid();
+            Check(f.Db.CommitVisit(new(laterVisit,f.A.Id,2,VisitOrigin.Manual,false,PlaybackProgress.Video(17))).Status==CommitStatus.Committed,"replacement visit saved");
+            f.Journal.Write(result.Record!); await f.Restart();
+            Check(f.Db.GetHistory(f.A.Id).Single().VisitId==laterVisit && f.Db.GetProgress(f.A.Id)!.Position.VideoPositionMs==17,"Applied marker prevents stale cleanup");
+            Check(!f.Db.GetSessionSnapshot().Items.Single(i=>i.Id==f.A.Id).IsMissing && f.OsCalls==1,"replacement stays present and never re-deleted");
         });
         foreach (var phase in new[] { DeletionPhase.Prepared, DeletionPhase.Unknown, DeletionPhase.Failed, DeletionPhase.Cancelled })
             await Scenario("restart phase " + phase, async f =>
@@ -253,9 +273,10 @@ internal static class T12Verification
     sealed class FakeMedia : ISessionMedia
     {
         public PlaybackProgress Position = PlaybackProgress.Video(0);
+        public bool FailDispose;
         public PlaybackProgress PauseAndCapture(SessionToken token) => Position;
         public void Activate(SessionToken token) { }
         public void Resume(SessionToken token) { }
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public ValueTask DisposeAsync() => FailDispose ? ValueTask.FromException(new IOException("injected release failure")) : ValueTask.CompletedTask;
     }
 }

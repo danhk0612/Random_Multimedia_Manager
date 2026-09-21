@@ -66,7 +66,8 @@ internal static class T12NativeVerification
             var item=new MediaItem(Guid.NewGuid(),cat.Id,MediaType.Comic,comic,comic.ToUpperInvariant(),new FileInfo(comic).Length,1);
             db.ApplyObservedItems([item],[]);
             var service=new DeletionService(db,new DeletionJournal(Path.Combine(root,"delete-journal")),WindowsFileDeletion.DeleteAsync);
-            var session=new SessionCoordinator(db,new ViewingMediaPreparer(surface,_=>{},_=>{}));
+            ViewingMedia? active = null;
+            var session=new SessionCoordinator(db,new ViewingMediaPreparer(surface,m=>active=m,m=>{ if(ReferenceEquals(active,m)) active=null; }));
             Check((await session.OpenManualAsync(Guid.NewGuid(),item.Id)).Status==SessionStatus.Completed,"actual comic ready before delete");
             var deleted=await session.DeleteCurrentAsync(Guid.NewGuid(),service,DeletionMode.Permanent);
             Check(deleted.Status==SessionStatus.Completed && session.View.Pending is null && !File.Exists(comic),"comic resources released before OS delete");
@@ -75,6 +76,16 @@ internal static class T12NativeVerification
             var videoItem=new MediaItem(Guid.NewGuid(),videoCat.Id,MediaType.Video,video,video.ToUpperInvariant(),new FileInfo(video).Length,1);
             db.ApplyObservedItems([videoItem],[]);
             Check((await session.OpenManualAsync(Guid.NewGuid(),videoItem.Id)).Status==SessionStatus.Completed,"actual video ready before delete");
+            var originalVisit=session.View.Pending;
+            active!.Video!.SetPaused(active.VideoVisit,true);
+            active.Video.SetMuted(active.VideoVisit,true);
+            active.Video.SetVolume(active.VideoVisit,35);
+            var cancelledService=new DeletionService(db,new DeletionJournal(Path.Combine(root,"cancel-journal")),
+                _=>Task.FromResult(new FileDeletionResult(DeletionOutcome.Cancelled)));
+            var cancelled=await session.DeleteCurrentAsync(Guid.NewGuid(),cancelledService,DeletionMode.Recycle);
+            Check(cancelled.Status==SessionStatus.Completed && session.View.Pending==originalVisit,"actual video cancellation retains same visit");
+            var restored=active!.Video!.Snapshot(active.VideoVisit);
+            Check(restored.Muted && restored.Volume==35 && restored.State!=LibVLCSharp.Shared.VLCState.Playing,"actual video restores paused/muted/volume state");
             deleted=await session.DeleteCurrentAsync(Guid.NewGuid(),service,DeletionMode.Recycle);
             Check(deleted.Status==SessionStatus.Completed && session.View.Pending is null && !File.Exists(video),"video resources released before recycle");
 
