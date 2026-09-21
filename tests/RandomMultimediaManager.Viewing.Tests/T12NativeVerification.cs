@@ -78,6 +78,12 @@ internal static class T12NativeVerification
             Check((await session.OpenManualAsync(Guid.NewGuid(),videoItem.Id)).Status==SessionStatus.Completed,"actual video ready before delete");
             var originalVisit=session.View.Pending;
             active!.Video!.SetPaused(active.VideoVisit,true);
+            var pauseDeadline=DateTime.UtcNow.AddSeconds(10);
+            while(active.Video.Snapshot(active.VideoVisit).State!=LibVLCSharp.Shared.VLCState.Paused)
+            {
+                if(DateTime.UtcNow>pauseDeadline) throw new TimeoutException("video pause acknowledgement");
+                await Task.Delay(20);
+            }
             active.Video.SetMuted(active.VideoVisit,true);
             active.Video.SetVolume(active.VideoVisit,35);
             var cancelledService=new DeletionService(db,new DeletionJournal(Path.Combine(root,"cancel-journal")),

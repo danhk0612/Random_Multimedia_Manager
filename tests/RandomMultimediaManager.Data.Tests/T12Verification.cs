@@ -69,6 +69,16 @@ internal static class T12Verification
             Check(r.Status == SessionStatus.Failed && f.OsCalls == 0 && f.C.View.Pending is not null, "no OS on journal failure");
             Check(!f.Db.IsDeletionBlocked(f.A.PathKey), "no durable intent lifts isolation");
         });
+        await Scenario("lost Prepared acknowledgement confirmation releases still-owned media", async f =>
+        {
+            await Done(f.C.OpenManualAsync(Guid.NewGuid(),f.A.Id)); var media=f.Preparer.Last!;
+            f.Journal.FailAfterWrite=true;
+            await f.C.DeleteCurrentAsync(Guid.NewGuid(),f.Service,DeletionMode.Recycle);
+            Check(f.OsCalls==0 && !media.Disposed && f.Service.Pending.Count==1,"durable Prepared but no OS/release");
+            f.Journal.FailAfterWrite=false; File.Delete(f.A.Path);
+            await Done(f.C.ResolveDeletionAsync(Guid.NewGuid(),f.Service,f.Service.Pending.Single(),true));
+            Check(media.Disposed && f.C.View.Pending is null,"confirmed success releases existing media");
+        });
         await Scenario("OS success + result journal failure requires confirmation", async f =>
         {
             await Done(f.C.OpenManualAsync(Guid.NewGuid(), f.A.Id));
@@ -217,8 +227,8 @@ internal static class T12Verification
     { using var f = new Fixture(); await action(f); Console.WriteLine("PASS T12: " + name); }
     sealed class FaultJournal(string directory) : DeletionJournal(directory)
     {
-        public DeletionPhase? FailPhase; public bool FailRemove;
-        public override void Write(DeletionRecord record) { if (record.Phase == FailPhase) throw new IOException("injected journal failure"); base.Write(record); }
+        public DeletionPhase? FailPhase; public bool FailRemove, FailAfterWrite;
+        public override void Write(DeletionRecord record) { if (record.Phase == FailPhase) throw new IOException("injected journal failure"); base.Write(record); if(FailAfterWrite) throw new IOException("lost write acknowledgement"); }
         public override void Remove(string file) { if (FailRemove) throw new IOException("injected removal failure"); base.Remove(file); }
     }
     sealed class Fixture : IDisposable
@@ -273,10 +283,10 @@ internal static class T12Verification
     sealed class FakeMedia : ISessionMedia
     {
         public PlaybackProgress Position = PlaybackProgress.Video(0);
-        public bool FailDispose;
+        public bool FailDispose, Disposed;
         public PlaybackProgress PauseAndCapture(SessionToken token) => Position;
         public void Activate(SessionToken token) { }
         public void Resume(SessionToken token) { }
-        public ValueTask DisposeAsync() => FailDispose ? ValueTask.FromException(new IOException("injected release failure")) : ValueTask.CompletedTask;
+        public ValueTask DisposeAsync() { if(FailDispose) return ValueTask.FromException(new IOException("injected release failure")); Disposed=true; return ValueTask.CompletedTask; }
     }
 }

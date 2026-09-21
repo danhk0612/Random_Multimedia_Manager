@@ -84,6 +84,16 @@ public sealed partial class SessionCoordinator
         phase = SessionPhase.Deleting;
         // Durable success must precede cleanup, but in-memory Pending must be cleared even
         // when the DB cleanup fails. A live confirmation can never generate a new visit.
+        if (succeeded && entry.Record is { } target && path?.Pending is not null
+            && path.Slots[path.Cursor].PathKey == target.PathKey && current is not null)
+        {
+            // Prepared may survive a lost write acknowledgement before media release. A user
+            // confirmation must release that still-owned media too, not merely drop its owner.
+            latestProgress = current.PauseAndCapture(activeToken!);
+            releasedItem = Find(await Task.Run(database.GetSessionSnapshot), path.Pending.ItemId);
+            await current.DisposeAsync();
+            current = null;
+        }
         var result = await service.ConfirmAsync(entry, succeeded);
         if (succeeded && entry.Record is { } r && result.Record?.Phase == DeletionPhase.Succeeded)
             DeleteSessionPath(r.PathKey);

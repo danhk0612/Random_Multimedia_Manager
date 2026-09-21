@@ -87,6 +87,7 @@ internal static class Program
             var videoToken=session.View.ActiveToken!;
             Check(current!.Video!.Operation.SessionId==videoToken.SessionId && current.VideoVisit.VisitId==videoToken.VisitId,"video operation and visit mapping");
             current.Video.SetPaused(current.VideoVisit,true);
+            await Wait(() => current.Video.Snapshot(current.VideoVisit).State == LibVLCSharp.Shared.VLCState.Paused);
             var prior=current.Video.Snapshot(current.VideoVisit);
             var absent=video with{Id=Guid.NewGuid(),Path=Path.Combine(root,"absent.mp4"),PathKey=Path.Combine(root,"absent.mp4").ToUpperInvariant()};
             db.ApplyObservedItems([absent],[]);
