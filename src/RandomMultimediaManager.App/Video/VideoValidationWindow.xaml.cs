@@ -27,6 +27,14 @@ public partial class VideoValidationWindow : Window
     private CancellationTokenSource? cancellation;
     private Task preparing = Task.CompletedTask;
     private Task command = Task.CompletedTask;
+    private Task dialogTask = Task.CompletedTask;
+    private bool ChooseFile(OpenFileDialog dialog)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        dialogTask = completion.Task;
+        try { return dialog.ShowDialog(this) == true && !closing && IsEnabled; }
+        finally { completion.SetResult(); }
+    }
     private Task? shutdown;
     private IReadOnlyList<ExternalSubtitleCandidate> stagedSubtitleCandidates = Array.Empty<ExternalSubtitleCandidate>();
     private bool busy;
@@ -51,7 +59,7 @@ public partial class VideoValidationWindow : Window
     {
         if (busy || closing || staged is not null) return;
         var dialog = new OpenFileDialog { Filter = "영상|*.mp4;*.mkv;*.avi|모든 파일|*.*" };
-        if (dialog.ShowDialog(this) != true) return;
+        if (!ChooseFile(dialog)) return;
         var request = new VideoOperation(sessionId, Guid.NewGuid(), Guid.NewGuid());
         operation = request;
         cancellation = new CancellationTokenSource();
@@ -260,7 +268,7 @@ public partial class VideoValidationWindow : Window
     {
         if (busy || closing || current is null || visit is null) return;
         var dialog = new OpenFileDialog { Filter = "외부 자막|*.srt;*.smi|SRT|*.srt|SMI|*.smi" };
-        if (dialog.ShowDialog(this) != true) return;
+        if (!ChooseFile(dialog)) return;
 
         ExternalSubtitleCandidate candidate;
         try { candidate = ExternalSubtitleService.FromManualPath(dialog.FileName); }
@@ -417,6 +425,7 @@ public partial class VideoValidationWindow : Window
         operation = null;
         cancellation?.Cancel();
         await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
+        await dialogTask;
         await command;
         await ReleaseAllAsync();
         allowClose = true;

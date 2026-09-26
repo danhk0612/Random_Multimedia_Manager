@@ -75,6 +75,22 @@ internal static class T15NativeVerification
             await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
             Check(await f.Lifecycle.ExitAsync(), "resolved save failure can exit");
         });
+        await Scenario("CommitUnknown preserves frozen visit", async f =>
+        {
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var pending = view.Coordinator.View.Pending!;
+            f.Sql($"INSERT INTO VisitCommit VALUES('{pending.VisitId:D}', '{f.Item.Id:D}', zeroblob(32));");
+            Check(!await f.Lifecycle.ExitAsync() && view.Coordinator.View.FrozenCommit is not null,
+                "conflicting commit acknowledgement blocks exit with frozen payload");
+            Check((await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid())).Status == SessionStatus.CommitUnknown
+                && view.Coordinator.View.Pending == pending && f.Removals == 0,
+                "CommitUnknown cannot resume or discard visit");
+            // Remove only the deliberately injected marker in this temporary DB.
+            f.Sql($"DELETE FROM VisitCommit WHERE VisitId='{pending.VisitId:D}';");
+            await view.Coordinator.RetryAsync(Guid.NewGuid());
+            Check(await f.Lifecycle.ExitAsync(), "resolved acknowledgement follows original frozen transition");
+        });
         await Scenario("modal delete confirmation exit", async f =>
         {
             var view = await f.OpenViewing();

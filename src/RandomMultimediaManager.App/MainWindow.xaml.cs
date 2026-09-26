@@ -135,6 +135,7 @@ public partial class MainWindow : Window
         async Task Recover()
         {
             await System.Windows.Threading.Dispatcher.Yield();
+            if (exitRequested) return;
             await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
         }
         recovery = Recover();

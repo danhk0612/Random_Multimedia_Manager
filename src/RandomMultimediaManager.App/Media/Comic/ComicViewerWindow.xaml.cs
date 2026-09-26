@@ -28,12 +28,13 @@ public partial class ComicViewerWindow : Window
     private async Task Track(Func<Task> action)
     {
         if (_closing) return;
-        var task = action();
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var task = completion.Task;
         pageOperations.Add(task);
-        try { await task; }
+        try { await action(); }
         catch (OperationCanceledException) { }
         catch (Exception ex) { StatusText.Text = ex.Message; }
-        finally { pageOperations.Remove(task); }
+        finally { pageOperations.Remove(task); completion.SetResult(); }
     }
     private WriteableBitmap? _surface;
     private byte[]? _pixelBuffer;
@@ -108,15 +109,15 @@ public partial class ComicViewerWindow : Window
 
     public PlaybackProgress GetProgress() => _viewModel.GetProgress();
 
-    private async void OpenFile(object sender, RoutedEventArgs e)
+    private async void OpenFile(object sender, RoutedEventArgs e) => await Track(async () =>
     {
         var dialog = new OpenFileDialog
         {
             Filter = "만화 압축 (*.zip;*.cbz)|*.zip;*.cbz|모든 파일 (*.*)|*.*"
         };
-        if (dialog.ShowDialog(this) == true)
+        if (dialog.ShowDialog(this) == true && !_closing && IsEnabled)
             await OpenAsync(dialog.FileName);
-    }
+    });
 
     private async void PreviousPage(object sender, RoutedEventArgs e) => await Track(() => MoveAsync(-1));
     private async void NextPage(object sender, RoutedEventArgs e) => await Track(() => MoveAsync(1));
