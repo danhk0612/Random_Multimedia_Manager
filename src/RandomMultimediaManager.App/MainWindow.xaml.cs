@@ -8,13 +8,22 @@ public partial class MainWindow : Window
 {
     private Media.Comic.ComicViewerWindow? comicViewer;
     private Video.VideoValidationWindow? videoValidation;
-    private bool waitingForVideoClose;
+    public Viewing.ViewingWindow? Viewing { get; private set; }
+    public Lifecycle.AppLifecycle? Lifecycle { get; set; }
+    private readonly Data.LibraryDatabase database;
+    private readonly Deletion.DeletionService deletions;
+    private bool exitRequested;
+    private Task recovery = Task.CompletedTask;
 
     private static string ComicTracePath => Path.Combine(Path.GetTempPath(), "RandomMultimediaManager-T08-startup.log");
 
-    public MainWindow()
+    public MainWindow() : this(((App)Application.Current).Database, ((App)Application.Current).Deletions) { }
+
+    public MainWindow(Data.LibraryDatabase database, Deletion.DeletionService deletions)
     {
+        this.database = database; this.deletions = deletions;
         InitializeComponent();
+        CategoryEditor.DataContext = new ViewModels.CategoryEditorViewModel(database);
     }
 
     private static void TraceComicStartup(string message)
@@ -31,6 +40,7 @@ public partial class MainWindow : Window
 
     private void OpenComicViewer(object sender, RoutedEventArgs e)
     {
+        if (exitRequested) return;
         TraceComicStartup("OpenComicViewer entered");
 
         if (comicViewer is not null)
@@ -71,6 +81,8 @@ public partial class MainWindow : Window
 
     private void OpenViewing(object sender, RoutedEventArgs e)
     {
+        if (exitRequested) return;
+        if (Viewing is not null) { Viewing.Activate(); return; }
         if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel { IsScanning: true })
         {
             MessageBox.Show(this, "진행 중인 스캔이 끝난 뒤 감상을 시작하세요.", "랜덤 감상");
@@ -78,32 +90,61 @@ public partial class MainWindow : Window
         }
         // A modal owner keeps scan application after the final visit/checkpoint boundary.
         // No scan can invalidate progress while the session is using that observed item.
-        new Viewing.ViewingWindow(((App)Application.Current).Database, ((App)Application.Current).Deletions) { Owner = this }.ShowDialog();
+        Viewing = new(database, deletions) { Owner = this };
+        try { Viewing.ShowDialog(); }
+        finally { Viewing = null; }
     }
 
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
     {
+        if (exitRequested) return;
         if (videoValidation is not null) { videoValidation.Activate(); return; }
         videoValidation = new Video.VideoValidationWindow { Owner = this };
         videoValidation.Closed += (_, _) => videoValidation = null;
         videoValidation.Show();
     }
 
-    protected override async void OnClosing(CancelEventArgs e)
+    public void SetExitRequested(bool value)
     {
-        TraceComicStartup("MainWindow OnClosing entered");
-        comicViewer?.Close();
-
-        if (videoValidation is not null)
+        exitRequested = value;
+        MainContent.IsEnabled = !value;
+        Viewing?.SetExitRequested(value);
+    }
+    public async Task StopScanningAsync()
+    {
+        if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel editor)
+        {
+            editor.CancelScan();
+            await editor.ScanCompletion;
+        }
+        await recovery;
+    }
+    public async Task CloseAuxiliaryWindowsAsync()
+    {
+        if (comicViewer is { } comic) await comic.ShutdownAsync();
+        if (videoValidation is { } video) await video.ShutdownAsync();
+    }
+    public void ShowLifecycleError(string message) => LifecycleStatus.Text = message;
+    private async void ExitApplication(object sender, RoutedEventArgs e)
+    { if (Lifecycle is not null) await Lifecycle.ExitAsync(); }
+    private async void RecoverDeletion(object sender, RoutedEventArgs e)
+    {
+        if (exitRequested || !recovery.IsCompleted) return;
+        async Task Recover()
+        {
+            await System.Windows.Threading.Dispatcher.Yield();
+            await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
+        }
+        recovery = Recover();
+        try { await recovery; }
+        catch (Exception ex) { ShowLifecycleError(ex.Message); }
+    }
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        if (Lifecycle is { State: not RandomMultimediaManager.App.Lifecycle.LifecycleState.Exited })
         {
             e.Cancel = true;
-            base.OnClosing(e);
-            if (waitingForVideoClose) return;
-            waitingForVideoClose = true;
-            try { await videoValidation.ShutdownAsync(); Close(); }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, "영상 리소스 해제 실패"); }
-            finally { waitingForVideoClose = false; }
-            return;
+            Lifecycle.HideMain();
         }
         base.OnClosing(e);
     }

@@ -171,7 +171,13 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         }
     }
 
-    public async Task<EditorResult> ScanSelectedCategoryAsync()
+    public Task<EditorResult> ScanCompletion { get; private set; } = Task.FromResult(new EditorResult(true, ""));
+    public Task<EditorResult> ScanSelectedCategoryAsync()
+    {
+        if (IsScanning) return ScanCompletion;
+        return ScanCompletion = ScanCoreAsync();
+    }
+    private async Task<EditorResult> ScanCoreAsync()
     {
         if (SelectedCategory is null)
             return SetResult(false, "스캔할 저장된 분류를 선택하세요.");

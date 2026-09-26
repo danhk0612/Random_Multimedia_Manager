@@ -42,6 +42,7 @@ public sealed class ViewingMedia : ISessionMedia, IDeletionMediaState
     private ComicViewerWindow? comicWindow;
     private VideoSnapshot? paused;
     private bool disposed;
+    private Task? disposal;
     public MediaItem Item { get; }
     public SessionToken? Token { get; private set; }
     public PreparedVideo? Video { get; }
@@ -112,13 +113,14 @@ public sealed class ViewingMedia : ISessionMedia, IDeletionMediaState
         Video.SetRate(VideoVisit, snapshot.Rate);
         Video.SetPaused(VideoVisit, snapshot.State != VLCState.Playing);
     }
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync() => new(disposal ??= ReleaseAsync());
+    private async Task ReleaseAsync()
     {
-        if (disposed) return;
         disposed = true;
         released(this);
         comic?.Dispose(); comic = null;
-        comicWindow?.ReleaseSessionContent(); comicWindow = null;
+        if (comicWindow is not null) await comicWindow.ShutdownAsync();
+        comicWindow = null;
         if (Video is not null) await Video.DisposeAsync();
     }
 }

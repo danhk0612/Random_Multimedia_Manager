@@ -20,11 +20,14 @@ public partial class ComicViewerWindow : Window
     private Point? _dragStart;
     private double _dragPanX;
     private double _dragPanY;
-    private bool _closing;
+    private bool _closing, allowClose;
+    private Task openingTask = Task.CompletedTask;
+    private Task? shutdown;
     private readonly HashSet<Task> pageOperations = [];
     public Task WhenIdleAsync() => Task.WhenAll(pageOperations.ToArray());
     private async Task Track(Func<Task> action)
     {
+        if (_closing) return;
         var task = action();
         pageOperations.Add(task);
         try { await task; }
@@ -51,7 +54,12 @@ public partial class ComicViewerWindow : Window
         UpdateUi();
     }
 
-    public async Task OpenAsync(string path, PlaybackProgress? progress = null)
+    public Task OpenAsync(string path, PlaybackProgress? progress = null)
+    {
+        if (_closing) return Task.CompletedTask;
+        return openingTask = OpenCoreAsync(path, progress);
+    }
+    private async Task OpenCoreAsync(string path, PlaybackProgress? progress)
     {
         CancellationTokenSource next = new();
         CancellationTokenSource? previous = Interlocked.Exchange(ref _operation, next);
@@ -394,22 +402,28 @@ public partial class ComicViewerWindow : Window
             : _viewModel.FitMode.ToString();
     }
 
-    protected override void OnClosing(CancelEventArgs e)
+    public Task ShutdownAsync() => shutdown ??= ShutdownCoreAsync();
+    private async Task ShutdownCoreAsync()
     {
-        if (_closing)
-        {
-            base.OnClosing(e);
-            return;
-        }
         _closing = true;
+        if (Content is UIElement content) content.IsEnabled = false;
         _resizeRenderTimer.Stop();
-        CancellationTokenSource? operation = Interlocked.Exchange(ref _operation, null);
-        operation?.Cancel();
-        operation?.Dispose();
+        _operation?.Cancel();
+        await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
+        try { await openingTask; await WhenIdleAsync(); }
+        catch (OperationCanceledException) { }
+        _operation?.Dispose(); _operation = null;
         _viewModel.Dispose();
-        _surface = null;
-        _pixelBuffer = null;
-        Canvas.Source = null;
+        _surface = null; _pixelBuffer = null; Canvas.Source = null;
+        allowClose = true;
+        Close();
+    }
+    protected override async void OnClosing(CancelEventArgs e)
+    {
+        if (allowClose) { base.OnClosing(e); return; }
+        e.Cancel = true;
         base.OnClosing(e);
+        try { await ShutdownAsync(); }
+        catch (Exception ex) { StatusText.Text = "종료 중 리소스 해제 실패: " + ex.Message; }
     }
 }

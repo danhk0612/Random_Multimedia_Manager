@@ -246,3 +246,5 @@ Console.WriteLine($"PASS: {passed} SQLite integration scenarios");
 await T06Verification.RunAsync();
 
 await T12Verification.RunAsync();
+
+await T15Verification.RunAsync();

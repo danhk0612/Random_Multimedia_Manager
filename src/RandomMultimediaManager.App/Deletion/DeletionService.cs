@@ -11,6 +11,10 @@ public sealed record DeletionResult(DeletionRecord? Record, DeletionOutcome Outc
 public sealed class DeletionService(LibraryDatabase database, DeletionJournal journal,
     Func<DeletionRecord, Task<FileDeletionResult>> deleteFile)
 {
+    // In-process success whose durable result/cleanup is not yet acknowledged must block exit.
+    private readonly HashSet<Guid> incompleteSuccess = [];
+    public bool HasIncompleteSuccess => incompleteSuccess.Count != 0
+        || Pending.Any(p => p.Record?.Phase == DeletionPhase.Succeeded);
     public IReadOnlyList<DeletionRecovery> Pending { get; private set; } = [];
     public bool GloballyBlocked => Pending.Any(p => p.PathKey is null);
     public async Task InitializeAsync()
@@ -46,6 +50,7 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
     public Task<FileDeletionResult> ExecuteAsync(DeletionRecord record) => deleteFile(record);
     public async Task<DeletionResult> RecordResultAsync(DeletionRecord record, FileDeletionResult result)
     {
+        if (result.Outcome == DeletionOutcome.Succeeded) incompleteSuccess.Add(record.OperationId);
         var updated = record with { Phase = result.Outcome switch {
             DeletionOutcome.Succeeded => DeletionPhase.Succeeded,
             DeletionOutcome.Failed => DeletionPhase.Failed,
@@ -80,6 +85,7 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
                 return new(record, DeletionOutcome.Unknown, false, "삭제 성공 여부를 확인하세요.");
             await Task.Run(() => journal.Remove(journal.FileFor(record)));
             Pending = Pending.Where(p => p.Record?.OperationId != record.OperationId).ToArray();
+            incompleteSuccess.Remove(record.OperationId);
             if (!Pending.Any(p => p.PathKey == record.PathKey)) database.ReleaseDeletion(record.PathKey);
             // Leave AppliedDeletion markers durable. Removing one before a directory deletion
             // is persisted could replay cleanup against a later file at this path after power loss.

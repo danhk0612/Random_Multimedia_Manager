@@ -416,6 +416,7 @@ public partial class VideoValidationWindow : Window
         UpdateControls();
         operation = null;
         cancellation?.Cancel();
+        await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
         await command;
         await ReleaseAllAsync();
         allowClose = true;
