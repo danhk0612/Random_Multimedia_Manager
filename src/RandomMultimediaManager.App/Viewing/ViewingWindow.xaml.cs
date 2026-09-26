@@ -22,6 +22,9 @@ public partial class ViewingWindow : Window
     public ViewingMedia? Current { get; private set; }
     private readonly DispatcherTimer timer;
     private Task command = Task.CompletedTask;
+    private Task<bool>? closeTask;
+    private bool exitRequested, closeAfterRetry;
+    public string? CloseError { get; private set; }
     private bool busy, allowClose, closing, seeking, refreshing, fullscreen;
     private DateTime lastCheckpoint = DateTime.UtcNow;
     private PlaybackProgress? saved;
@@ -65,29 +68,30 @@ public partial class ViewingWindow : Window
     }
     private void Controls()
     {
-        DeleteButton.IsEnabled = !busy && !closing && Current is not null && deletions is not null
+        DeleteButton.IsEnabled = !busy && !closing && !exitRequested && Current is not null && deletions is not null
             && !database.IsDeletionBlocked(Current.Item.PathKey);
-        RecoveryButton.IsEnabled = !busy && !closing && deletions?.Pending.Count > 0;
+        RecoveryButton.IsEnabled = !busy && !closing && !exitRequested && deletions?.Pending.Count > 0;
         bool failed = Coordinator.View.Phase == SessionPhase.SaveFailed;
-        SessionControls.IsEnabled = SettingsControls.IsEnabled = !busy && !closing && !failed;
-        VideoControls.IsEnabled = !busy && !closing && !failed;
-        if (Current?.ComicContent is { } comic) comic.IsEnabled = !busy && !closing && !failed;
-        RetryButton.IsEnabled = ResumeButton.IsEnabled = !busy && failed;
+        SessionControls.IsEnabled = SettingsControls.IsEnabled = !busy && !closing && !exitRequested && !failed;
+        VideoControls.IsEnabled = !busy && !closing && !exitRequested && !failed;
+        if (Current?.ComicContent is { } comic) comic.IsEnabled = !busy && !closing && !exitRequested && !failed;
+        RetryButton.IsEnabled = ResumeButton.IsEnabled = !busy && !closing && !exitRequested && failed;
     }
     // Admission is synchronous; navigation never queues behind another command. A checkpoint
     // already admitted finishes before any transition can capture/commit a later position.
     private async Task Run(Func<Task> action)
     {
-        if (busy) return;
+        if (busy || closing || exitRequested) return;
         busy = true; Controls();
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        command = completion.Task; // Publish before a modal dialog can pump tray messages.
         async Task Execute()
         {
             try { if (Current is { } media) await media.WhenIdleAsync(); await action(); }
             catch (Exception ex) { Status.Text = ex.Message; }
-            finally { busy = false; Controls(); }
+            finally { busy = false; Controls(); completion.SetResult(); }
         }
-        command = Execute();
-        await command;
+        await Execute();
     }
     private async Task Navigate(Func<Task<SessionResult>> action)
     {
@@ -95,6 +99,7 @@ public partial class ViewingWindow : Window
         Status.Text = "감상 전환 준비 중… 준비 중에는 ‘준비 취소’를 사용할 수 있습니다.";
         // Let WPF render the pending state before entering native preparation calls.
         await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
+        if (closing || exitRequested) return;
         var result = await action();
         Status.Text = result.Error ?? result.Status switch
         {
@@ -134,9 +139,10 @@ public partial class ViewingWindow : Window
     {
         if (Current is null || deletions is null) return;
         var dialog = new DeleteConfirmationWindow(Current.Item.Path) { Owner = this };
-        if (dialog.ShowDialog() != true || dialog.Selection is not { } mode) return;
+        if (dialog.ShowDialog() != true || dialog.Selection is not { } mode || closing || exitRequested) return;
         Status.Text = "삭제 중… 결과와 저널 저장이 끝날 때까지 기다려 주세요.";
         await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
+        if (closing || exitRequested) return;
         var result = await Coordinator.DeleteCurrentAsync(Guid.NewGuid(), deletions, mode);
         Status.Text = result.Error ?? result.Status.ToString();
         Suppressed.IsChecked = Coordinator.View.Pending?.SuppressHistory == true;
@@ -158,20 +164,17 @@ public partial class ViewingWindow : Window
     private async void Previous(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.PreviousAsync(Guid.NewGuid())));
     private void Cancel(object s, RoutedEventArgs e)
     { if (Coordinator.PreparingToken is { } t) Coordinator.CancelOpening(t.SessionId, t.OperationId); }
-    private async void Retry(object s, RoutedEventArgs e) => await Run(async () =>
+    private async void Retry(object s, RoutedEventArgs e)
     {
-        await Navigate(() => Coordinator.RetryAsync(Guid.NewGuid()));
-        if (closing && Coordinator.View.Phase != SessionPhase.SaveFailed)
-        {
-            var leave = await Coordinator.LeaveAsync(Guid.NewGuid());
-            if (leave.Status is SessionStatus.Completed or SessionStatus.NoOp) { allowClose = true; Close(); }
-            else Status.Text = "닫기 전 저장을 다시 확인하세요. " + leave.Error;
-        }
-    });
+        await Run(() => Navigate(() => Coordinator.RetryAsync(Guid.NewGuid())));
+        if (closeAfterRetry && !busy && !closing && !exitRequested
+            && Coordinator.View.Phase != SessionPhase.SaveFailed && Coordinator.ReleaseError is null)
+            await RequestCloseAsync();
+    }
     private async void ResumeFailed(object s, RoutedEventArgs e) => await Run(async () =>
     {
         await Navigate(() => Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid()));
-        if (Coordinator.View.Phase == SessionPhase.Active) closing = false;
+        if (Coordinator.View.Phase == SessionPhase.Active) { closing = false; closeAfterRetry = false; }
     });
     private async void SuppressedChanged(object s, RoutedEventArgs e) => await Run(async () =>
     {
@@ -219,7 +222,7 @@ public partial class ViewingWindow : Window
     }
     private async Task Tick()
     {
-        if (busy || closing || Coordinator.View.Phase != SessionPhase.Active) return;
+        if (busy || closing || exitRequested || Coordinator.View.Phase != SessionPhase.Active) return;
         try
         {
             if (Current?.Video is { } video)
@@ -269,39 +272,76 @@ public partial class ViewingWindow : Window
         RefreshTracks(this,new RoutedEventArgs());
     }
     private async void ExternalChanged(object s, SelectionChangedEventArgs e) { if (!refreshing && ExternalSubtitles.SelectedItem is ExternalSubtitleCandidate c) await Run(() => Subtitle(c.Path)); }
-    private async void LoadSubtitle(object s, RoutedEventArgs e)
+    private async void LoadSubtitle(object s, RoutedEventArgs e) => await Run(async () =>
     {
         var dialog = new OpenFileDialog { Filter="자막|*.srt;*.smi" };
-        if (dialog.ShowDialog(this) == true) await Run(() => Subtitle(dialog.FileName));
-    }
+        if (dialog.ShowDialog(this) == true && !closing && !exitRequested) await Subtitle(dialog.FileName);
+    });
     private async void DisableSubtitles(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.DisableSubtitles(t));
     private void BeginSeek(object s, MouseButtonEventArgs e) => seeking = true;
     private async void EndSeek(object s, MouseButtonEventArgs e) { await VideoAction((v,t) => v.Seek(t,(long)Position.Value)); seeking = false; }
     private void Fullscreen(object s, RoutedEventArgs e)
     {
+        if (closing || exitRequested) return;
         if (!fullscreen) { previousState = WindowState; WindowState = WindowState.Normal; WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; }
         else { WindowState = WindowState.Normal; WindowStyle = WindowStyle.SingleBorderWindow; WindowState = previousState; }
         fullscreen = !fullscreen;
+    }
+    public void SetExitRequested(bool value)
+    {
+        exitRequested = value;
+        Coordinator.SetExitRequested(value);
+        Controls();
+    }
+    public Task<bool> RequestCloseAsync()
+    {
+        Dispatcher.VerifyAccess();
+        if (allowClose) return Task.FromResult(true);
+        if (closeTask is { IsCompleted: false }) return closeTask;
+        closing = true; CloseError = null;
+        Coordinator.SetExitRequested(true);
+        Controls();
+        Cancel(this, new RoutedEventArgs());
+        return closeTask = CloseCoreAsync();
+    }
+    private async Task<bool> CloseCoreAsync()
+    {
+        await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
+        try
+        {
+            await command;
+            await Coordinator.WhenIdleAsync();
+            if (Current is { } media) await media.WhenIdleAsync();
+            if (deletions?.GloballyBlocked == true || deletions?.HasIncompleteSuccess == true)
+                throw new InvalidOperationException("삭제 복구 확인/재시도로 DB·저널 정리를 완료하세요.");
+            if (Coordinator.View.Phase == SessionPhase.SaveFailed)
+                throw new InvalidOperationException("저장 재시도 또는 감상 복귀로 현재 방문을 해결하세요.");
+            var result = await Coordinator.LeaveAsync(Guid.NewGuid());
+            if (result.Status is not (SessionStatus.Completed or SessionStatus.NoOp) || result.Error is not null
+                || Coordinator.ReleaseError is not null)
+                throw new InvalidOperationException(result.Error ?? Coordinator.ReleaseError ?? "현재 방문의 저장·삭제 복구를 확인하세요.");
+            allowClose = true;
+            Close();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            closeAfterRetry = Coordinator.View.Phase == SessionPhase.SaveFailed;
+            CloseError = ex.Message;
+            Status.Text = "종료하지 않았습니다. " + ex.Message;
+            return false;
+        }
+        finally
+        {
+            closing = false;
+            Coordinator.SetExitRequested(exitRequested);
+            Controls();
+        }
     }
     private async void OnClosing(object? s, CancelEventArgs e)
     {
         if (allowClose) return;
         e.Cancel = true;
-        if (closing) return;
-        closing = true; Controls();
-        Cancel(this,new RoutedEventArgs());
-        // Even an empty session returns synchronously. Exit WPF's Closing event before Close().
-        await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
-        await command;
-        await Run(async () =>
-        {
-            var result = await Coordinator.LeaveAsync(Guid.NewGuid());
-            if (result.Status is SessionStatus.Completed or SessionStatus.NoOp) { allowClose = true; Close(); }
-            else
-            {
-                Status.Text = "닫기 전 저장이 필요합니다. 저장 재시도 또는 감상 복귀를 선택하세요. " + result.Error;
-                if (Coordinator.View.Phase != SessionPhase.SaveFailed) closing = false;
-            }
-        });
+        await RequestCloseAsync();
     }
 }

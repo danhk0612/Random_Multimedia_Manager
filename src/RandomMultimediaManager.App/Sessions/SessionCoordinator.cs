@@ -26,6 +26,29 @@ public sealed partial class SessionCoordinator
     private CancellationTokenSource? opening;
     private bool cancelled;
     private bool busy;
+    private bool exitRequested;
+    private readonly List<ISessionMedia> unreleased = [];
+    public string? ReleaseError { get; private set; }
+    public Task WhenIdleAsync() { lock (gate) return (Task?)runningTask ?? Task.CompletedTask; }
+    public void SetExitRequested(bool value)
+    {
+        lock (gate)
+        {
+            exitRequested = value;
+            if (value && preparationToken is { } t) CancelOpening(t.SessionId, t.OperationId);
+        }
+    }
+    private async Task ReleaseOwnedAsync(ISessionMedia media)
+    {
+        try { await media.DisposeAsync(); }
+        catch (Exception ex)
+        {
+            // Retain ownership and the failure even if the visit was already committed.
+            if (!unreleased.Contains(media)) unreleased.Add(media);
+            ReleaseError ??= ex.Message;
+            throw;
+        }
+    }
     private Transition? failed;
     private VisitCommitRequest? frozen;
     private PlaybackProgress? latestProgress;
@@ -59,6 +82,7 @@ public sealed partial class SessionCoordinator
             if (id == Guid.Empty) throw new ArgumentException("CommandId is required.");
             if (busy && id == runningCommand) return runningTask!;
             if (commands.TryGetValue(id, out var previous)) return previous;
+            if (ReleaseError is not null) return Task.FromResult(new SessionResult(SessionStatus.Failed, ReleaseError));
             if (busy || (phase == SessionPhase.SaveFailed && !recovery))
             {
                 var rejected = Task.FromResult(new SessionResult(SessionStatus.Busy));
@@ -207,6 +231,7 @@ public sealed partial class SessionCoordinator
                     ? (await Task.Run(() => database.GetProgress(item.Id)))?.Position : null;
                 lock (gate)
                 {
+                    if (exitRequested) return new(SessionStatus.Cancelled);
                     phase = SessionPhase.Opening;
                     cancelled = false;
                     opening = new CancellationTokenSource();
@@ -272,14 +297,14 @@ public sealed partial class SessionCoordinator
             }
             if (old is not null)
             {
-                try { await old.DisposeAsync(); }
+                try { await ReleaseOwnedAsync(old); }
                 catch (Exception ex) { activationError ??= ex.Message; }
             }
             return new(SessionStatus.Completed, activationError);
         }
         finally
         {
-            try { if (ready is not null) await ready.DisposeAsync(); }
+            try { if (ready is not null) await ReleaseOwnedAsync(ready); }
             finally
             {
                 lock (gate)
@@ -360,7 +385,7 @@ public sealed partial class SessionCoordinator
                     phase = RestingPhase;
                 }
             }
-            if (release is not null) await release.DisposeAsync();
+            if (release is not null) await ReleaseOwnedAsync(release);
             return new(SessionStatus.Completed);
         });
 

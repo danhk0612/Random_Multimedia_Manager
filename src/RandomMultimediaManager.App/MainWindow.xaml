@@ -3,11 +3,18 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:RandomMultimediaManager.App.Views"
         Title="Random Multimedia Manager" Width="960" Height="640">
-    <DockPanel>
+    <DockPanel x:Name="MainContent">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Right" Margin="12,6">
             <Button Content="랜덤 감상" Padding="12,6" Margin="0,0,8,0" Click="OpenViewing" />
             <Button Content="만화 뷰어" Padding="12,6" Margin="0,0,8,0" Click="OpenComicViewer" />
             <Button Content="영상 기반 검증" Padding="12,6" Click="OpenVideoValidation" />
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Margin="12,4">
+            <TextBlock x:Name="LifecycleStatus" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="삭제 복구 확인/재시도" Click="RecoverDeletion" Padding="8,4" Margin="0,0,8,0" />
+                <Button Content="종료" Click="ExitApplication" Padding="8,4" />
+            </StackPanel>
         </StackPanel>
         <views:CategoryEditorView x:Name="CategoryEditor" />
     </DockPanel>

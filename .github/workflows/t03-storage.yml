@@ -22,9 +22,11 @@ jobs:
       - run: dotnet build RandomMultimediaManager.sln -c Release --no-restore
       - run: dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release --no-build
       - run: dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release --no-build
-      - name: Open and close empty WPF shell twice
+      - name: Open and gracefully exit WPF shell twice
         shell: pwsh
         run: |
+          Add-Type -AssemblyName UIAutomationClient
+          Add-Type -AssemblyName UIAutomationTypes
           $exe = Resolve-Path 'src/RandomMultimediaManager.App/bin/Release/net10.0-windows/RandomMultimediaManager.App.exe'
           1..2 | ForEach-Object {
             $process = Start-Process $exe -PassThru
@@ -37,7 +39,12 @@ jobs:
               } while ($process.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline)
               if ($process.MainWindowHandle -eq 0) { throw 'No WPF main window.' }
               if ($process.MainWindowTitle -ne 'Random Multimedia Manager') { throw 'Unexpected window title.' }
-              if (-not $process.CloseMainWindow()) { throw 'CloseMainWindow failed.' }
+              $window = [System.Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
+              $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, '종료')
+              $quit = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+              if ($null -eq $quit) { throw 'Graceful exit button missing.' }
+              $invoke = $quit.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+              $invoke.Invoke()
               if (-not $process.WaitForExit(10000)) { throw 'App did not exit.' }
               if ($process.ExitCode -ne 0) { throw 'App exited with an error.' }
             } finally {

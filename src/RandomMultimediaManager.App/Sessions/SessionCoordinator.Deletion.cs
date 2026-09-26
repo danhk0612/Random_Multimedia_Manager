@@ -25,7 +25,7 @@ public sealed partial class SessionCoordinator
                     releasedState = (current as IDeletionMediaState)?.CaptureDeletionState();
                     latestProgress = current.PauseAndCapture(activeToken);
                     releasedItem = item;
-                    await current.DisposeAsync();
+                    await ReleaseOwnedAsync(current);
                     current = null;
                 }
                 osStarted = true;
@@ -76,7 +76,7 @@ public sealed partial class SessionCoordinator
             return null;
         }
         catch (Exception ex) { return ex.Message; }
-        finally { if (media is not null) await media.DisposeAsync(); }
+        finally { if (media is not null) await ReleaseOwnedAsync(media); }
     }
     public Task<SessionResult> ResolveDeletionAsync(Guid commandId, DeletionService service,
         DeletionRecovery entry, bool succeeded) => Command(commandId, async () =>
@@ -91,7 +91,7 @@ public sealed partial class SessionCoordinator
             // confirmation must release that still-owned media too, not merely drop its owner.
             latestProgress = current.PauseAndCapture(activeToken!);
             releasedItem = Find(await Task.Run(database.GetSessionSnapshot), path.Pending.ItemId);
-            await current.DisposeAsync();
+            await ReleaseOwnedAsync(current);
             current = null;
         }
         var result = await service.ConfirmAsync(entry, succeeded);
