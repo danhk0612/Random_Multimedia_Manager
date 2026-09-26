@@ -168,11 +168,26 @@ internal static class T15NativeVerification
                 "exit cancels and awaits scan before DB disposal");
         });
         // The shell may be absent on unattended runners; report that separately, never as a pass.
-        using var tray = new TrayIcon(() => { }, () => { }, () => { });
-        Console.WriteLine(tray.Available ? "PASS T15 native Shell_NotifyIcon add/modify" : "UNVERIFIED T15 shell icon display: no notification area on runner");
+        int restored = 0, exited = 0;
+        using var tray = new TrayIcon(() => restored++, () => exited++, () => { });
+        if (tray.Available) Check(tray.EnsureAvailable(), "native Shell_NotifyIcon add/modify");
+        else Console.WriteLine("UNVERIFIED T15 shell icon display: no notification area on runner");
+        var fields = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        var menu = (ContextMenu)typeof(TrayIcon).GetField("menu", fields)!.GetValue(tray)!;
+        Check(menu.Items.OfType<MenuItem>().Single(i => i.Header.ToString()!.Contains("미구현")).IsEnabled == false,
+            "T16 menu remains disabled");
+        menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "열기/복원"))
+            .RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        var source = (System.Windows.Interop.HwndSource)typeof(TrayIcon).GetField("source", fields)!.GetValue(tray)!;
+        SendMessage(source.Handle, 0x8001, IntPtr.Zero, (IntPtr)((1 << 16) | 0x203));
+        menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "종료"))
+            .RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Check(restored == 2 && exited == 1, "tray menu and native double-click use registered actions");
         tray.Dispose();
         Check(!tray.Available && !tray.EnsureAvailable(), "tray disposal is idempotent and cannot re-add");
     }
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
     private static async Task Scenario(string name, Func<Fixture, Task> test)
     {
         using var f = new Fixture();
