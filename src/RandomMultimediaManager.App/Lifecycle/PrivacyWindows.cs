@@ -10,6 +10,8 @@ public sealed class PrivacyWindows : IDisposable
     private readonly Hook callback;
     private readonly Subclass subclass;
     private readonly IntPtr hook;
+    private readonly Hook afterCallback;
+    private readonly IntPtr afterHook;
     private readonly HashSet<IntPtr> attached = [];
     private readonly HashSet<IntPtr> exempt = [];
     private readonly List<IntPtr> restore = [];
@@ -18,9 +20,11 @@ public sealed class PrivacyWindows : IDisposable
     public bool AllowTrayWindowCreation { get; set; }
     public PrivacyWindows()
     {
-        callback = OnHook; subclass = OnMessage;
+        callback = OnHook; subclass = OnMessage; afterCallback = AfterMessage;
         hook = SetWindowsHookEx(5, callback, IntPtr.Zero, GetCurrentThreadId());
         if (hook == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+        afterHook = SetWindowsHookEx(12, afterCallback, IntPtr.Zero, GetCurrentThreadId());
+        if (afterHook == IntPtr.Zero) { UnhookWindowsHookEx(hook); throw new Win32Exception(Marshal.GetLastWin32Error()); }
         EnumThreadWindows(GetCurrentThreadId(), (hwnd, _) => { Attach(hwnd); return true; }, IntPtr.Zero);
     }
     public void Exempt(IntPtr hwnd) => exempt.Add(hwnd);
@@ -56,6 +60,18 @@ public sealed class PrivacyWindows : IDisposable
         }
         if (code == 5 && hidden && attached.Contains(hwnd) && !exempt.Contains(hwnd)) return (IntPtr)1;
         return CallNextHookEx(hook, code, hwnd, data);
+    }
+    private IntPtr AfterMessage(int code, IntPtr wParam, IntPtr lParam)
+    {
+        if (code >= 0)
+        {
+            var message = Marshal.PtrToStructure<ReturnedMessage>(lParam);
+            // HwndSource installs its own WndProc during creation. Attach after WM_CREATE
+            // as well, before any ShowWindow/SetWindowPos can expose the new surface.
+            if (message.Message == 1 && attached.Contains(message.Window))
+                SetWindowSubclass(message.Window, subclass, 16, 0);
+        }
+        return CallNextHookEx(afterHook, code, wParam, lParam);
     }
     private void Remember(IntPtr hwnd) { if (!restore.Contains(hwnd)) restore.Add(hwnd); }
     private IntPtr OnMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam, nuint id, nuint data)
@@ -103,10 +119,13 @@ public sealed class PrivacyWindows : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        UnhookWindowsHookEx(afterHook);
         UnhookWindowsHookEx(hook);
         foreach (var hwnd in attached.ToArray()) RemoveWindowSubclass(hwnd, subclass, 16);
         attached.Clear(); restore.Clear(); exempt.Clear();
     }
+    [StructLayout(LayoutKind.Sequential)] private struct ReturnedMessage
+    { public IntPtr Result, LParam, WParam; public uint Message; public IntPtr Window; }
     [StructLayout(LayoutKind.Sequential)] private struct CreateWindow
     {
         public IntPtr Parameters, Instance, Menu, Parent;

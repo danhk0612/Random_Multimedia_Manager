@@ -296,7 +296,8 @@ internal static class T15NativeVerification
     {
         using var f = new Fixture();
         f.Main.Show(); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
-        await test(f);
+        try { await test(f); }
+        catch (Exception ex) { Console.Error.WriteLine("SCENARIO FAILURE " + name + "\n" + ex); throw; }
         Console.WriteLine("PASS T15 scenario " + name);
     }
     private sealed class FaultJournal(string path) : DeletionJournal(path)
