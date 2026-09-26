@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Interop;
 using Microsoft.Data.Sqlite;
 using RandomMultimediaManager.App;
 using RandomMultimediaManager.App.Data;
@@ -67,8 +68,10 @@ internal static class T15NativeVerification
             var pending = view.Coordinator.View.Pending;
             f.Sql("CREATE TRIGGER t15_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
             Check(!await f.Lifecycle.ExitAsync() && f.Lifecycle.State == LifecycleState.ExitBlocked, "save failure blocks app exit");
-            Check(view.IsVisible && view.Coordinator.View.Pending == pending && f.Removals == 0,
+            Check(!PrivacyWindows.IsWindowVisible(new WindowInteropHelper(view).Handle) && f.Lifecycle.IsPrivacyHidden
+                && view.Coordinator.View.Pending == pending && f.Removals == 0,
                 "blocked exit preserves Pending and restore path");
+            f.Lifecycle.Restore();
             Check(((Button)view.FindName("RetryButton")).IsEnabled && ((Button)view.FindName("ResumeButton")).IsEnabled,
                 "existing retry/resume controls accessible");
             f.Sql("DROP TRIGGER t15_fail;");
@@ -180,15 +183,97 @@ internal static class T15NativeVerification
             Check(await f.Lifecycle.ExitAsync() && scan.IsCompleted && !editor.IsScanning,
                 "exit cancels and awaits scan before DB disposal");
         });
+        await Scenario("T16 all windows and late native dialogs", async f =>
+        {
+            using var keys = new GlobalHotKeys(f.Lifecycle.ToggleHidden, () => _ = f.Lifecycle.ExitAsync());
+            Check(keys.HideRegistered && keys.ExitRegistered, "T16 global key registration");
+            using (var collision = new GlobalHotKeys(() => { }, () => { }))
+                Check(!collision.HideRegistered && !collision.ExitRegistered, "T16 conflicts do not replace registered keys");
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var pending = view.Coordinator.View.Pending;
+            var auxiliary = new Window { Owner = view, Width = 240, Height = 160,
+                WindowStyle = WindowStyle.None, WindowState = WindowState.Maximized };
+            auxiliary.Show();
+            var originallyHidden = new Window { Owner = f.Main };
+            new WindowInteropHelper(originallyHidden).EnsureHandle();
+            f.Lifecycle.HideAll(); f.Lifecycle.HideAll();
+            bool Visible(Window w) => PrivacyWindows.IsWindowVisible(new WindowInteropHelper(w).Handle);
+            Check(!Visible(f.Main) && !Visible(view) && !Visible(auxiliary), "T16 all native windows hidden");
+            Check(view.Coordinator.View.Pending == pending && f.Db.GetHistory(f.Item.Id).Count == 0,
+                "T16 hide preserves Pending and does not commit");
+            var late = new Window { Owner = view, Width = 240, Height = 160 };
+            late.Show();
+            Check(!Visible(late), "T16 late WPF window suppressed before show returns");
+            f.Lifecycle.TrayUnavailable();
+            Check(!Visible(view), "T16 tray re-registration failure does not expose windows");
+            f.Lifecycle.Restore();
+            Check(Visible(view) && Visible(auxiliary) && Visible(late) && !Visible(originallyHidden)
+                && auxiliary.WindowState == WindowState.Maximized && auxiliary.WindowStyle == WindowStyle.None,
+                "T16 exact visible set and fullscreen preserved");
+            auxiliary.Close(); late.Close(); originallyHidden.Close();
+            _ = view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
+            await Wait(() => view.OwnedWindows.OfType<DeleteConfirmationWindow>().Any());
+            var confirm = view.OwnedWindows.OfType<DeleteConfirmationWindow>().Single();
+            f.Lifecycle.ToggleHidden();
+            Check(!Visible(confirm) && f.OsCalls == 0, "T16 modal hide retains confirmation without consent");
+            f.Lifecycle.ToggleHidden();
+            Check(Visible(confirm) && f.OsCalls == 0, "T16 modal restore retains original command");
+            var exit = f.Lifecycle.ExitAsync();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Check(!exit.IsCompleted && !Visible(confirm), "T16 hidden exit waits modal command");
+            f.Lifecycle.Restore();
+            Check(Visible(confirm), "T16 explicit restore during Closing allows cancellation");
+            confirm.Close();
+            Check(await exit && f.OsCalls == 0, "T16 confirmation cancel never authorizes delete");
+            keys.Dispose();
+            using var registeredAgain = new GlobalHotKeys(() => { }, () => { });
+            Check(registeredAgain.HideRegistered && registeredAgain.ExitRegistered, "T16 hotkeys released");
+        });
+        await Scenario("T16 native file picker and late message box", async f =>
+        {
+            foreach (bool late in new[] { false, true })
+            {
+                if (late) f.Lifecycle.HideAll();
+                bool returned = false;
+                _ = f.Main.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (late) MessageBox.Show(f.Main, "T16 late dialog", "T16 native test", MessageBoxButton.OKCancel);
+                    else new Microsoft.Win32.OpenFileDialog { Title = "T16 native test" }.ShowDialog(f.Main);
+                    returned = true;
+                }));
+                IntPtr dialog = IntPtr.Zero;
+                await Wait(() =>
+                {
+                    EnumThreadWindows(GetCurrentThreadId(), (hwnd, _) =>
+                    {
+                        var title = new System.Text.StringBuilder(256);
+                        GetWindowText(hwnd, title, title.Capacity);
+                        if (title.ToString() == "T16 native test") dialog = hwnd;
+                        return true;
+                    }, IntPtr.Zero);
+                    return dialog != IntPtr.Zero;
+                });
+                if (!late) f.Lifecycle.HideAll();
+                Check(!PrivacyWindows.IsWindowVisible(dialog) && !returned, "T16 native dialog hidden, modal loop retained " + late);
+                f.Lifecycle.Restore();
+                Check(PrivacyWindows.IsWindowVisible(dialog) && !returned, "T16 native dialog restored " + late);
+                PostMessage(dialog, 0x10, IntPtr.Zero, IntPtr.Zero);
+                await Wait(() => returned);
+            }
+            Check(await f.Lifecycle.ExitAsync(), "T16 native dialog scenario exit");
+        });
         // The shell may be absent on unattended runners; report that separately, never as a pass.
-        int restored = 0, exited = 0;
-        using var tray = new TrayIcon(() => restored++, () => exited++, () => { });
+        int restored = 0, exited = 0, toggled = 0;
+        using var tray = new TrayIcon(() => restored++, () => exited++, () => { }, () => toggled++);
         if (tray.Available) Check(tray.EnsureAvailable(), "native Shell_NotifyIcon add/modify");
         else Console.WriteLine("UNVERIFIED T15 shell icon display: no notification area on runner");
         var fields = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
         var menu = (ContextMenu)typeof(TrayIcon).GetField("menu", fields)!.GetValue(tray)!;
-        Check(menu.Items.OfType<MenuItem>().Single(i => i.Header.ToString()!.Contains("미구현")).IsEnabled == false,
-            "T16 menu remains disabled");
+        var toggle = menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "모두 숨기기/복원"));
+        toggle.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Check(toggle.IsEnabled && toggled == 1, "T16 menu connected");
         menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "열기/복원"))
             .RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         var source = (System.Windows.Interop.HwndSource)typeof(TrayIcon).GetField("source", fields)!.GetValue(tray)!;
@@ -201,11 +286,18 @@ internal static class T15NativeVerification
     }
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
+    private delegate bool EnumWindow(IntPtr hwnd, IntPtr data);
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool EnumThreadWindows(uint thread, EnumWindow callback, IntPtr data);
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr hwnd, System.Text.StringBuilder text, int size);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam);
     private static async Task Scenario(string name, Func<Fixture, Task> test)
     {
         using var f = new Fixture();
         f.Main.Show(); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
-        await test(f);
+        try { await test(f); }
+        catch (Exception ex) { Console.Error.WriteLine("SCENARIO FAILURE " + name + "\n" + ex); throw; }
         Console.WriteLine("PASS T15 scenario " + name);
     }
     private sealed class FaultJournal(string path) : DeletionJournal(path)
@@ -267,7 +359,7 @@ internal static class T15NativeVerification
         }
         public void Dispose()
         {
-            Main.Lifecycle = null; Main.Close(); Db.Dispose();
+            Lifecycle.DisposePrivacy(); Main.Lifecycle = null; Main.Close(); Db.Dispose();
             Directory.Delete(root, true);
         }
     }

@@ -21,6 +21,7 @@ jobs:
       - run: dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release --no-build
       - run: dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release --no-build
       - run: dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release
+      - run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release
       - run: dotnet run --project tests/RandomMultimediaManager.Comic.Tests -c Release
       - run: dotnet run --project tests/RandomMultimediaManager.Video.Tests -c Release
       - run: dotnet run --project tests/RandomMultimediaManager.Subtitle.Tests -c Release

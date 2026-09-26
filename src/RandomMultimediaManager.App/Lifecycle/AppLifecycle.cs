@@ -14,6 +14,42 @@ public sealed class AppLifecycle(MainWindow main, LibraryDatabase database, Dele
     private Task<bool>? exiting;
     public LifecycleState State { get; private set; } = LifecycleState.Visible;
     public string? Error { get; private set; }
+    private PrivacyWindows? privacy;
+    public bool IsPrivacyHidden => privacy?.Hidden == true;
+    public bool BlocksNewCommands => IsPrivacyHidden || State is LifecycleState.Closing or LifecycleState.Exited;
+    public PrivacyWindows Privacy => privacy ??= new();
+    public void ToggleHidden()
+    {
+        main.Dispatcher.VerifyAccess();
+        if (State == LifecycleState.Exited) return;
+        if (IsPrivacyHidden) Restore(); else HideAll();
+    }
+    public void HideAll()
+    {
+        main.Dispatcher.VerifyAccess();
+        if (State == LifecycleState.Exited || IsPrivacyHidden) return;
+        if (!ensureTray())
+        {
+            main.ShowLifecycleError("트레이를 사용할 수 없어 모두 숨기기를 실행하지 않았습니다.");
+            return;
+        }
+        HidePrivateSurfaces();
+        if (State == LifecycleState.Visible) State = LifecycleState.Hidden;
+    }
+    private void HidePrivateSurfaces()
+    {
+        // Create the window guard before touching audio; failure cannot leave a half-hidden mode.
+        var windows = Privacy;
+        Video.PreparedVideo.SetPrivacyMuted(true);
+        windows.Hide();
+    }
+    public void TrayUnavailable()
+    {
+        // A shell restart must not expose private windows. The keys remain available.
+        main.ShowLifecycleError("트레이 재등록 실패. 전역 복원 키로 복원할 수 있습니다.");
+        if (!IsPrivacyHidden) Restore();
+    }
+    public void DisposePrivacy() { privacy?.Dispose(); privacy = null; Video.PreparedVideo.SetPrivacyMuted(false); }
 
     public void HideMain()
     {
@@ -32,6 +68,13 @@ public sealed class AppLifecycle(MainWindow main, LibraryDatabase database, Dele
     {
         main.Dispatcher.VerifyAccess();
         if (State == LifecycleState.Exited) return;
+        if (IsPrivacyHidden)
+        {
+            Privacy.Restore();
+            Video.PreparedVideo.SetPrivacyMuted(false);
+            if (State == LifecycleState.Hidden) State = LifecycleState.Visible;
+            return;
+        }
         main.Show();
         if (main.WindowState == WindowState.Minimized) main.WindowState = WindowState.Normal;
         main.Activate();
@@ -48,6 +91,8 @@ public sealed class AppLifecycle(MainWindow main, LibraryDatabase database, Dele
         main.Dispatcher.VerifyAccess();
         if (State == LifecycleState.Exited) return exiting ?? Task.FromResult(true);
         if (exiting is { IsCompleted: false }) return exiting;
+        try { HidePrivateSurfaces(); }
+        catch (Exception ex) { Error = ex.Message; main.ShowLifecycleError(ex.Message); return Task.FromResult(false); }
         State = LifecycleState.Closing; Error = null;
         main.SetExitRequested(true);
         return exiting = ExitCoreAsync();
@@ -67,6 +112,7 @@ public sealed class AppLifecycle(MainWindow main, LibraryDatabase database, Dele
             await main.CloseAuxiliaryWindowsAsync();
             database.Dispose();
             removeTray();
+            DisposePrivacy();
             State = LifecycleState.Exited;
             shutdown();
             return true;
@@ -76,8 +122,7 @@ public sealed class AppLifecycle(MainWindow main, LibraryDatabase database, Dele
             State = LifecycleState.ExitBlocked; Error = ex.Message;
             main.SetExitRequested(false);
             main.ShowLifecycleError("종료하지 않았습니다. " + ex.Message);
-            // T15 has no quick-hide/mute phase. Keep the existing error/recovery UI usable.
-            Restore();
+            // Keep privacy until an explicit key/tray restore, including save/release failures.
             return false;
         }
     }

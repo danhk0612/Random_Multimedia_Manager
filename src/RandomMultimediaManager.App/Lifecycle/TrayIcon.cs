@@ -16,15 +16,18 @@ public sealed class TrayIcon : IDisposable
     private readonly ContextMenu menu;
     private NotifyData data;
     private bool disposed;
+    private readonly PrivacyWindows? privacyWindows;
     public bool Available { get; private set; }
 
-    public TrayIcon(Action restore, Action exit, Action unavailable)
+    public TrayIcon(Action restore, Action exit, Action unavailable, Action? toggleHidden = null, PrivacyWindows? privacy = null)
     {
         this.restore = restore;
         this.unavailable = unavailable;
         source = new HwndSource(new HwndSourceParameters("Random Multimedia Manager tray")
             { Width = 0, Height = 0, WindowStyle = 0 });
         source.AddHook(Message);
+        privacyWindows = privacy;
+        privacy?.Exempt(source.Handle);
         taskbarCreated = RegisterWindowMessage("TaskbarCreated");
         data = new NotifyData { Size = (uint)Marshal.SizeOf<NotifyData>(), Window = source.Handle,
             Id = 1, Flags = 1 | 2 | 4, CallbackMessage = Callback,
@@ -34,7 +37,9 @@ public sealed class TrayIcon : IDisposable
         var open = new MenuItem { Header = "열기/복원" };
         open.Click += (_, _) => restore();
         menu.Items.Add(open);
-        menu.Items.Add(new MenuItem { Header = "모두 숨기기/복원 (미구현)", IsEnabled = false });
+        var toggle = new MenuItem { Header = "모두 숨기기/복원", IsEnabled = toggleHidden is not null };
+        toggle.Click += (_, _) => toggleHidden?.Invoke();
+        menu.Items.Add(toggle);
         menu.Items.Add(new Separator());
         var quit = new MenuItem { Header = "종료" };
         quit.Click += (_, _) => exit();
@@ -65,7 +70,9 @@ public sealed class TrayIcon : IDisposable
             else if (notification is 0x7b or 0x205)
             {
                 SetForegroundWindow(source.Handle);
-                menu.IsOpen = true;
+                if (privacyWindows is not null) privacyWindows.AllowTrayWindowCreation = true;
+                try { menu.IsOpen = true; }
+                finally { if (privacyWindows is not null) privacyWindows.AllowTrayWindowCreation = false; }
             }
             handled = true;
         }

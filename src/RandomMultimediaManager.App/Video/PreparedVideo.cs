@@ -49,6 +49,20 @@ public sealed class PreparedVideo : IAsyncDisposable
     private long? completedPosition;
     private int desiredVolume;
     private bool desiredMuted = true;
+    private static bool privacyMuted;
+    private static readonly HashSet<PreparedVideo> live = [];
+    public static bool PrivacyMuted => privacyMuted;
+    public bool AppMuted => desiredMuted;
+    public static void SetPrivacyMuted(bool value)
+    {
+        privacyMuted = value;
+        foreach (var video in live.ToArray())
+        {
+            video.dispatcher.VerifyAccess();
+            if (!video.retiring && video.visit is not null && !video.RestoredCompleted)
+                video.ApplyAudio();
+        }
+    }
     private string preparationStage = "native initialization";
 
     public VideoOperation Operation { get; }
@@ -97,6 +111,7 @@ public sealed class PreparedVideo : IAsyncDisposable
         engine.Log += logHandler;
         view = new VideoView { Visibility = Visibility.Hidden };
         parent.Children.Add(view);
+        live.Add(this);
     }
 
     public static async Task<VideoPreparation> PrepareAsync(Panel parent, VideoOperation operation,
@@ -312,7 +327,7 @@ public sealed class PreparedVideo : IAsyncDisposable
         RequireVisit(token);
         return new(token, PlaybackProgress.Video(completedPosition ?? Math.Max(0, player.Time)), Math.Max(0, player.Length),
             RestoredCompleted ? VLCState.Ended : player.State, RestoredCompleted || AudioUnavailable ? desiredVolume : player.Volume,
-            AudioUnavailable || RestoredCompleted || player.Mute, player.Rate, player.IsSeekable,
+            AudioUnavailable || RestoredCompleted || (privacyMuted ? desiredMuted : player.Mute), player.Rate, player.IsSeekable,
             Volatile.Read(ref failed) == 0 ? null : "현재 영상 재생 오류");
     }
 
@@ -353,7 +368,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private void ApplyAudio()
     {
         player.Volume = AudioUnavailable ? 0 : desiredVolume;
-        player.Mute = AudioUnavailable || desiredMuted;
+        player.Mute = AudioUnavailable || privacyMuted || desiredMuted;
     }
     public bool Seek(VideoVisit token, long milliseconds)
     {
@@ -495,6 +510,7 @@ public sealed class PreparedVideo : IAsyncDisposable
         await Task.Run(() => { player.Dispose(); media.Dispose(); engine.Dispose(); });
 
         string[] temporaryFiles = temporarySubtitleFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        live.Remove(this);
         temporarySubtitleFiles.Clear();
         loadedExternalSubtitles.Clear();
         await Task.Run(() =>
