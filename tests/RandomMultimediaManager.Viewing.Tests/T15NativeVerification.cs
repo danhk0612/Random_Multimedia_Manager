@@ -75,6 +75,19 @@ internal static class T15NativeVerification
             await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
             Check(await f.Lifecycle.ExitAsync(), "resolved save failure can exit");
         });
+        await Scenario("viewing close retry completes original close", async f =>
+        {
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            f.Sql("CREATE TRIGGER t15_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
+            Check(!await view.RequestCloseAsync(), "viewing close preserves failed save");
+            f.Sql("DROP TRIGGER t15_fail;");
+            bool closed = false; view.Closed += (_, _) => closed = true;
+            ((Button)view.FindName("RetryButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Wait(() => closed);
+            Check(f.Db.GetHistory(f.Item.Id).Count == 1, "retry saves once and completes original viewing close");
+            Check(await f.Lifecycle.ExitAsync(), "app exit after viewing retry");
+        });
         await Scenario("CommitUnknown preserves frozen visit", async f =>
         {
             var view = await f.OpenViewing();

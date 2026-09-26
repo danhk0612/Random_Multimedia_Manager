@@ -23,7 +23,7 @@ public partial class ViewingWindow : Window
     private readonly DispatcherTimer timer;
     private Task command = Task.CompletedTask;
     private Task<bool>? closeTask;
-    private bool exitRequested;
+    private bool exitRequested, closeAfterRetry;
     public string? CloseError { get; private set; }
     private bool busy, allowClose, closing, seeking, refreshing, fullscreen;
     private DateTime lastCheckpoint = DateTime.UtcNow;
@@ -164,14 +164,17 @@ public partial class ViewingWindow : Window
     private async void Previous(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.PreviousAsync(Guid.NewGuid())));
     private void Cancel(object s, RoutedEventArgs e)
     { if (Coordinator.PreparingToken is { } t) Coordinator.CancelOpening(t.SessionId, t.OperationId); }
-    private async void Retry(object s, RoutedEventArgs e) => await Run(async () =>
+    private async void Retry(object s, RoutedEventArgs e)
     {
-        await Navigate(() => Coordinator.RetryAsync(Guid.NewGuid()));
-    });
+        await Run(() => Navigate(() => Coordinator.RetryAsync(Guid.NewGuid())));
+        if (closeAfterRetry && !busy && !closing && !exitRequested
+            && Coordinator.View.Phase != SessionPhase.SaveFailed && Coordinator.ReleaseError is null)
+            await RequestCloseAsync();
+    }
     private async void ResumeFailed(object s, RoutedEventArgs e) => await Run(async () =>
     {
         await Navigate(() => Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid()));
-        if (Coordinator.View.Phase == SessionPhase.Active) closing = false;
+        if (Coordinator.View.Phase == SessionPhase.Active) { closing = false; closeAfterRetry = false; }
     });
     private async void SuppressedChanged(object s, RoutedEventArgs e) => await Run(async () =>
     {
@@ -323,6 +326,7 @@ public partial class ViewingWindow : Window
         }
         catch (Exception ex)
         {
+            closeAfterRetry = Coordinator.View.Phase == SessionPhase.SaveFailed;
             CloseError = ex.Message;
             Status.Text = "종료하지 않았습니다. " + ex.Message;
             return false;
