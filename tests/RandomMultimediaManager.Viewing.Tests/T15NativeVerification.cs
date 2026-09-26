@@ -108,7 +108,7 @@ internal static class T15NativeVerification
         {
             var view = await f.OpenViewing();
             await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
-            view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
+            _ = view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
             await Wait(() => view.OwnedWindows.OfType<DeleteConfirmationWindow>().Any());
             var exit = f.Lifecycle.ExitAsync();
@@ -254,7 +254,7 @@ internal static class T15NativeVerification
         }
         public async Task<RandomMultimediaManager.App.Viewing.ViewingWindow> OpenViewing()
         {
-            Main.Dispatcher.BeginInvoke(new Action(() => Main.GetType().GetMethod("OpenViewing",
+            _ = Main.Dispatcher.BeginInvoke(new Action(() => Main.GetType().GetMethod("OpenViewing",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(Main, [Main, new RoutedEventArgs()])));
             await Wait(() => Main.Viewing is not null && ((ListBox)Main.Viewing.FindName("Categories")).Items.Count != 0
                 && ((FrameworkElement)Main.Viewing.FindName("SessionControls")).IsEnabled);
