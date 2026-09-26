@@ -8,7 +8,7 @@
 - T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. T06은 Core 순수 후보/세션 정책과 App/Sessions 조정자를 구현한다.
 - T08: App/Media/Comic에 T07 `ComicArchive`를 사용하는 준비/활성 분리, 제한 페이지 캐시, SkiaSharp 렌더링과 WPF 만화 뷰어가 있다. T11 ViewingWindow가 기존 표시 콘텐츠와 준비 객체를 연결하고 진행을 저장한다.
 - T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 승인된 계약과 검증 결과는 docs/VIDEO_ENGINE_VALIDATION.md를 따른다. T11 ViewingMedia 어댑터가 T06 조정자와 공통 화면을 연결하며 고정 영상 패널의 HWND를 준비부터 해제까지 유지한다.
-- 셸의 일반 창 닫기는 WPF 기본 동작이다. 트레이/빠른 종료 제품 정책의 확정이 아니다.
+- T15: AppLifecycle/TrayIcon이 메인 X 숨김·복원·일반 정상 종료를 조정한다. 감상 X는 기존 Leave다. 저장/삭제/해제 오류 시 종료를 차단하며 Quick Hide·전역 키는 T16에 남긴다.
 
 T02 계약에 사용자 승인된 VisitCommit 검증값을 보완하고 T03에서 net10.0 Core와 Core.Tests/Data.Tests를 추가했다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.
 
@@ -76,6 +76,10 @@ T14 상세 기준은 docs/SHORTCUTS_AND_TRAY.md다. 앱 수준 생명주기는 V
 
 Quick Hide는 모든 앱 창을 숨기고 활성 영상에 앱 mute를 적용하지만 pause하거나 감상 기록을 확정하지 않는다. 복원 시 앱이 Hide 때문에 바꾼 mute와 창 표시 상태만 되돌리며 외부 프로그램의 음소거 상태를 추정 복원하지 않는다.
 
-정상 종료는 표시 숨김+앱 mute → 신규 명령 차단 → 준비 취소/진행 중 작업 경계 대기 → 기존 Pending의 정상 Leave 저장 → 미디어 해제 → DB/전역 키/트레이 정리 → WPF 종료 순서다. SaveFailed/CommitUnknown/해제 실패는 강제 종료하지 않고 ExitBlocked로 남겨 트레이 복원 후 기존 복구 UI를 사용한다.
+T16 빠른 정상 종료는 표시 숨김+앱 mute → 신규 명령 차단 → 준비 취소/진행 중 작업 경계 대기 → 기존 Pending의 정상 Leave 저장 → 미디어 해제 → DB/전역 키/트레이 정리 → WPF 종료 순서다. SaveFailed/CommitUnknown/해제 실패는 강제 종료하지 않고 ExitBlocked로 남겨 트레이 복원 후 기존 복구 UI를 사용한다.
 
 T12와의 병렬 경계는 삭제 계약을 변경하지 않는다. T12 통합 경계 대조를 완료했다. docs/SHORTCUTS_AND_TRAY.md §6의 현재 Pending 격리·삭제 명령 대기·Succeeded 정리·해제 소유권 규칙을 따라 T15부터 진행한다.
+
+## T15 구현 연결
+
+`ViewingWindow.RequestCloseAsync`는 UI 명령과 SessionCoordinator 실행 작업을 기다린 뒤 Leave 결과와 해제 오류를 확인한다. AppLifecycle은 스캔/삭제 복구·보조 창의 비동기 해제까지 기다린 후 DB/트레이/WPF 순서로 종료한다. 저장 실패와 현재 경로 Unknown, 전역 손상 격리, 미완료 성공 삭제는 ExitBlocked로 보존한다. T15 일반 종료에는 즉시 숨김·음소거 단계가 없다. 최소 기본값만 제공하며 옵션 저장/UI와 전역 키는 이번에 추가하지 않는다. 검증/제약은 docs/T15_LIFECYCLE_VALIDATION.md를 따른다.

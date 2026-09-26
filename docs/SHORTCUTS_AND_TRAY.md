@@ -102,6 +102,10 @@ T15는 다음만 구현한다.
 
 T15의 일반 정상 종료에 즉시 숨김+음소거를 결합하는 작업은 T16이다. T15에서 전역 키, 빠른 종료 전체 순서, 삭제 계약, DB 스키마, 재생/기록 정책을 구현하지 않는다.
 
+### T15 구현 연결점
+
+AppLifecycle이 일반 종료를 조정하며 ViewingWindow.RequestCloseAsync의 결과를 기다린다. UI 명령 Task와 SessionCoordinator.WhenIdleAsync를 함께 관찰한다. DeletionService.HasIncompleteSuccess는 Pending의 Succeeded뿐 아니라 성공 결과 저널 저장 실패로 Prepared가 남은 현재 프로세스의 성공도 포함한다. 삭제 계약/저널 형식은 유지한다. 해제 실패를 기억하여 이후 NoOp 종료로 우회하지 않는다. 자동/사용자 검증과 제한은 docs/T15_LIFECYCLE_VALIDATION.md를 따른다.
+
 ## 8. T16 구현 경계 및 검증
 
 T16은 이 문서의 Quick Hide와 정상 종료 순서를 구현한다. 구현은 기존 SessionCoordinator/ViewingWindow/T12 API를 재사용하고 필요한 최소 생명주기 조정만 추가한다.
