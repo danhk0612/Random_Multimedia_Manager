@@ -109,6 +109,8 @@ public partial class MainWindow : Window
         exitRequested = value;
         MainContent.IsEnabled = !value;
         Viewing?.SetExitRequested(value);
+        if (comicViewer is not null) comicViewer.IsEnabled = !value;
+        if (videoValidation is not null) videoValidation.IsEnabled = !value;
     }
     public async Task StopScanningAsync()
     {
@@ -144,7 +146,7 @@ public partial class MainWindow : Window
         if (Lifecycle is { State: not RandomMultimediaManager.App.Lifecycle.LifecycleState.Exited })
         {
             e.Cancel = true;
-            Lifecycle.HideMain();
+            Dispatcher.BeginInvoke(new Action(Lifecycle.HideMain));
         }
         base.OnClosing(e);
     }

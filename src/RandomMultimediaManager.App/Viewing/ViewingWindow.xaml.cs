@@ -167,7 +167,6 @@ public partial class ViewingWindow : Window
     private async void Retry(object s, RoutedEventArgs e) => await Run(async () =>
     {
         await Navigate(() => Coordinator.RetryAsync(Guid.NewGuid()));
-
     });
     private async void ResumeFailed(object s, RoutedEventArgs e) => await Run(async () =>
     {
@@ -270,12 +269,11 @@ public partial class ViewingWindow : Window
         RefreshTracks(this,new RoutedEventArgs());
     }
     private async void ExternalChanged(object s, SelectionChangedEventArgs e) { if (!refreshing && ExternalSubtitles.SelectedItem is ExternalSubtitleCandidate c) await Run(() => Subtitle(c.Path)); }
-    private async void LoadSubtitle(object s, RoutedEventArgs e)
+    private async void LoadSubtitle(object s, RoutedEventArgs e) => await Run(async () =>
     {
-        if (busy || closing || exitRequested) return;
         var dialog = new OpenFileDialog { Filter="자막|*.srt;*.smi" };
-        if (dialog.ShowDialog(this) == true) await Run(() => Subtitle(dialog.FileName));
-    }
+        if (dialog.ShowDialog(this) == true && !closing && !exitRequested) await Subtitle(dialog.FileName);
+    });
     private async void DisableSubtitles(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.DisableSubtitles(t));
     private void BeginSeek(object s, MouseButtonEventArgs e) => seeking = true;
     private async void EndSeek(object s, MouseButtonEventArgs e) { await VideoAction((v,t) => v.Seek(t,(long)Position.Value)); seeking = false; }

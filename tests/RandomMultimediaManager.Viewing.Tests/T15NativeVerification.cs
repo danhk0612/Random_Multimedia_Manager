@@ -30,11 +30,11 @@ internal static class T15NativeVerification
             f.Main.WindowState = WindowState.Minimized;
             Check(f.Main.ShowInTaskbar && f.Lifecycle.State == LifecycleState.Visible, "ordinary minimize keeps taskbar");
             f.Lifecycle.Restore();
-            f.Main.Close();
+            f.Main.Close(); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Check(!f.Main.IsVisible && f.Lifecycle.State == LifecycleState.Hidden, "main X hides without closing");
             f.Lifecycle.Restore(); f.Lifecycle.Restore();
             Check(f.Main.IsVisible && f.Main.WindowState == WindowState.Normal, "repeat restore reuses main");
-            f.TrayAvailable = false; f.Main.Close();
+            f.TrayAvailable = false; f.Main.Close(); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Check(f.Main.IsVisible, "tray failure never strands hidden main");
             var first = f.Lifecycle.ExitAsync(); var second = f.Lifecycle.ExitAsync();
             Check(ReferenceEquals(first, second), "duplicate exit shares task");
@@ -74,6 +74,28 @@ internal static class T15NativeVerification
             f.Sql("DROP TRIGGER t15_fail;");
             await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
             Check(await f.Lifecycle.ExitAsync(), "resolved save failure can exit");
+        });
+        await Scenario("modal delete confirmation exit", async f =>
+        {
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
+            await Wait(() => view.OwnedWindows.OfType<DeleteConfirmationWindow>().Any());
+            var exit = f.Lifecycle.ExitAsync();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Check(!exit.IsCompleted, "exit waits confirmation command published before modal pump");
+            view.OwnedWindows.OfType<DeleteConfirmationWindow>().Single().Close();
+            Check(await exit && f.OsCalls == 0, "cancelled confirmation exits without OS deletion");
+        });
+        await Scenario("opening exit", async f =>
+        {
+            var view = await f.OpenViewing();
+            var opening = view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var exit = f.Lifecycle.ExitAsync();
+            var result = await opening;
+            Check(await exit && view.Coordinator.View.Pending is null, "exit awaits opening cancellation and media release");
+            Check(result.Status == SessionStatus.Cancelled, "pending preparation cancelled on exit");
         });
         await Scenario("current Unknown", async f =>
         {
