@@ -24,7 +24,7 @@
 | 외부 SRT/SMI 자막 | T10 완료 (자동 검증 + 사용자 UI 검증, 일부 수동 항목 승인 생략, PR #11) |
 | 영상 엔진·WPF 검증 호스트 | T09 완료 (잔여 수동 검증 사용자 승인 생략, PR #8 main 통합 완료) |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | T06 후보/이번 방문 억제·삭제 결과 전이 구현; 공통 UI는 T11 구현·자동 검증 통과, 실제 삭제는 T12 |
-| 단축키·트레이·빠른 숨김/종료 | T15 트레이·일반 종료 구현/Windows 자동 검증 완료 (PR #17), 사용자 확인 대기. 전역 키·Quick Hide는 T16 미구현 |
+| 단축키·트레이·빠른 숨김/종료 | T15 트레이·일반 종료 구현/Windows 자동 검증 완료 (PR #17 main 통합), 사용자 확인 대기. 전역 키·Quick Hide는 T16 미구현 |
 | VSR | 후순위, 가능성 미검증 |
 
 ## T12 삭제·복구 구현
@@ -53,12 +53,13 @@
 
 ## 다음 작업과 차단
 
-T12 PR #16과 T14 PR #15를 main에 통합했다. 삭제/저장/종료 경계 대조는 docs/SHORTCUTS_AND_TRAY.md §6을 따른다.
+T15 PR #17을 main에 통합했다. 구현·Windows 자동 검증 완료와 사용자 수동 미검증을 구분한다.
 
-- T15는 task/t15-tray-lifecycle / PR #17에서 구현·Windows 자동 검증을 완료했으며 사용자 Windows 확인은 별도 대기다. 직접 병합하지 않는다. 후속 Task의 기준은 T15가 통합된 최신 main이다.
-- T16은 T15의 창/종료 조정 경로 통합 후 진행한다. 빠른 종료 키 기본값은 T16에서 D03/D04 위임 범위로 확정·기록한다.
-- T13/T17은 이번 T15와 MainWindow/ViewingWindow 및 표시·종료 진입점이 겹치므로 병렬 배정하지 않는다. T15 통합 후 수정 파일/계약을 대조해 병렬 가능성을 재평가한다. 이는 작업 배정 순서이며 기존 기능 선행 관계를 임의 변경하지 않는다.
-- T12 잔여 수동 검사는 사용자 지시에 따라 기본 완성 후 실사용 단계로 이관한다. 미검증을 통과로 쓰지 않는다. T09/T10/T11의 기존 검증 생략과 AVI 무음 조사 보류도 보존한다.
+- 다음은 T16 빠른 숨김·음소거·정상 종료 — Astra Work. 최신 main에서 task/t16-quick-hide-exit 브랜치를 사용한다.
+- T15 AppLifecycle/TrayIcon 및 RequestCloseAsync를 확장하고 기존 저장·삭제·해제 경계를 재사용한다. T15의 실패 시 자동 Restore는 T16의 숨김 유지 정책과 구분해 연결한다.
+- T13/T17은 T16과 ViewingWindow/MainWindow·전체화면·새 창 표시 경계가 겹치므로 이번에는 병렬 배정하지 않는다. T16 통합 후 재평가한다. T18A도 종료 중 스캔/명령 차단 경계 확정 후 배정한다.
+- T15 사용자 트레이 클릭·전체화면/보조 창·Explorer 재시작 확인은 여전히 미검증이다. 이번 병합 요청을 수동 통과나 생략 승인으로 해석하지 않는다. T16 결합 검증에서도 추적한다.
+- T12 실사용 검증 이관, T09/T10/T11의 기존 검증 생략 및 AVI 무음 조사 보류는 유지한다.
 
 
 ## T03 저장 구현
@@ -211,7 +212,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - T12의 삭제 저널·AppliedDeletion·격리 계약은 변경하지 않았다. T12 통합 후 Deleting/Unknown/Succeeded+DB 정리 관찰 경계와 미디어 해제 소유권을 대조했다. 구체적인 종료 규칙은 docs/SHORTCUTS_AND_TRAY.md §6에 기록했다.
 - 제품 코드, 패키지, DB 스키마, AVI 무음 보류 조사, T15/T16 구현은 변경하지 않았다. 문서 정합성 검토만 수행했다.
 
-## T15 트레이·일반 정상 종료 — PR #17, 사용자 확인 대기
+## T15 트레이·일반 정상 종료 — PR #17 main 통합, 사용자 확인 대기
 
 - 기준 main `b850b324ddc5d5395e481a142a10d4f52d6cb00d`에 T12 #16/T14 #15가 통합됨을 확인하고 `task/t15-tray-lifecycle`에서 작업했다.
 - 트레이 열기/복원·더블클릭·종료, 시작 표시/일반 최소화/메인 X 숨김, 감상 X 정상 Leave, 스캔·감상·삭제 명령 대기 후 DB/트레이/WPF 종료를 연결했다. 메인 종료/삭제 복구 버튼은 트레이 실패·종료 차단 시 접근 경로다.
@@ -219,4 +220,4 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 검증 코드 `c00b68e3259e110f0af9d0a587299e7f15b0511c`: Windows x64 10.0.26100 / .NET SDK 10.0.401. Release 빌드 경고 0·오류 0. T15 데이터 경계와 실제 WPF 시나리오, Shell_NotifyIcon 등록/갱신·메뉴/더블클릭 callback·해제, 저장/삭제/미디어 회귀가 통과했다.
 - 성공 실행: [T11/T12/T15 감상·생명주기 및 만화/영상/자막 회귀 36231753776](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36231753776), [T03 저장·앱 시작/정상 종료 36231753784](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36231753784), [T05 스캔 36231753788](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36231753788), [T06 세션 36231753787](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36231753787), [T07 만화 36231753769](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36231753769), [T09 영상 36231753785](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36231753785), [T10 자막 36231753774](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36231753774).
 - 이후 변경은 기준/검증 문서뿐이다. 실제 사용자 Windows 수동 확인(트레이 클릭·전체화면/보조 창·Explorer 재시작)은 미실시이며 기존 생략 승인을 적용하지 않는다.
-- 상세 검사/구현 제약: docs/T15_LIFECYCLE_VALIDATION.md. PR #17은 main 미병합이며 다음 Task는 구현하지 않았다.
+- 상세 검사/구현 제약: docs/T15_LIFECYCLE_VALIDATION.md. PR #17은 main에 통합됐다. 다음 구현은 T16이며 사용자 수동 확인은 미검증으로 유지한다.
