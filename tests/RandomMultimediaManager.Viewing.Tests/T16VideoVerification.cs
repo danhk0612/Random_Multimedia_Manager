@@ -83,7 +83,8 @@ internal static class T16VideoVerification
             Check((await opening).Status == SessionStatus.Completed && Player(current!.Video!).Mute,
                 "actual session late Ready remains muted");
             var pending = session.View.Pending!;
-            await session.DeleteCurrentAsync(Guid.NewGuid(), service, DeletionMode.Recycle);
+            var deletion = await session.DeleteCurrentAsync(Guid.NewGuid(), service, DeletionMode.Recycle);
+            Console.WriteLine($"T16 reopen result={deletion.Status}/{deletion.Error}; video={current?.Video is not null}; appMute={current?.Video?.AppMuted}; nativeMute={(current?.Video is { } native ? Player(native).Mute : null)}; audioUnavailable={current?.Video?.AudioUnavailable}; visit={session.View.Pending?.VisitId}");
             Check(current?.Video is not null && Player(current.Video).Mute && !current.Video.AppMuted
                 && session.View.Pending!.VisitId == pending.VisitId && File.Exists(path),
                 "failed deletion reopens same visit silently with original mute intent");

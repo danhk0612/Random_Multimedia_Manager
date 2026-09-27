@@ -267,6 +267,47 @@ internal static class T15NativeVerification
             }
             Check(await f.Lifecycle.ExitAsync(), "T16 native dialog scenario exit");
         });
+        await Scenario("T16 tray popup remains reachable while hidden", async f =>
+        {
+            using var icon = new TrayIcon(f.Lifecycle.Restore, () => _ = f.Lifecycle.ExitAsync(),
+                f.Lifecycle.TrayUnavailable, f.Lifecycle.ToggleHidden, f.Lifecycle.Privacy);
+            f.Lifecycle.HideAll();
+            var fields = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            var source = (HwndSource)typeof(TrayIcon).GetField("source", fields)!.GetValue(icon)!;
+            var menu = (ContextMenu)typeof(TrayIcon).GetField("menu", fields)!.GetValue(icon)!;
+            SendMessage(source.Handle, 0x8001, IntPtr.Zero, (IntPtr)0x205);
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Check(menu.IsOpen && PresentationSource.FromVisual(menu) is HwndSource popup
+                && PrivacyWindows.IsWindowVisible(popup.Handle), "T16 native tray popup visible during privacy");
+            Check(!PrivacyWindows.IsWindowVisible(new WindowInteropHelper(f.Main).Handle), "T16 tray popup does not reveal main");
+            menu.IsOpen = false;
+            f.Lifecycle.Restore();
+            Check(await f.Lifecycle.ExitAsync(), "T16 tray popup clean exit");
+        });
+        await Scenario("T16 active DB writer exit", async f =>
+        {
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var writer = Task.Run(async () =>
+            {
+                using var connection = new SqliteConnection($"Data Source={f.DbPath};Pooling=False");
+                connection.Open();
+                using var transaction = connection.BeginTransaction();
+                entered.SetResult(); await release.Task; transaction.Commit();
+            });
+            await entered.Task;
+            var exit = f.Lifecycle.ExitAsync();
+            try
+            {
+                await Task.Delay(150);
+                Check(!exit.IsCompleted && f.Lifecycle.IsPrivacyHidden && f.Exits == 0,
+                    "T16 DB writer wait preserves hidden exit without forced termination");
+            }
+            finally { release.TrySetResult(); await writer; }
+            Check(await exit && f.Exits == 1, "T16 exit completes after DB writer boundary");
+        });
         // The shell may be absent on unattended runners; report that separately, never as a pass.
         int restored = 0, exited = 0, toggled = 0;
         using var tray = new TrayIcon(() => restored++, () => exited++, () => { }, () => toggled++);

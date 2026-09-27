@@ -327,7 +327,7 @@ public sealed class PreparedVideo : IAsyncDisposable
         RequireVisit(token);
         return new(token, PlaybackProgress.Video(completedPosition ?? Math.Max(0, player.Time)), Math.Max(0, player.Length),
             RestoredCompleted ? VLCState.Ended : player.State, RestoredCompleted || AudioUnavailable ? desiredVolume : player.Volume,
-            AudioUnavailable || RestoredCompleted || (privacyMuted ? desiredMuted : player.Mute), player.Rate, player.IsSeekable,
+            privacyMuted ? desiredMuted : AudioUnavailable || RestoredCompleted || player.Mute, player.Rate, player.IsSeekable,
             Volatile.Read(ref failed) == 0 ? null : "현재 영상 재생 오류");
     }
 
