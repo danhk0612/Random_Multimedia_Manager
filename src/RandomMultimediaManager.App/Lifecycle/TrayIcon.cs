@@ -44,6 +44,12 @@ public sealed class TrayIcon : IDisposable
         var quit = new MenuItem { Header = "종료" };
         quit.Click += (_, _) => exit();
         menu.Items.Add(quit);
+        menu.Opened += (_, _) =>
+        {
+            // WPF may create the Popup HWND after the IsOpen setter has returned.
+            if (privacyWindows is not null && System.Windows.PresentationSource.FromVisual(menu) is HwndSource popup)
+                privacyWindows.ShowTrayMenu(popup.Handle);
+        };
         menu.Closed += (_, _) => { if (!disposed) Shell_NotifyIcon(3, ref data); };
         EnsureAvailable();
     }

@@ -197,7 +197,10 @@ internal static class T15NativeVerification
             auxiliary.Show();
             var originallyHidden = new Window { Owner = f.Main };
             new WindowInteropHelper(originallyHidden).EnsureHandle();
-            f.Lifecycle.HideAll(); f.Lifecycle.HideAll();
+            var keySource = (HwndSource)typeof(GlobalHotKeys).GetField("source",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(keys)!;
+            SendMessage(keySource.Handle, 0x312, (IntPtr)1, IntPtr.Zero);
+            f.Lifecycle.HideAll();
             bool Visible(Window w) => PrivacyWindows.IsWindowVisible(new WindowInteropHelper(w).Handle);
             Check(!Visible(f.Main) && !Visible(view) && !Visible(auxiliary), "T16 all native windows hidden");
             Check(view.Coordinator.View.Pending == pending && f.Db.GetHistory(f.Item.Id).Count == 0,

@@ -3,6 +3,11 @@ using System.Reflection;
 using System.Windows.Controls;
 using LibVLCSharp.Shared;
 using RandomMultimediaManager.App.Video;
+using RandomMultimediaManager.App.Data;
+using RandomMultimediaManager.App.Deletion;
+using RandomMultimediaManager.App.Sessions;
+using RandomMultimediaManager.App.Viewing;
+using RandomMultimediaManager.Core;
 
 internal static class T16VideoVerification
 {
@@ -56,5 +61,37 @@ internal static class T16VideoVerification
             if (first is not null) await first.DisposeAsync();
             PreparedVideo.SetPrivacyMuted(false);
         }
+        string root = Path.Combine(Path.GetTempPath(), "rmm-t16-video-" + Guid.NewGuid());
+        Directory.CreateDirectory(root);
+        try
+        {
+            string path = Path.Combine(root, "copy.mp4");
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "silent.mp4"), path);
+            using var db = LibraryDatabase.Open(Path.Combine(root, "db.sqlite"));
+            var category = new Category(Guid.NewGuid(), "video", RandomMultimediaManager.Core.MediaType.Video);
+            db.SaveCategory(category);
+            var file = new FileInfo(path);
+            var item = new MediaItem(Guid.NewGuid(), category.Id, category.MediaType, path, path.ToUpperInvariant(), file.Length, file.LastWriteTimeUtc.Ticks);
+            db.ApplyObservedItems([item], []);
+            ViewingMedia? current = null;
+            var session = new SessionCoordinator(db, new ViewingMediaPreparer(surface,
+                media => current = media, media => { if (ReferenceEquals(current, media)) current = null; }));
+            var service = new DeletionService(db, new DeletionJournal(Path.Combine(root, "journal")),
+                _ => Task.FromResult(new FileDeletionResult(DeletionOutcome.Failed, "injected failure; file untouched")));
+            var opening = session.OpenManualAsync(Guid.NewGuid(), item.Id);
+            PreparedVideo.SetPrivacyMuted(true);
+            Check((await opening).Status == SessionStatus.Completed && Player(current!.Video!).Mute,
+                "actual session late Ready remains muted");
+            var pending = session.View.Pending!;
+            await session.DeleteCurrentAsync(Guid.NewGuid(), service, DeletionMode.Recycle);
+            Check(current?.Video is not null && Player(current.Video).Mute && !current.Video.AppMuted
+                && session.View.Pending!.VisitId == pending.VisitId && File.Exists(path),
+                "failed deletion reopens same visit silently with original mute intent");
+            PreparedVideo.SetPrivacyMuted(false);
+            Check(!current!.Video!.AppMuted, "reopened visit restores original app mute");
+            Check((await session.LeaveAsync(Guid.NewGuid())).Status == SessionStatus.Completed
+                && db.GetHistory(item.Id).Single().VisitId == pending.VisitId, "reopened visit stores once at normal Leave");
+        }
+        finally { PreparedVideo.SetPrivacyMuted(false); Directory.Delete(root, true); }
     }
 }
