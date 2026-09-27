@@ -30,7 +30,13 @@ public sealed class PrivacyWindows : IDisposable
         if (afterHook == IntPtr.Zero) { UnhookWindowsHookEx(hook); throw new Win32Exception(Marshal.GetLastWin32Error()); }
         beforeHook = SetWindowsHookEx(4, beforeCallback, IntPtr.Zero, GetCurrentThreadId());
         if (beforeHook == IntPtr.Zero) { UnhookWindowsHookEx(afterHook); UnhookWindowsHookEx(hook); throw new Win32Exception(Marshal.GetLastWin32Error()); }
-        EnumThreadWindows(GetCurrentThreadId(), (hwnd, _) => { Attach(hwnd); return true; }, IntPtr.Zero);
+        Exception? error = null;
+        EnumThreadWindows(GetCurrentThreadId(), (hwnd, _) =>
+        {
+            try { Attach(hwnd); return true; }
+            catch (Exception ex) { error = ex; return false; }
+        }, IntPtr.Zero);
+        if (error is not null) { Dispose(); throw error; }
     }
     public void Exempt(IntPtr hwnd) { exempt.Add(hwnd); restore.Remove(hwnd); Uncloak(hwnd); }
     public void ShowTrayMenu(IntPtr hwnd)
@@ -60,7 +66,6 @@ public sealed class PrivacyWindows : IDisposable
                     // privacy guard cannot be attached, rather than expose a new private window.
                     try { Attach(hwnd); }
                     catch { return (IntPtr)1; }
-
                 }
             }
         }
@@ -133,11 +138,17 @@ public sealed class PrivacyWindows : IDisposable
     {
         if (hidden) return;
         // Capture every visible surface before hiding any owner (which can hide owned windows).
+        Exception? error = null;
         EnumThreadWindows(GetCurrentThreadId(), (hwnd, _) =>
         {
-            if (!exempt.Contains(hwnd)) { Attach(hwnd); if (IsWindowVisible(hwnd)) Remember(hwnd); }
-            return true;
+            try
+            {
+                if (!exempt.Contains(hwnd)) { Attach(hwnd); if (IsWindowVisible(hwnd)) Remember(hwnd); }
+                return true;
+            }
+            catch (Exception ex) { error = ex; return false; }
         }, IntPtr.Zero);
+        if (error is not null) throw error;
         hidden = true;
         foreach (var hwnd in restore.ToArray()) { Cloak(hwnd); SetWindowPos(hwnd, IntPtr.Zero, 0, 0, 0, 0, 0x97); }
     }

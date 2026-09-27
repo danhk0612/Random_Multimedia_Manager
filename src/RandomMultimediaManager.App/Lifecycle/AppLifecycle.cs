@@ -54,7 +54,7 @@ public sealed class AppLifecycle(MainWindow main, LibraryDatabase database, Dele
     public void HideMain()
     {
         main.Dispatcher.VerifyAccess();
-        if (State is LifecycleState.Closing or LifecycleState.Exited) return;
+        if (IsPrivacyHidden || State is LifecycleState.Closing or LifecycleState.Exited) return;
         if (!ensureTray())
         {
             Restore();

@@ -195,6 +195,8 @@ internal static class T15NativeVerification
             var auxiliary = new Window { Owner = view, Width = 240, Height = 160,
                 WindowStyle = WindowStyle.None, WindowState = WindowState.Maximized };
             auxiliary.Show();
+            var minimized = new Window { Owner = f.Main, Width = 240, Height = 160 };
+            minimized.Show(); minimized.WindowState = WindowState.Minimized;
             var originallyHidden = new Window { Owner = f.Main };
             new WindowInteropHelper(originallyHidden).EnsureHandle();
             var keySource = (HwndSource)typeof(GlobalHotKeys).GetField("source",
@@ -212,9 +214,10 @@ internal static class T15NativeVerification
             Check(!Visible(view), "T16 tray re-registration failure does not expose windows");
             f.Lifecycle.Restore();
             Check(Visible(view) && Visible(auxiliary) && Visible(late) && !Visible(originallyHidden)
-                && auxiliary.WindowState == WindowState.Maximized && auxiliary.WindowStyle == WindowStyle.None,
+                && auxiliary.WindowState == WindowState.Maximized && auxiliary.WindowStyle == WindowStyle.None
+                && minimized.WindowState == WindowState.Minimized,
                 "T16 exact visible set and fullscreen preserved");
-            auxiliary.Close(); late.Close(); originallyHidden.Close();
+            auxiliary.Close(); minimized.Close(); late.Close(); originallyHidden.Close();
             _ = view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
             await Wait(() => view.OwnedWindows.OfType<DeleteConfirmationWindow>().Any());
