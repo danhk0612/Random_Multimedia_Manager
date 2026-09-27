@@ -108,7 +108,7 @@ AppLifecycle이 일반 종료를 조정하며 ViewingWindow.RequestCloseAsync의
 
 ## 8. T16 구현 경계 및 검증
 
-T16은 이 문서의 Quick Hide와 정상 종료 순서를 구현한다. 구현은 기존 SessionCoordinator/ViewingWindow/T12 API를 재사용하고 필요한 최소 생명주기 조정만 추가한다.
+T16은 이 문서의 Quick Hide와 정상 종료 순서를 구현한다. 빠른 종료 키는 D03/D04 위임에 따라 Ctrl+Shift+Q 전역 키로 확정했다. 구현·검증 기록은 T16_QUICK_ACTIONS_VALIDATION.md를 따른다. 구현은 기존 SessionCoordinator/ViewingWindow/T12 API를 재사용하고 필요한 최소 생명주기 조정만 추가한다.
 
 필수 Windows 검증:
 
