@@ -214,7 +214,7 @@ public partial class ViewingWindow : Window
             browser.IsEnabled = false;
             await viewModel.WaitForPendingReadsAsync();
             allowDialogClose = true;
-            dialog.Dispatcher.BeginInvoke(new Action(() =>
+            _ = dialog.Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (dialog.IsVisible) dialog.Close();
             }), DispatcherPriority.Normal);
