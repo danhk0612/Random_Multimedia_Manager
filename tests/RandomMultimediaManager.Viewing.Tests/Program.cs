@@ -305,9 +305,6 @@ internal static class Program
                 _ = Application.Current.Windows.OfType<Window>()
                     .Single(window => window.Title == "라이브러리에서 파일 선택");
                 host.SetExitRequested(true);
-                Console.WriteLine("T17 exit request set; dialog=" + Application.Current.Windows.OfType<Window>()
-                    .Any(window => window.Title == "라이브러리에서 파일 선택")
-                    + ", controls=" + ((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
                 completion.SetResult();
             }
             catch (Exception ex) { completion.SetException(ex); }

@@ -208,18 +208,14 @@ public partial class ViewingWindow : Window
         };
         dialog.Closing += async (_, args) =>
         {
-            Console.WriteLine($"T17 library Closing; allow={allowDialogClose}");
             if (allowDialogClose) return;
             args.Cancel = true;
             viewModel.SetExitRequested(true);
-            Console.WriteLine("T17 library waiting for reads");
             await viewModel.WaitForPendingReadsAsync();
-            Console.WriteLine("T17 library reads complete");
             allowDialogClose = true;
             dialog.Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (dialog.IsVisible) dialog.Close();
-                Console.WriteLine("T17 library close posted after reads");
             }), DispatcherPriority.Normal);
         };
         libraryDialog = dialog;
@@ -371,10 +367,7 @@ public partial class ViewingWindow : Window
         exitRequested = value;
         libraryBrowser?.SetExitRequested(value);
         if (value && libraryDialog is { IsVisible: true })
-        {
-            Console.WriteLine("T17 exit closing visible library dialog");
             libraryDialog.Close();
-        }
         Coordinator.SetExitRequested(value);
         Controls();
     }

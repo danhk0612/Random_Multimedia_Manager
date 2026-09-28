@@ -51,9 +51,11 @@ internal static class T17LibraryBrowserVerification
             await Wait(() => viewModel.VisibleItems.Count == 1
                 && viewModel.VisibleItems[0].Item.Id == video.Id);
             var fileList = (ListBox)browser.FindName("FileList");
-            fileList.SelectedItem = viewModel.VisibleItems.Single();
-            await Wait(() => viewModel.SelectedItem?.Item.Id == video.Id
-                && ((Button)FindButton(browser, "감상 열기")).IsEnabled);
+            fileList.SelectedIndex = 0;
+            await Wait(() => viewModel.SelectedItem?.Item.Id == video.Id, "T17 WPF selected-item binding");
+            Check(viewModel.CanOpenSelected, "T17 WPF selected item permits opening");
+            await Wait(() => ((Button)FindButton(browser, "감상 열기")).IsEnabled,
+                "T17 WPF open button binding");
             await Wait(() => viewModel.SelectedProgressText == "00:01:05");
             Check(viewModel.SelectedItem!.FileName == "한글 video 파일.mp4"
                 && viewModel.SelectedItem.LastViewedAtUtc == 1000
@@ -99,12 +101,12 @@ internal static class T17LibraryBrowserVerification
         throw new InvalidOperationException($"Button not found: {label}");
     }
 
-    private static async Task Wait(Func<bool> condition)
+    private static async Task Wait(Func<bool> condition, string failure = "T17 library browser UI condition")
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);
         while (!condition())
         {
-            if (DateTime.UtcNow > deadline) throw new TimeoutException("T17 library browser UI condition");
+            if (DateTime.UtcNow > deadline) throw new TimeoutException(failure);
             await Task.Delay(50);
         }
     }
