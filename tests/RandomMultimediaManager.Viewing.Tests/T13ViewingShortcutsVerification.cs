@@ -258,7 +258,12 @@ internal static class T13ViewingShortcutsVerification
             await Wait(() => videoMedia.Video!.Snapshot(videoMedia.VideoVisit).State == VLCState.Paused,
                 "T13 video is paused for keyboard checks");
 
-            PressKey(window, Key.Space);
+            FocusCommandButton(window);
+            var startButton = FindElement<Button>(window, button => Equals(button.Content, "랜덤 시작"));
+            Check(ReferenceEquals(Keyboard.FocusedElement, startButton), "T13 video shortcut uses a non-input keyboard focus");
+            Check(((FrameworkElement)window.FindName("VideoControls")).IsEnabled, "T13 video controls are enabled before Space");
+            var playKey = PressKey(window, Key.Space);
+            Check(playKey.Handled, "T13 Space is consumed for the active video");
             await Wait(() => videoMedia.Video!.Snapshot(videoMedia.VideoVisit).State == VLCState.Playing
                 && ((FrameworkElement)window.FindName("VideoControls")).IsEnabled,
                 "T13 Space plays a paused video through the existing command");
@@ -267,6 +272,7 @@ internal static class T13ViewingShortcutsVerification
                 && ((FrameworkElement)window.FindName("VideoControls")).IsEnabled,
                 "T13 Space auto-repeat does not toggle playback again");
             Check(spaceRepeat, "T13 repeated Space is consumed");
+            FocusCommandButton(window);
             PressKey(window, Key.Space);
             await Wait(() => videoMedia.Video!.Snapshot(videoMedia.VideoVisit).State == VLCState.Paused
                 && ((FrameworkElement)window.FindName("VideoControls")).IsEnabled,

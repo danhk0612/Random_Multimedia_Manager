@@ -36,6 +36,7 @@ public partial class ViewingWindow : Window
     public string? CloseError { get; private set; }
     private bool busy, allowClose, closing, seeking, refreshing, fullscreen, fullscreenControlsVisible = true;
     private bool imeComposing;
+    private int modalInputDepth;
     private DateTime lastCheckpoint = DateTime.UtcNow;
     private PlaybackProgress? saved;
     private SessionToken? savedToken;
@@ -174,7 +175,11 @@ public partial class ViewingWindow : Window
     {
         if (Current is null || deletions is null) return;
         var dialog = new DeleteConfirmationWindow(Current.Item.Path) { Owner = this };
-        if (dialog.ShowDialog() != true || dialog.Selection is not { } mode || closing || exitRequested) return;
+        bool? confirmed;
+        modalInputDepth++;
+        try { confirmed = dialog.ShowDialog(); }
+        finally { modalInputDepth--; }
+        if (confirmed != true || dialog.Selection is not { } mode || closing || exitRequested) return;
         Status.Text = "삭제 중… 결과와 저널 저장이 끝날 때까지 기다려 주세요.";
         await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
         if (closing || exitRequested) return;
@@ -190,7 +195,9 @@ public partial class ViewingWindow : Window
     private async void RecoverDeletion(object s, RoutedEventArgs e) => await Run(async () =>
     {
         if (deletions is null) return;
-        await DeletionDialogs.RecoverAsync(deletions, this, Coordinator);
+        modalInputDepth++;
+        try { await DeletionDialogs.RecoverAsync(deletions, this, Coordinator); }
+        finally { modalInputDepth--; }
         Status.Text = deletions.Pending.Count == 0 ? "삭제 복구 처리를 완료했습니다." : "미해결 삭제 경로의 격리를 유지합니다.";
         Suppressed.IsChecked = Coordinator.View.Pending?.SuppressHistory == true;
     });
@@ -235,7 +242,9 @@ public partial class ViewingWindow : Window
         libraryBrowser = viewModel;
         try
         {
-            dialog.ShowDialog();
+            modalInputDepth++;
+            try { dialog.ShowDialog(); }
+            finally { modalInputDepth--; }
             await viewModel.WaitForPendingReadsAsync();
             if (selectedItemId is { } itemId && !closing && !exitRequested && !PreparedVideo.PrivacyMuted)
                 await Navigate(() => Coordinator.OpenManualAsync(Guid.NewGuid(), itemId));
@@ -363,7 +372,11 @@ public partial class ViewingWindow : Window
     private async void LoadSubtitle(object s, RoutedEventArgs e) => await Run(async () =>
     {
         var dialog = new OpenFileDialog { Filter="자막|*.srt;*.smi" };
-        if (dialog.ShowDialog(this) == true && !closing && !exitRequested) await Subtitle(dialog.FileName);
+        bool? selected;
+        modalInputDepth++;
+        try { selected = dialog.ShowDialog(this); }
+        finally { modalInputDepth--; }
+        if (selected == true && !closing && !exitRequested) await Subtitle(dialog.FileName);
     });
     private async void DisableSubtitles(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.DisableSubtitles(t));
     private void BeginSeek(object s, MouseButtonEventArgs e) => seeking = true;
@@ -381,7 +394,7 @@ public partial class ViewingWindow : Window
     {
         if (fullscreen) ShowFullscreenControls();
         if (e.Handled || !IsEnabled || closing || exitRequested || PreparedVideo.PrivacyMuted || imeComposing
-            || OwnedWindows.Cast<Window>().Any(window => window.IsVisible)
+            || modalInputDepth > 0
             || e.Key is Key.ImeProcessed or Key.DeadCharProcessed
             || IsShortcutInputControl(e.OriginalSource as DependencyObject)
             || IsShortcutInputControl(Keyboard.FocusedElement as DependencyObject)) return;
