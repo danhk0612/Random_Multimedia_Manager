@@ -381,6 +381,7 @@ public partial class ViewingWindow : Window
     {
         if (fullscreen) ShowFullscreenControls();
         if (e.Handled || !IsEnabled || closing || exitRequested || PreparedVideo.PrivacyMuted || imeComposing
+            || OwnedWindows.Cast<Window>().Any(window => window.IsVisible)
             || e.Key is Key.ImeProcessed or Key.DeadCharProcessed
             || IsShortcutInputControl(e.OriginalSource as DependencyObject)
             || IsShortcutInputControl(Keyboard.FocusedElement as DependencyObject)) return;
