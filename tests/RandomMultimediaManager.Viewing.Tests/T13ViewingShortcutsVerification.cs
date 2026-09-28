@@ -154,6 +154,13 @@ internal static class T13ViewingShortcutsVerification
             Check(!textInputKey.Handled && db.GetItems(comicCategory.Id)
                 .Single(item => item.Id == initialComicId).IsFavorite == inputFavoriteBefore,
                 "T13 does not steal a key from a text input");
+            var resumeMode = (ComboBox)window.FindName("ResumeModeBox");
+            Keyboard.Focus(resumeMode);
+            page = window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex!.Value;
+            var selectionInputKey = PressKey(window, Key.PageDown);
+            Check(!selectionInputKey.Handled
+                && window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page,
+                "T13 preserves selection-box key handling");
             Keyboard.Focus(categoryPicker);
             page = window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex!.Value;
             var listInputKey = PressKey(window, Key.PageDown);
@@ -234,6 +241,12 @@ internal static class T13ViewingShortcutsVerification
             volume.Value = 50;
             await Wait(() => videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Volume == 50
                 && ((FrameworkElement)window.FindName("VideoControls")).IsEnabled, "T13 video volume control completed");
+            Keyboard.Focus(volume);
+            var focusedVolume = volume.Value;
+            var sliderInputKey = PressKey(window, Key.Up);
+            Check(!sliderInputKey.Handled && volume.Value == focusedVolume,
+                "T13 preserves slider key handling");
+            FocusCommandButton(window);
             PressKey(window, Key.Up);
             await Wait(() => videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Volume == 55
                 && videoControlsEnabled(window),
