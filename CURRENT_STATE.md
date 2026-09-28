@@ -24,7 +24,7 @@
 | 외부 SRT/SMI 자막 | T10 완료 (자동 검증 + 사용자 UI 검증, 일부 수동 항목 승인 생략, PR #11) |
 | 영상 엔진·WPF 검증 호스트 | T09 완료 (잔여 수동 검증 사용자 승인 생략, PR #8 main 통합 완료) |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | T06 후보/이번 방문 억제·삭제 결과 전이 구현; 공통 UI는 T11 구현·자동 검증 통과, 실제 삭제는 T12 |
-| 단축키·트레이·빠른 숨김/종료 | T15 PR #17 main 통합. T16 모두 숨김·앱 mute/복원·전역 키·빠른 정상 종료 구현 (PR #18), Windows 자동 검증 완료·수동 미검증 |
+| 단축키·트레이·빠른 숨김/종료 | T15 PR #17 main 통합. T16 모두 숨김·앱 mute/복원·전역 키·빠른 정상 종료 구현 (PR #18 main 통합), Windows 자동 검증 완료·수동 미검증 |
 | VSR | 후순위, 가능성 미검증 |
 
 ## T12 삭제·복구 구현
@@ -53,13 +53,13 @@
 
 ## 다음 작업과 차단
 
-T15 PR #17이 통합된 main에서 T16을 구현했다. T16 PR #18은 검토·병합 대기이며 직접 병합하지 않는다.
+T16 PR #18을 main에 통합했다. 복원 키·트레이 복합 실패 보완과 Windows 자동 검증 4개 성공을 확인했다. 실제 키보드/트레이 클릭·Explorer 재시작·화면 순간 노출·스피커 청취는 미검증으로 유지한다.
 
-- 작업 브랜치는 `task/t16-quick-hide-exit`. 구현·Windows 자동 검증과 사용자 수동 미검증을 구분한다. 상세 결과는 CURRENT_STATE의 T16 절과 docs/T16_QUICK_ACTIONS_VALIDATION.md를 따른다.
-- 모든 창 숨김·앱 mute/복원, H/Q 전역 키, 복원 키·트레이 동시 가용 시 숨김 후 T15 정상 종료를 연결했다. 숨김 불가 시 표시·mute를 유지한 동일 정상 종료를 사용한다. 저장·삭제·해제 경계를 재사용하며 ExitBlocked에서 자동 Restore하지 않는다.
-- T13/T17은 T16과 ViewingWindow/MainWindow·전체화면·새 창 표시 경계가 겹치므로 이번에는 병렬 배정하지 않는다. T16 통합 후 재평가한다. T18A도 종료 중 스캔/명령 차단 경계 확정 후 배정한다.
-- T15 사용자 트레이 클릭·전체화면/보조 창·Explorer 재시작 확인은 여전히 미검증이다. 이번 병합 요청을 수동 통과나 생략 승인으로 해석하지 않는다. T16 결합 검증에서도 추적한다.
-- T12 실사용 검증 이관, T09/T10/T11의 기존 검증 생략 및 AVI 무음 조사 보류는 유지한다.
+- 다음은 T17 최소 라이브러리 탐색 및 파일 정보 — Sol 구현 작업. 최신 main에서 task/t17-library-browser 브랜치를 사용한다.
+- 기존 GetItems/GetHistory/GetProgress 및 SessionCoordinator.OpenManualAsync를 사용하고, 공통 감상 호스트에 필요한 최소 UI 진입만 연결한다. DB 스키마·공통 세션 계약·생명주기 정책을 변경해야 한다면 Astra 검토 대상으로 보고한다.
+- T13은 로컬 키 배정 확정이 남아 있다. T17과 ViewingWindow 진입 코드를 함께 수정할 수 있어 이번에는 병렬 배정하지 않는다.
+- T18A는 시작/실행 중 감지 기본값과 종료·스캔 직렬화 설계를 먼저 정리해야 하므로 별도 Astra 작업으로 남긴다. T17 통합 후 T13/T18A 배정을 재검토한다.
+- T15/T16 수동 미검증, T12 실사용 검증 이관, T09/T10/T11 기존 생략 및 AVI 무음 조사 보류를 유지한다.
 
 
 ## T03 저장 구현
@@ -231,4 +231,4 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 성공 실행: [T11/T12/T15/T16 및 Core/Data·스캔·만화·영상·자막 회귀 36301497300](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36301497300), [T03 저장·앱 시작/정상 종료 36301497269](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36301497269), [T09 영상 36301497322](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36301497322), [T10 자막 36301497276](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36301497276). 최초 구현 검증이며 병합 전 보완 검증은 아래와 구분한다.
 - 실제 사용자 키보드/트레이 클릭, 순간 화면 노출과 실제 스피커·외부 음소거 조합, Explorer 재시작은 미검증이다. T15 미검증과 T12 실사용 이관·T09/T10/T11 기존 생략 상태는 보존한다. T16 네이티브 영상 검사의 오디오 장치 부재 경로와 실제 청취 검증을 구분한다.
 - 2026-09-28 병합 전 보완: 실제 복원 키+트레이 동시 가용 조건, 숨김 불가 시 화면 유지 일반 정상 종료, 독립 초기화, Hidden/Closing/ExitBlocked 키 유지 및 최종 해제 순서를 보완했다. 코드 `bea0b04066d9e6fa8a0a867e7064ae9f2d475a97`에서 Windows x64/.NET SDK 10.0.401 Release 경고 0·오류 0, 지정 복합 실패 및 기존 회귀를 통과했다. [통합 회귀 36362827110](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36362827110), [저장·앱 시작/종료 36362827122](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36362827122), [영상 36362827097](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36362827097), [자막 36362827106](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36362827106). 이후 변경은 지정 문서뿐이다. 트레이 실패는 오류 주입이며 실제 Explorer 재시작·사용자 키 입력·청취를 통과로 바꾸지 않는다.
-- 상세 구현·자동/수동 검사: docs/T16_QUICK_ACTIONS_VALIDATION.md. PR #18을 직접 병합하거나 다음 Task를 진행하지 않았다.
+- 상세 구현·자동/수동 검사: docs/T16_QUICK_ACTIONS_VALIDATION.md. PR #18 main 통합 완료. 다음 구현 작업은 T17이다.
