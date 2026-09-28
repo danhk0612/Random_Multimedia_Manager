@@ -73,13 +73,15 @@ internal static class T13ViewingShortcutsVerification
             Check(categoryPicker.SelectedItems.Count == 1, "T13 comic category is selected from the bound items");
             ClickButton(window, "랜덤 시작");
             await Wait(() => window.Current?.Item.CategoryId == comicCategory.Id
-                && window.Coordinator.View.Phase == SessionPhase.Active, "T13 comic session opened");
+                && window.Coordinator.View.Phase == SessionPhase.Active && !GetField<bool>(window, "busy"),
+                "T13 comic session opened");
             FocusCommandButton(window);
 
             Guid initialComicId = window.Current!.Item.Id;
             bool favoriteBefore = database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
             var favoriteKey = PressKey(window, Key.F);
-            await Wait(() => database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite != favoriteBefore,
+            await Wait(() => database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite != favoriteBefore
+                && !GetField<bool>(window, "busy"),
                 "T13 F toggles favorite through existing command");
             Check(favoriteKey.Handled, "T13 handled favorite key is consumed");
             bool favoriteAfter = database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
@@ -88,11 +90,13 @@ internal static class T13ViewingShortcutsVerification
                 "T13 favorite key repeat is ignored");
 
             PressKey(window, Key.I);
-            await Wait(() => window.Coordinator.View.Pending?.SuppressHistory == true, "T13 I excludes the current visit");
+            await Wait(() => window.Coordinator.View.Pending?.SuppressHistory == true && !GetField<bool>(window, "busy"),
+                "T13 I excludes the current visit");
             Route(window, Key.I, ModifierKeys.None, true);
             Check(window.Coordinator.View.Pending?.SuppressHistory == true, "T13 history-exclusion repeat is ignored");
             PressKey(window, Key.I);
-            await Wait(() => window.Coordinator.View.Pending?.SuppressHistory == false, "T13 I restores normal visit recording");
+            await Wait(() => window.Coordinator.View.Pending?.SuppressHistory == false && !GetField<bool>(window, "busy"),
+                "T13 I restores normal visit recording");
 
             var comicContent = window.Current!.ComicContent!;
             var displayMode = FindElement<ComboBox>(comicContent, control => control.Name == "DisplayModeBox");
@@ -101,19 +105,23 @@ internal static class T13ViewingShortcutsVerification
                 .Single(item => Equals(item.Tag?.ToString(), "SinglePage"));
             int page = window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex!.Value;
             var pageDown = PressKey(window, Key.PageDown);
-            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page + 1,
+            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page + 1
+                && !GetField<bool>(window, "busy"),
                 "T13 PageDown moves one comic page");
             Check(pageDown.Handled, "T13 comic page key is consumed once by the common window");
             PressKey(window, Key.PageUp);
-            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page,
+            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page
+                && !GetField<bool>(window, "busy"),
                 "T13 PageUp moves to the previous comic page");
 
             displayMode.SelectedItem = displayMode.Items.Cast<ComboBoxItem>()
                 .Single(item => Equals(item.Tag?.ToString(), "TwoPage"));
             await window.Current!.WhenIdleAsync();
+            await Wait(() => !GetField<bool>(window, "busy"), "T13 display mode transition completed");
             page = window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex!.Value;
             Route(window, Key.PageDown, ModifierKeys.None, false);
-            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page + 2,
+            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page + 2
+                && !GetField<bool>(window, "busy"),
                 "T13 PageDown preserves the existing two-page spread movement");
             page += 2;
             SetField(window, "busy", true);
@@ -198,7 +206,8 @@ internal static class T13ViewingShortcutsVerification
             ClickButton(window, "랜덤 시작");
             await Wait(() => window.Current?.Video is not null
                 && window.Current!.Item.Id == video.Id
-                && window.Coordinator.View.Phase == SessionPhase.Active, "T13 video session opened");
+                && window.Coordinator.View.Phase == SessionPhase.Active && !GetField<bool>(window, "busy"),
+                "T13 video session opened");
             FocusCommandButton(window);
             var videoMedia = window.Current!;
             videoMedia.Video!.SetPaused(videoMedia.VideoVisit, true);
