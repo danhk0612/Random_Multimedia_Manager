@@ -239,6 +239,8 @@ public sealed class LibraryBrowserViewModel : INotifyPropertyChanged
             Interlocked.Increment(ref loadVersion);
             Interlocked.Increment(ref progressVersion);
         }
+        else if (SelectedItem is not null)
+            _ = LoadSelectedProgressAsync();
     }
 
     public async Task WaitForPendingReadsAsync()
