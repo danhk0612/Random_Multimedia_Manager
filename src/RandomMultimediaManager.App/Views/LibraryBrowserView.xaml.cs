@@ -49,7 +49,11 @@ public partial class LibraryBrowserView : UserControl
 
     private async void FileSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (DataContext is LibraryBrowserViewModel viewModel) await viewModel.LoadSelectedProgressAsync();
+        if (DataContext is not LibraryBrowserViewModel viewModel) return;
+        await viewModel.LoadSelectedProgressAsync();
+        if (!IsLoaded) return;
+        ManualOpenButton.IsEnabled = viewModel.CanOpenSelected;
+        ExplorerButton.IsEnabled = viewModel.HasSelectedItem;
     }
 
     private void OpenManual_Click(object sender, RoutedEventArgs e)
