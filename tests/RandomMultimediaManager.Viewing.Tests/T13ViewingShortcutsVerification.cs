@@ -103,11 +103,18 @@ internal static class T13ViewingShortcutsVerification
 
             displayMode.SelectedItem = displayMode.Items.Cast<ComboBoxItem>()
                 .Single(item => Equals(item.Tag?.ToString(), "TwoPage"));
+            await window.Current!.WhenIdleAsync();
             page = window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex!.Value;
+            Route(window, Key.PageDown, ModifierKeys.None, false);
+            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page + 2,
+                "T13 PageDown preserves the existing two-page spread movement");
+            page += 2;
+            SetField(window, "busy", true);
             Route(window, Key.PageDown, ModifierKeys.None, true);
             Route(window, Key.PageDown, ModifierKeys.None, true);
-            await Wait(() => window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page + 1,
-                "T13 repeated comic page input is not queued behind the existing page operation");
+            SetField(window, "busy", false);
+            Check(window.Current!.Capture(window.Coordinator.View.ActiveToken!).ComicPageIndex == page,
+                "T13 page repeat during Busy does not queue another page operation");
 
             Check(Route(window, Key.Add, ModifierKeys.Control, true), "T13 Ctrl+numpad Add is recognized");
             Check(Route(window, Key.Add, ModifierKeys.Control, true), "T13 repeated comic zoom input is admitted without queuing");
