@@ -70,12 +70,12 @@ internal static class T17LibraryBrowserVerification
                 && explorerCommand.ArgumentList.SequenceEqual([$"/select,{video.Path}"]),
                 "T17 Explorer selection preserves Korean and spaces in a single argument");
 
-            var missing = Add("missing file.mp4", videoCategory, false);
-            File.Delete(missing.Path);
-            database.ApplyObservedItems([], [missing.Id]);
+            File.Delete(video.Path);
+            database.ApplyObservedItems([], [video.Id]);
             await viewModel.RefreshAsync();
-            fileList.SelectedItem = viewModel.VisibleItems.Single(row => row.Item.Id == missing.Id);
-            await Wait(() => viewModel.SelectedItem?.Item.Id == missing.Id);
+            await Wait(() => viewModel.VisibleItems.Any(row => row.Item.Id == video.Id && row.Item.IsMissing)
+                && viewModel.SelectedItem?.Item.Id == video.Id && !viewModel.CanOpenSelected);
+            await Wait(() => ((Button)FindButton(browser, "탐색기에서 위치 열기")).IsEnabled);
             explorerStart = null;
             ((Button)FindButton(browser, "탐색기에서 위치 열기")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Check(explorerStart is null && !viewModel.CanOpenSelected
