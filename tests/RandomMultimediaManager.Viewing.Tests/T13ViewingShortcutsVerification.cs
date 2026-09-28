@@ -24,26 +24,28 @@ internal static class T13ViewingShortcutsVerification
         string root = Path.Combine(Path.GetTempPath(), "rmm-t13-shortcuts-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         ViewingWindow window = null!;
+        LibraryDatabase? database = null;
         PrivacyWindows? privacy = null;
         try
         {
-            using var database = LibraryDatabase.Open(Path.Combine(root, "library.db"));
+            database = LibraryDatabase.Open(Path.Combine(root, "library.db"));
+            LibraryDatabase db = database;
             int deleteCalls = 0;
             var comicCategory = new Category(Guid.NewGuid(), "T13 Comics", MediaType.Comic);
             var videoCategory = new Category(Guid.NewGuid(), "T13 Videos", MediaType.Video);
-            database.SaveCategory(comicCategory);
-            database.SaveCategory(videoCategory);
+            db.SaveCategory(comicCategory);
+            db.SaveCategory(videoCategory);
             string sourcePath = Path.GetFullPath(root);
             string sourceKey = sourcePath.ToUpperInvariant();
-            database.AddSource(new CategorySource(Guid.NewGuid(), comicCategory.Id, sourcePath, sourceKey));
-            database.AddSource(new CategorySource(Guid.NewGuid(), videoCategory.Id, sourcePath, sourceKey));
+            db.AddSource(new CategorySource(Guid.NewGuid(), comicCategory.Id, sourcePath, sourceKey));
+            db.AddSource(new CategorySource(Guid.NewGuid(), videoCategory.Id, sourcePath, sourceKey));
 
             MediaItem AddItem(Category category, string path)
             {
                 var file = new FileInfo(path);
                 var item = new MediaItem(Guid.NewGuid(), category.Id, category.MediaType,
                     file.FullName, file.FullName.ToUpperInvariant(), file.Length, file.LastWriteTimeUtc.Ticks);
-                database.ApplyObservedItems([item], []);
+                db.ApplyObservedItems([item], []);
                 return item;
             }
 
@@ -55,7 +57,7 @@ internal static class T13ViewingShortcutsVerification
             AddItem(comicCategory, comicPath2);
             var video = AddItem(videoCategory, videoPath);
 
-            var deletions = new DeletionService(database,
+            var deletions = new DeletionService(db,
                 new DeletionJournal(Path.Combine(root, "delete-journal")), record =>
                 {
                     deleteCalls++;
@@ -64,7 +66,7 @@ internal static class T13ViewingShortcutsVerification
                 });
             await deletions.InitializeAsync();
 
-            window = new ViewingWindow(database, deletions) { WindowStartupLocation = WindowStartupLocation.CenterScreen };
+            window = new ViewingWindow(db, deletions) { WindowStartupLocation = WindowStartupLocation.CenterScreen };
             window.Show();
             await Wait(() => ((ListBox)window.FindName("Categories")).Items.Count == 2
                 && ((FrameworkElement)window.FindName("SessionControls")).IsEnabled, "T13 category and session controls loaded");
@@ -78,14 +80,14 @@ internal static class T13ViewingShortcutsVerification
             FocusCommandButton(window);
 
             Guid initialComicId = window.Current!.Item.Id;
-            bool favoriteBefore = database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
+            bool favoriteBefore = db.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
             var favoriteKey = PressKey(window, Key.F);
-            await Wait(() => database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite != favoriteBefore
+            await Wait(() => db.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite != favoriteBefore
                 && !GetField<bool>(window, "busy"),
                 "T13 F toggles favorite through existing command");
             Check(favoriteKey.Handled, "T13 handled favorite key is consumed");
-            bool favoriteAfter = database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
-            Check(Route(window, Key.F, ModifierKeys.None, true) && database.GetItems(comicCategory.Id)
+            bool favoriteAfter = db.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
+            Check(Route(window, Key.F, ModifierKeys.None, true) && db.GetItems(comicCategory.Id)
                 .Single(item => item.Id == initialComicId).IsFavorite == favoriteAfter,
                 "T13 favorite key repeat is ignored");
 
@@ -147,9 +149,9 @@ internal static class T13ViewingShortcutsVerification
 
             var days = (TextBox)window.FindName("Days");
             Keyboard.Focus(days);
-            bool inputFavoriteBefore = database.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
+            bool inputFavoriteBefore = db.GetItems(comicCategory.Id).Single(item => item.Id == initialComicId).IsFavorite;
             var textInputKey = PressKey(window, Key.F);
-            Check(!textInputKey.Handled && database.GetItems(comicCategory.Id)
+            Check(!textInputKey.Handled && db.GetItems(comicCategory.Id)
                 .Single(item => item.Id == initialComicId).IsFavorite == inputFavoriteBefore,
                 "T13 does not steal a key from a text input");
             Keyboard.Focus(categoryPicker);
@@ -161,7 +163,7 @@ internal static class T13ViewingShortcutsVerification
             SetField(window, "imeComposing", true);
             var imeKey = PressKey(window, Key.F);
             SetField(window, "imeComposing", false);
-            Check(!imeKey.Handled && database.GetItems(comicCategory.Id)
+            Check(!imeKey.Handled && db.GetItems(comicCategory.Id)
                 .Single(item => item.Id == initialComicId).IsFavorite == inputFavoriteBefore,
                 "T13 suppresses shortcuts during IME composition");
 
@@ -262,13 +264,13 @@ internal static class T13ViewingShortcutsVerification
                 && videoControlsEnabled(window),
                 "T13 Left seeks back five seconds within duration");
 
-            bool muteBefore = videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Muted;
+            bool muteBefore = videoMedia.Video!.AppMuted;
             var muteKey = PressKey(window, Key.M);
-            await Wait(() => videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Muted != muteBefore
+            await Wait(() => videoMedia.Video!.AppMuted != muteBefore
                 && videoControlsEnabled(window),
                 "T13 M toggles app mute through the existing command");
             Check(muteKey.Handled && Route(window, Key.M, ModifierKeys.None, true)
-                && videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Muted != muteBefore,
+                && videoMedia.Video!.AppMuted != muteBefore,
                 "T13 mute auto-repeat is consumed without a second toggle");
 
             var videoControls = (FrameworkElement)window.FindName("VideoControls");
@@ -286,13 +288,15 @@ internal static class T13ViewingShortcutsVerification
                 "T13 video fullscreen exits with Escape");
 
             var deleteButton = (Button)window.FindName("DeleteButton");
-            database.QuarantineDeletion(video.PathKey);
+            db.QuarantineDeletion(video.PathKey);
             Invoke(window, "Controls");
             Check(!deleteButton.IsEnabled, "T13 quarantined file keeps the existing delete button disabled");
             Check(Route(window, Key.Delete, ModifierKeys.None, false) && deleteCalls == 0,
                 "T13 Delete shortcut cannot bypass deletion quarantine");
-            database.ReleaseDeletion(video.PathKey);
+            db.ReleaseDeletion(video.PathKey);
             Invoke(window, "Controls");
+            await Wait(() => deleteButton.IsEnabled && !GetField<bool>(window, "busy"),
+                "T13 delete control is re-enabled after Busy and quarantine clear");
             Check(deleteButton.IsEnabled, "T13 delete button reopens after the quarantine is released");
 
             int dialogsBefore = Application.Current.Windows.OfType<DeleteConfirmationWindow>().Count();
@@ -300,11 +304,12 @@ internal static class T13ViewingShortcutsVerification
             Check(Application.Current.Windows.OfType<DeleteConfirmationWindow>().Count() == dialogsBefore,
                 "T13 repeated Delete opens no duplicate confirmation");
 
-            var cancelTimer = ScheduleDialogAction(dialog => dialog.Close());
+            int cancellationCount = 0;
+            var cancelTimer = ScheduleDialogAction(dialog => { cancellationCount++; dialog.Close(); });
             var cancelDeleteKey = PressKey(window, Key.Delete);
             cancelTimer.Stop();
             await Wait(() => !GetField<bool>(window, "busy"), "T13 canceled delete dialog returned");
-            Check(cancelDeleteKey.Handled && File.Exists(videoPath) && deleteCalls == 0
+            Check(cancelDeleteKey.Handled && cancellationCount == 1 && File.Exists(videoPath) && deleteCalls == 0
                 && window.Current?.Item.Id == video.Id,
                 "T13 Delete cancellation leaves test copy and visit untouched");
 
@@ -345,6 +350,7 @@ internal static class T13ViewingShortcutsVerification
                         $"phase={window.Coordinator.View.Phase}, closeError={window.CloseError}: {ex}");
                 }
             }
+            database?.Dispose();
             try { Directory.Delete(root, recursive: true); }
             catch (Exception ex) { Console.Error.WriteLine("T13 temporary fixture cleanup failed: " + ex); }
         }
