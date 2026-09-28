@@ -17,7 +17,7 @@
 | T10 | 외부 SRT/SMI 자막 | Sol | 완료 (사용자 확인, 일부 수동 검증 승인 생략, PR #11) | T09; D07 자막 결정 |
 | T11 | 공통 감상 UI와 진행 위치 연결 | Astra | 완료 — 기본 동작 사용자 확인, 어려운 수동 검사 생략·미검증 (PR #14 main 통합 완료) | T06/T08/T09; T02 이어보기 계약 |
 | T12 | 삭제와 세션 상태 처리 | Astra | 완료 (PR #16 main 통합 완료, 잔여 수동 검증은 기본 완성 후 실사용으로 이관) | T11; D05 |
-| T13 | 일반 단축키와 전체화면 UX | Sol | 착수 가능 | T11/T12; 로컬 키 배정 확정, T17 통합 기준 |
+| T13 | 일반 단축키와 전체화면 UX | Sol | 구현·Windows 자동 검증 완료, PR #20 검토 대기 | T11/T12; 로컬 키 배정 확정, T17 통합 기준 |
 | T14 | 프로그램 생명주기 정책과 상태 설계 | Astra | 설계 완료 (PR #15 main 통합) | T11; D03/D04 |
 | T15 | 트레이 및 창 동작 | Astra | 구현·Windows 자동 검증 완료 (PR #17 main 통합, 사용자 Windows 확인 대기) | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
@@ -30,10 +30,9 @@
 
 T17 PR #19 main 통합 완료. 최신 PR 코드의 Windows 자동 검증 4개 성공을 확인했다. 실제 Explorer 표시와 사용자 클릭은 미검증으로 유지한다.
 
-- 다음은 T13 일반 단축키와 전체화면 UX — Sol 구현 작업. docs/SHORTCUTS_AND_TRAY.md의 T13 로컬 키 배정을 확정했으므로 착수 가능하다.
-- 최신 main에서 task/t13-viewing-shortcuts 브랜치를 사용한다. 기존 버튼/명령·입력 차단·T16 숨김/복원 경계를 재사용한다.
+- T13은 PR #20에서 Windows 자동 검증을 마치고 검토를 기다린다. PR이 main에 통합되기 전에는 T13 완료 처리나 후속 Task를 시작하지 않는다.
 - T18A는 감지 기본값과 스캔/종료 직렬화 설계가 남은 Astra 작업이다. 이번에는 T13만 배정하며 T18A 구현을 병렬 시작하지 않는다.
-- 이후 T18A 설계/구현 → T18 배포·통합 검증 순서로 진행한다. T19 VSR은 후순위다.
+- T13 통합 이후의 순서는 T18A 설계/구현 → T18 배포·통합 검증이다. T19 VSR은 후순위다.
 - T15/T16/T17 수동 미검증, T12 실사용 검증 이관, T09/T10/T11 기존 생략 및 AVI 무음 조사 보류를 유지한다.
 
 
@@ -198,10 +197,13 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T13 — 일반 단축키와 전체화면 UX
 
 - 목적: 감상 중 키보드 접근과 전체화면 컨트롤 연결.
-- 담당/상태: Sol / 착수 가능.
+- 담당/상태: Sol / 구현·Windows 자동 검증 완료, PR #20 검토 대기 (main 미통합).
 - 선행: T11/T12; docs/SHORTCUTS_AND_TRAY.md의 T13 로컬 키 배정 확정.
 - 범위/수정 영역: 공통/만화/영상 입력 및 화면 컨트롤.
 - 완료 조건/검증: 페이지·탐색·볼륨·즐겨찾기·삭제·이전/다음·전체화면에서 명령 일관성, 입력 필드 충돌·컨트롤 숨김 확인.
+- 구현: 활성 공통 감상 창에서 확정된 로컬 키를 기존 UI 명령 경로로 연결했다. 입력 컨트롤/IME/모달·Busy·disabled/quarantine 게이트, 키 자동 반복, 기존 만화 표시 모드/확대와 영상 재생·탐색·볼륨 범위를 보존한다. 전체화면은 borderless/maximized이며 3초 유휴 후 컨트롤을 숨기고 마우스/키 활동으로 다시 보인다. Esc 일반 상태는 창 닫기·앱 종료·숨김을 하지 않으며 T16 PrivacyWindows 숨김/복원 뒤 전체화면 상태를 보존한다.
+- 실제 Windows 자동 검증: 코드 `2e633372211839cc55abc7e60178ab3f443c1d97`, Windows Server 2025 10.0.26100 x64 / .NET SDK 10.0.401. T11 전체 viewing workflow와 T03/T07/T09 회귀가 성공했다. T13 시나리오는 favorites/history repeat, comic page/zoom/fit, TextBox/ComboBox/ListBox/Slider/IME, modal/Busy/SaveFailed, fullscreen 공통·만화·영상 컨트롤 자동 숨김/복원, privacy hide/restore/Esc, Space/seek/volume/mute, Delete quarantine/반복/취소/테스트 복사본 1회 삭제를 검사했다. 상세 실행 링크·재시도 이력 및 수동 미검증 범위는 docs/T13_VIEWING_SHORTCUTS_VALIDATION.md.
+- PR: [#20 T13 일반 감상 단축키와 전체화면 UX](https://github.com/danhk0612/Random_Multimedia_Manager/pull/20). 미병합; 후속 Task는 시작하지 않는다.
 - 수정하지 말아야 할 영역: 전역 키·종료/숨김·기록 정책.
 
 ## T14 — 프로그램 생명주기 정책과 상태 설계
