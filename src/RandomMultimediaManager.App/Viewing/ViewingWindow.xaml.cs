@@ -204,7 +204,7 @@ public partial class ViewingWindow : Window
         {
             if (closing || exitRequested) return;
             selectedItemId = id;
-            dialog.DialogResult = true;
+            dialog.Close();
         };
         dialog.Closing += async (_, args) =>
         {

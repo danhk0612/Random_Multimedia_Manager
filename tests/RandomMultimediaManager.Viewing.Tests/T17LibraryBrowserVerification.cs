@@ -47,7 +47,7 @@ internal static class T17LibraryBrowserVerification
                 && viewModel.VisibleItems[0].Item.Id == comic.Id);
 
             var categoryPicker = (ComboBox)browser.FindName("CategoryPicker");
-            categoryPicker.SelectedItem = videoCategory;
+            categoryPicker.SelectedItem = viewModel.Categories.Single(category => category.Id == videoCategory.Id);
             await Wait(() => viewModel.VisibleItems.Count == 1
                 && viewModel.VisibleItems[0].Item.Id == video.Id);
             var fileList = (ListBox)browser.FindName("FileList");

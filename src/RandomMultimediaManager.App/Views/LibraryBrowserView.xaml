@@ -48,10 +48,10 @@
                         <StackPanel Margin="3">
                             <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                             <TextBlock FontSize="11" Foreground="Gray">
-                                <Run Text="{Binding TypeLabel}" /><Run Text=" · " />
-                                <Run Text="{Binding AvailabilityLabel}" /><Run Text=" · " />
-                                <Run Text="{Binding FavoriteLabel}" /><Run Text=" · " />
-                                <Run Text="{Binding ExclusionLabel}" />
+                                <Run Text="{Binding TypeLabel, Mode=OneWay}" /><Run Text=" · " />
+                                <Run Text="{Binding AvailabilityLabel, Mode=OneWay}" /><Run Text=" · " />
+                                <Run Text="{Binding FavoriteLabel, Mode=OneWay}" /><Run Text=" · " />
+                                <Run Text="{Binding ExclusionLabel, Mode=OneWay}" />
                             </TextBlock>
                         </StackPanel>
                     </DataTemplate>

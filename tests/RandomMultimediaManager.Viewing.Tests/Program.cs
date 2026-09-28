@@ -213,6 +213,12 @@ internal static class Program
                 && browserSession.Coordinator.View.ActiveToken == tokenBeforeNoOp
                 && ((TextBlock)browserSession.FindName("Status")).Text == "NoOp",
                 "T17 selecting the current ItemId is a no-op in the active viewing session");
+            var beforeBrowserExit = browserSession.Current;
+            var tokenBeforeBrowserExit = browserSession.Coordinator.View.ActiveToken;
+            await RequestExitWithLibraryOpenAsync(browserSession);
+            Check(ReferenceEquals(browserSession.Current, beforeBrowserExit)
+                && browserSession.Coordinator.View.ActiveToken == tokenBeforeBrowserExit,
+                "T17 exit request closes the library modal without changing the active visit");
             bool browserSessionClosed = false;
             browserSession.Closed += (_, _) => browserSessionClosed = true;
             browserSession.Close();
@@ -285,5 +291,31 @@ internal static class Program
         await Wait(() => !Application.Current.Windows.OfType<Window>()
                 .Any(window => window.Title == "라이브러리에서 파일 선택")
             && ((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
+    }
+
+    private static async Task RequestExitWithLibraryOpenAsync(ViewingWindow host)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            try
+            {
+                _ = Application.Current.Windows.OfType<Window>()
+                    .Single(window => window.Title == "라이브러리에서 파일 선택");
+                host.SetExitRequested(true);
+                completion.SetResult();
+            }
+            catch (Exception ex) { completion.SetException(ex); }
+        };
+        timer.Start();
+        ClickOn(host, "라이브러리에서 열기");
+        await completion.Task;
+        await Wait(() => !Application.Current.Windows.OfType<Window>()
+                .Any(window => window.Title == "라이브러리에서 파일 선택")
+            && !((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
+        host.SetExitRequested(false);
+        await Wait(() => ((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
     }
 }
