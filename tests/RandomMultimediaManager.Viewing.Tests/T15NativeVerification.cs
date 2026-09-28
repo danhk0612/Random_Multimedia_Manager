@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Interop;
 using Microsoft.Data.Sqlite;
 using RandomMultimediaManager.App;
 using RandomMultimediaManager.App.Data;
@@ -10,6 +11,7 @@ using RandomMultimediaManager.App.Deletion;
 using RandomMultimediaManager.App.Lifecycle;
 using RandomMultimediaManager.App.Sessions;
 using RandomMultimediaManager.App.ViewModels;
+using RandomMultimediaManager.App.Video;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
 
@@ -67,8 +69,10 @@ internal static class T15NativeVerification
             var pending = view.Coordinator.View.Pending;
             f.Sql("CREATE TRIGGER t15_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
             Check(!await f.Lifecycle.ExitAsync() && f.Lifecycle.State == LifecycleState.ExitBlocked, "save failure blocks app exit");
-            Check(view.IsVisible && view.Coordinator.View.Pending == pending && f.Removals == 0,
+            Check(!PrivacyWindows.IsWindowVisible(new WindowInteropHelper(view).Handle) && f.Lifecycle.IsPrivacyHidden
+                && view.Coordinator.View.Pending == pending && f.Removals == 0,
                 "blocked exit preserves Pending and restore path");
+            f.Lifecycle.Restore();
             Check(((Button)view.FindName("RetryButton")).IsEnabled && ((Button)view.FindName("ResumeButton")).IsEnabled,
                 "existing retry/resume controls accessible");
             f.Sql("DROP TRIGGER t15_fail;");
@@ -180,15 +184,270 @@ internal static class T15NativeVerification
             Check(await f.Lifecycle.ExitAsync() && scan.IsCompleted && !editor.IsScanning,
                 "exit cancels and awaits scan before DB disposal");
         });
+        await Scenario("T16 restore key collision with healthy tray", async f =>
+        {
+            f.Keys!.Dispose();
+            using var blocker = new GlobalHotKeys(() => { }, () => { });
+            f.RegisterKeys();
+            Check(!f.Keys!.HideRegistered && f.TrayAvailable, "T16 actual restore-key collision with tray available");
+            foreach (bool muted in new[] { false, true })
+            {
+                PreparedVideo.SetPrivacyMuted(muted);
+                f.Lifecycle.HideAll();
+                Check(Visible(f.Main) && !f.Lifecycle.IsPrivacyHidden && PreparedVideo.PrivacyMuted == muted,
+                    "T16 rejected hide leaves visibility and mute unchanged " + muted);
+            }
+            PreparedVideo.SetPrivacyMuted(false);
+            Check(f.Status.Contains("비활성") && f.Status.Contains("등록 실패"), "T16 unavailable hide explains key collision");
+            using var icon = new TrayIcon(f.Lifecycle.Restore, () => { }, f.Lifecycle.TrayUnavailable,
+                f.Lifecycle.ToggleHidden, f.Lifecycle.Privacy, f.Lifecycle.QuickHideUnavailableReason);
+            var menu = (ContextMenu)typeof(TrayIcon).GetField("menu",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(icon)!;
+            menu.RaiseEvent(new RoutedEventArgs(ContextMenu.OpenedEvent));
+            var toggle = menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "모두 숨기기/복원"));
+            Check(!toggle.IsEnabled && toggle.ToolTip is string reason && reason.Contains("등록 실패"),
+                "T16 tray hide disabled with reason when restore key conflicts");
+            f.TrayAvailable = false;
+            f.Lifecycle.TrayUnavailable();
+            Check(Visible(f.Main) && !f.Status.Contains("복원할 수 있습니다"), "T16 combined failure never advertises unregistered key");
+            Check(await f.Lifecycle.ExitAsync(), "T16 both unavailable can still exit normally");
+        });
+        await Scenario("T16 registered key without tray uses visible exit", async f =>
+        {
+            f.TrayAvailable = false;
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var visit = view.Coordinator.View.Pending!.VisitId;
+            f.Lifecycle.HideAll();
+            Check(Visible(view) && !PreparedVideo.PrivacyMuted && f.Status.Contains("트레이 사용 불가"),
+                "T16 missing tray rejects hide despite registered key");
+            var exit = f.Lifecycle.ExitAsync();
+            Check(Visible(view) && !f.Lifecycle.IsPrivacyHidden && !PreparedVideo.PrivacyMuted
+                && f.Status == "복원 키/트레이를 사용할 수 없어 화면을 유지한 채 정상 종료합니다",
+                "T16 visible normal exit explains missing restoration means");
+            Check(ReferenceEquals(exit, f.Lifecycle.ExitAsync()) && await exit, "T16 visible exit uses same single task");
+            using var read = LibraryDatabase.Open(f.DbPath);
+            Check(read.GetHistory(f.Item.Id).Single().VisitId == visit && !f.Keys!.HideRegistered,
+                "T16 visible exit saves original visit and releases key");
+        });
+        await Scenario("T16 both unavailable with save failure", async f =>
+        {
+            f.Keys!.Dispose();
+            using var blocker = new GlobalHotKeys(() => { }, () => { });
+            f.RegisterKeys(); f.TrayAvailable = false;
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var pending = view.Coordinator.View.Pending;
+            f.Sql("CREATE TRIGGER t16_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
+            Check(!await f.Lifecycle.ExitAsync() && f.Lifecycle.State == LifecycleState.ExitBlocked,
+                "T16 combined restore failure preserves save failure");
+            Check(Visible(f.Main) && Visible(view) && !PreparedVideo.PrivacyMuted
+                && view.Coordinator.View.Pending == pending && f.Removals == 0
+                && ((Button)view.FindName("RetryButton")).IsEnabled && ((Button)view.FindName("ResumeButton")).IsEnabled,
+                "T16 no restore means: visible recovery controls and Pending retained");
+            f.Sql("DROP TRIGGER t16_fail;");
+            await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
+            Check(await f.Lifecycle.ExitAsync(), "T16 visible recovery retries normal exit");
+        });
+        await Scenario("T16 both unavailable with modal command", async f =>
+        {
+            f.Keys!.Dispose();
+            using var blocker = new GlobalHotKeys(() => { }, () => { });
+            f.RegisterKeys(); f.TrayAvailable = false;
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            _ = view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
+            await Wait(() => view.OwnedWindows.OfType<DeleteConfirmationWindow>().Any());
+            var confirm = view.OwnedWindows.OfType<DeleteConfirmationWindow>().Single();
+            var exit = f.Lifecycle.ExitAsync();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Check(!exit.IsCompleted && Visible(confirm) && confirm.IsEnabled && Visible(view)
+                && !PreparedVideo.PrivacyMuted && f.OsCalls == 0, "T16 no restore means: modal stays visible and cancellable");
+            confirm.Close();
+            Check(await exit && f.OsCalls == 0, "T16 visible modal cancellation retains deletion boundary");
+        });
+        await Scenario("T16 hidden blocked retry retains real restore key", async f =>
+        {
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            f.Lifecycle.HideAll();
+            f.TrayAvailable = false; f.Lifecycle.TrayUnavailable();
+            Check(!Visible(view) && PreparedVideo.PrivacyMuted && f.Keys!.HideRegistered,
+                "T16 tray re-registration failure keeps privacy and registered key");
+            f.Sql("CREATE TRIGGER t16_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
+            Check(!await f.Lifecycle.ExitAsync() && f.Keys!.HideRegistered && f.Removals == 0,
+                "T16 hidden ExitBlocked retains registered key");
+            var retry = f.Lifecycle.ExitAsync();
+            Check(f.Lifecycle.State == LifecycleState.Closing && f.Keys!.HideRegistered && !Visible(view),
+                "T16 hidden exit retry retains registered key during Closing");
+            f.RestoreKey();
+            Check(Visible(view) && !PreparedVideo.PrivacyMuted, "T16 actual registered key restores during exit retry without tray");
+            Check(!await retry && Visible(view) && f.Keys!.HideRegistered,
+                "T16 repeated save failure retains explicit restoration");
+            f.Sql("DROP TRIGGER t16_fail;");
+            await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
+            Check(await f.Lifecycle.ExitAsync() && !f.Keys!.HideRegistered, "T16 resolved retry releases key only on exit");
+        });
+        await Scenario("T16 late cleanup failure retains restore key", async f =>
+        {
+            f.FailTrayRemoval = true;
+            Check(!await f.Lifecycle.ExitAsync() && f.Lifecycle.State == LifecycleState.ExitBlocked
+                && f.Keys!.HideRegistered && f.Lifecycle.IsPrivacyHidden,
+                "T16 cleanup failure after DB close cannot remove restore key");
+            f.RestoreKey();
+            Check(Visible(f.Main) && !PreparedVideo.PrivacyMuted, "T16 restore still works after cleanup failure");
+            f.FailTrayRemoval = false;
+            f.Icon = new TrayIcon(f.Lifecycle.Restore, () => { }, f.Lifecycle.TrayUnavailable,
+                f.Lifecycle.ToggleHidden, f.Lifecycle.Privacy, f.Lifecycle.QuickHideUnavailableReason);
+            var privacy = f.Lifecycle.Privacy;
+            Check(await f.Lifecycle.ExitAsync() && !f.Keys!.HideRegistered && !f.Keys.ExitRegistered
+                && !f.Icon.Available && !f.Icon.EnsureAvailable(), "T16 normal completion releases keys and tray");
+            var fields = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            Check((bool)typeof(PrivacyWindows).GetField("disposed", fields)!.GetValue(privacy)!
+                && ((System.Collections.Generic.HashSet<IntPtr>)typeof(PrivacyWindows).GetField("attached", fields)!.GetValue(privacy)!).Count == 0,
+                "T16 normal completion disposes privacy hooks and subclasses");
+            using var again = new GlobalHotKeys(() => { }, () => { });
+            Check(again.HideRegistered && again.ExitRegistered, "T16 terminal cleanup permits native key re-registration");
+        });
+        await Scenario("T16 all windows and late native dialogs", async f =>
+        {
+            var keys = f.Keys!;
+            Check(keys.HideRegistered && keys.ExitRegistered, "T16 global key registration");
+            using (var collision = new GlobalHotKeys(() => { }, () => { }))
+                Check(!collision.HideRegistered && !collision.ExitRegistered, "T16 conflicts do not replace registered keys");
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var pending = view.Coordinator.View.Pending;
+            var auxiliary = new Window { Owner = view, Width = 240, Height = 160,
+                WindowStyle = WindowStyle.None, WindowState = WindowState.Maximized };
+            auxiliary.Show();
+            var minimized = new Window { Owner = f.Main, Width = 240, Height = 160 };
+            minimized.Show(); minimized.WindowState = WindowState.Minimized;
+            var originallyHidden = new Window { Owner = f.Main };
+            new WindowInteropHelper(originallyHidden).EnsureHandle();
+            var keySource = (HwndSource)typeof(GlobalHotKeys).GetField("source",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(keys)!;
+            SendMessage(keySource.Handle, 0x312, (IntPtr)1, IntPtr.Zero);
+            f.Lifecycle.HideAll();
+            bool Visible(Window w) => PrivacyWindows.IsWindowVisible(new WindowInteropHelper(w).Handle);
+            Check(!Visible(f.Main) && !Visible(view) && !Visible(auxiliary), "T16 all native windows hidden");
+            Check(view.Coordinator.View.Pending == pending && f.Db.GetHistory(f.Item.Id).Count == 0,
+                "T16 hide preserves Pending and does not commit");
+            var late = new Window { Owner = view, Width = 240, Height = 160 };
+            late.Show();
+            Check(!Visible(late), "T16 late WPF window suppressed before show returns");
+            f.Lifecycle.TrayUnavailable();
+            Check(!Visible(view), "T16 tray re-registration failure does not expose windows");
+            f.Lifecycle.Restore();
+            Check(Visible(view) && Visible(auxiliary) && Visible(late) && !Visible(originallyHidden)
+                && auxiliary.WindowState == WindowState.Maximized && auxiliary.WindowStyle == WindowStyle.None
+                && minimized.WindowState == WindowState.Minimized,
+                "T16 exact visible set and fullscreen preserved");
+            auxiliary.Close(); minimized.Close(); late.Close(); originallyHidden.Close();
+            _ = view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
+            await Wait(() => view.OwnedWindows.OfType<DeleteConfirmationWindow>().Any());
+            var confirm = view.OwnedWindows.OfType<DeleteConfirmationWindow>().Single();
+            f.Lifecycle.ToggleHidden();
+            Check(!Visible(confirm) && f.OsCalls == 0, "T16 modal hide retains confirmation without consent");
+            f.Lifecycle.ToggleHidden();
+            Check(Visible(confirm) && f.OsCalls == 0, "T16 modal restore retains original command");
+            var exit = f.Lifecycle.ExitAsync();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Check(!exit.IsCompleted && !Visible(confirm), "T16 hidden exit waits modal command");
+            f.Lifecycle.Restore();
+            Check(Visible(confirm), "T16 explicit restore during Closing allows cancellation");
+            confirm.Close();
+            Check(await exit && f.OsCalls == 0, "T16 confirmation cancel never authorizes delete");
+            keys.Dispose();
+            using var registeredAgain = new GlobalHotKeys(() => { }, () => { });
+            Check(registeredAgain.HideRegistered && registeredAgain.ExitRegistered, "T16 hotkeys released");
+        });
+        await Scenario("T16 native file picker and late message box", async f =>
+        {
+            foreach (bool late in new[] { false, true })
+            {
+                if (late) f.Lifecycle.HideAll();
+                bool returned = false;
+                _ = f.Main.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (late) MessageBox.Show(f.Main, "T16 late dialog", "T16 native test", MessageBoxButton.OKCancel);
+                    else new Microsoft.Win32.OpenFileDialog { Title = "T16 native test" }.ShowDialog(f.Main);
+                    returned = true;
+                }));
+                IntPtr dialog = IntPtr.Zero;
+                await Wait(() =>
+                {
+                    EnumThreadWindows(GetCurrentThreadId(), (hwnd, _) =>
+                    {
+                        var title = new System.Text.StringBuilder(256);
+                        GetWindowText(hwnd, title, title.Capacity);
+                        if (title.ToString() == "T16 native test") dialog = hwnd;
+                        return true;
+                    }, IntPtr.Zero);
+                    return dialog != IntPtr.Zero;
+                });
+                if (!late) f.Lifecycle.HideAll();
+                Check(!PrivacyWindows.IsWindowVisible(dialog) && !returned, "T16 native dialog hidden, modal loop retained " + late);
+                f.Lifecycle.Restore();
+                Check(PrivacyWindows.IsWindowVisible(dialog) && !returned, "T16 native dialog restored " + late);
+                PostMessage(dialog, 0x10, IntPtr.Zero, IntPtr.Zero);
+                await Wait(() => returned);
+            }
+            Check(await f.Lifecycle.ExitAsync(), "T16 native dialog scenario exit");
+        });
+        await Scenario("T16 tray popup remains reachable while hidden", async f =>
+        {
+            using var icon = new TrayIcon(f.Lifecycle.Restore, () => _ = f.Lifecycle.ExitAsync(),
+                f.Lifecycle.TrayUnavailable, f.Lifecycle.ToggleHidden, f.Lifecycle.Privacy);
+            f.Lifecycle.HideAll();
+            var fields = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            var source = (HwndSource)typeof(TrayIcon).GetField("source", fields)!.GetValue(icon)!;
+            var menu = (ContextMenu)typeof(TrayIcon).GetField("menu", fields)!.GetValue(icon)!;
+            SendMessage(source.Handle, 0x8001, IntPtr.Zero, (IntPtr)0x205);
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Check(menu.IsOpen && PresentationSource.FromVisual(menu) is HwndSource popup
+                && PrivacyWindows.IsWindowVisible(popup.Handle), "T16 native tray popup visible during privacy");
+            Check(!PrivacyWindows.IsWindowVisible(new WindowInteropHelper(f.Main).Handle), "T16 tray popup does not reveal main");
+            menu.IsOpen = false;
+            f.Lifecycle.Restore();
+            Check(await f.Lifecycle.ExitAsync(), "T16 tray popup clean exit");
+        });
+        await Scenario("T16 active DB writer exit", async f =>
+        {
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var writer = Task.Run(async () =>
+            {
+                using var connection = new SqliteConnection($"Data Source={f.DbPath};Pooling=False");
+                connection.Open();
+                using var transaction = connection.BeginTransaction();
+                entered.SetResult(); await release.Task; transaction.Commit();
+            });
+            await entered.Task;
+            var exit = f.Lifecycle.ExitAsync();
+            try
+            {
+                await Task.Delay(150);
+                Check(!exit.IsCompleted && f.Lifecycle.IsPrivacyHidden && f.Exits == 0,
+                    "T16 DB writer wait preserves hidden exit without forced termination");
+            }
+            finally { release.TrySetResult(); await writer; }
+            Check(await exit && f.Exits == 1, "T16 exit completes after DB writer boundary");
+        });
         // The shell may be absent on unattended runners; report that separately, never as a pass.
-        int restored = 0, exited = 0;
-        using var tray = new TrayIcon(() => restored++, () => exited++, () => { });
+        int restored = 0, exited = 0, toggled = 0;
+        using var tray = new TrayIcon(() => restored++, () => exited++, () => { }, () => toggled++);
         if (tray.Available) Check(tray.EnsureAvailable(), "native Shell_NotifyIcon add/modify");
         else Console.WriteLine("UNVERIFIED T15 shell icon display: no notification area on runner");
         var fields = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
         var menu = (ContextMenu)typeof(TrayIcon).GetField("menu", fields)!.GetValue(tray)!;
-        Check(menu.Items.OfType<MenuItem>().Single(i => i.Header.ToString()!.Contains("미구현")).IsEnabled == false,
-            "T16 menu remains disabled");
+        var toggle = menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "모두 숨기기/복원"));
+        toggle.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Check(toggle.IsEnabled && toggled == 1, "T16 menu connected");
         menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "열기/복원"))
             .RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         var source = (System.Windows.Interop.HwndSource)typeof(TrayIcon).GetField("source", fields)!.GetValue(tray)!;
@@ -199,13 +458,21 @@ internal static class T15NativeVerification
         tray.Dispose();
         Check(!tray.Available && !tray.EnsureAvailable(), "tray disposal is idempotent and cannot re-add");
     }
+    private static bool Visible(Window window) => PrivacyWindows.IsWindowVisible(new WindowInteropHelper(window).Handle);
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
+    private delegate bool EnumWindow(IntPtr hwnd, IntPtr data);
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool EnumThreadWindows(uint thread, EnumWindow callback, IntPtr data);
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr hwnd, System.Text.StringBuilder text, int size);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool PostMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam);
     private static async Task Scenario(string name, Func<Fixture, Task> test)
     {
         using var f = new Fixture();
         f.Main.Show(); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
-        await test(f);
+        try { await test(f); }
+        catch (Exception ex) { Console.Error.WriteLine("SCENARIO FAILURE " + name + "\n" + ex); throw; }
         Console.WriteLine("PASS T15 scenario " + name);
     }
     private sealed class FaultJournal(string path) : DeletionJournal(path)
@@ -224,7 +491,20 @@ internal static class T15NativeVerification
         public DeletionService Service;
         public MediaItem Item;
         public int Exits, Removals, OsCalls;
-        public bool TrayAvailable = true;
+        public bool TrayAvailable = true, FailTrayRemoval;
+        public GlobalHotKeys? Keys;
+        public TrayIcon? Icon;
+        public void RegisterKeys()
+        {
+            Keys = new(Lifecycle.ToggleHidden, () => _ = Lifecycle.ExitAsync());
+        }
+        public void RestoreKey()
+        {
+            var source = (HwndSource)typeof(GlobalHotKeys).GetField("source",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(Keys)!;
+            SendMessage(source.Handle, 0x312, (IntPtr)1, IntPtr.Zero);
+        }
+        public string Status => ((TextBlock)Main.FindName("LifecycleStatus")).Text;
         public DeletionOutcome Outcome = DeletionOutcome.Succeeded;
         public TaskCompletionSource? DeleteGate;
         public Fixture()
@@ -249,8 +529,21 @@ internal static class T15NativeVerification
             Journal = new(Path.Combine(root, "journal"));
             Service = new(Db, Journal, async _ => { OsCalls++; if (DeleteGate is not null) await DeleteGate.Task; return new(Outcome); });
             Main = new(Db, Service);
-            Lifecycle = new(Main, Db, Service, () => TrayAvailable, () => Removals++, () => Exits++);
+            Lifecycle = new(Main, Db, Service, () => TrayAvailable, () => Keys?.HideRegistered == true,
+                () =>
+                {
+                    if (FailTrayRemoval) throw new IOException("injected tray cleanup failure");
+                    Icon?.Dispose(); Removals++;
+                },
+                () =>
+                {
+                    Check(Lifecycle!.State == LifecycleState.Exited && !Lifecycle.IsPrivacyHidden
+                        && !PreparedVideo.PrivacyMuted && Removals == 1, "T16 cleanup precedes terminal key release");
+                    Keys?.Dispose(); Exits++;
+                });
             Main.Lifecycle = Lifecycle;
+            RegisterKeys();
+            Check(Keys!.HideRegistered && Keys.ExitRegistered, "T16 fixture owns actual global keys");
         }
         public async Task<RandomMultimediaManager.App.Viewing.ViewingWindow> OpenViewing()
         {
@@ -267,7 +560,7 @@ internal static class T15NativeVerification
         }
         public void Dispose()
         {
-            Main.Lifecycle = null; Main.Close(); Db.Dispose();
+            Icon?.Dispose(); Lifecycle.DisposePrivacy(); Keys?.Dispose(); Main.Lifecycle = null; Main.Close(); Db.Dispose();
             Directory.Delete(root, true);
         }
     }

@@ -45,7 +45,7 @@ public partial class ViewingWindow : Window
             var settings = await Task.Run(database.GetSettings);
             Days.Text = settings.HistoryExclusionDays.ToString();
             ResumeModeBox.SelectedIndex = settings.ResumeMode == ResumeMode.Resume ? 0 : 1;
-        });
+        }, whileHidden: true);
         Closed += (_, _) => timer.Stop();
         timer.Start();
     }
@@ -79,9 +79,9 @@ public partial class ViewingWindow : Window
     }
     // Admission is synchronous; navigation never queues behind another command. A checkpoint
     // already admitted finishes before any transition can capture/commit a later position.
-    private async Task Run(Func<Task> action)
+    private async Task Run(Func<Task> action, bool whileHidden = false)
     {
-        if (busy || closing || exitRequested) return;
+        if (busy || closing || exitRequested || (!whileHidden && PreparedVideo.PrivacyMuted)) return;
         busy = true; Controls();
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         command = completion.Task; // Publish before a modal dialog can pump tray messages.
@@ -232,7 +232,7 @@ public partial class ViewingWindow : Window
                 TimeText.Text = $"{TimeSpan.FromMilliseconds(snapshot.Progress.VideoPositionMs!.Value):hh\\:mm\\:ss} / {TimeSpan.FromMilliseconds(snapshot.DurationMs):hh\\:mm\\:ss}  {snapshot.State}";
             }
             if (DateTime.UtcNow - lastCheckpoint >= TimeSpan.FromSeconds(5))
-            { lastCheckpoint = DateTime.UtcNow; await Run(CheckpointAsync); }
+            { lastCheckpoint = DateTime.UtcNow; await Run(CheckpointAsync, whileHidden: true); }
         }
         catch (Exception ex) { Status.Text = ex.Message; }
     }

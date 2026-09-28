@@ -21,6 +21,12 @@ jobs:
       - run: dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release --no-build
       - run: dotnet run --project tests/RandomMultimediaManager.Data.Tests -c Release --no-build
       - run: dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release
+      - name: Scanner regression scenarios
+        run: |
+          foreach ($scenario in @('basic', 'state', 'cancel', 'access', 'reparse', 'case')) {
+            dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release -- $scenario
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - run: dotnet run --project tests/RandomMultimediaManager.Comic.Tests -c Release
       - run: dotnet run --project tests/RandomMultimediaManager.Video.Tests -c Release
       - run: dotnet run --project tests/RandomMultimediaManager.Subtitle.Tests -c Release

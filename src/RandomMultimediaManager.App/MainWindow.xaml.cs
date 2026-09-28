@@ -40,7 +40,7 @@ public partial class MainWindow : Window
 
     private void OpenComicViewer(object sender, RoutedEventArgs e)
     {
-        if (exitRequested) return;
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
         TraceComicStartup("OpenComicViewer entered");
 
         if (comicViewer is not null)
@@ -81,7 +81,7 @@ public partial class MainWindow : Window
 
     private void OpenViewing(object sender, RoutedEventArgs e)
     {
-        if (exitRequested) return;
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
         if (Viewing is not null) { Viewing.Activate(); return; }
         if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel { IsScanning: true })
         {
@@ -97,7 +97,7 @@ public partial class MainWindow : Window
 
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
     {
-        if (exitRequested) return;
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
         if (videoValidation is not null) { videoValidation.Activate(); return; }
         videoValidation = new Video.VideoValidationWindow { Owner = this };
         videoValidation.Closed += (_, _) => videoValidation = null;
@@ -131,11 +131,11 @@ public partial class MainWindow : Window
     { if (Lifecycle is not null) await Lifecycle.ExitAsync(); }
     private async void RecoverDeletion(object sender, RoutedEventArgs e)
     {
-        if (exitRequested || !recovery.IsCompleted) return;
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true || !recovery.IsCompleted) return;
         async Task Recover()
         {
             await System.Windows.Threading.Dispatcher.Yield();
-            if (exitRequested) return;
+            if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
             await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
         }
         recovery = Recover();

@@ -8,7 +8,7 @@
 - T03: App/Data의 SQLite 직접 접근과 v1 초기화, Core 공통 모델 및 Core.Tests/Data.Tests가 있다. T06은 Core 순수 후보/세션 정책과 App/Sessions 조정자를 구현한다.
 - T08: App/Media/Comic에 T07 `ComicArchive`를 사용하는 준비/활성 분리, 제한 페이지 캐시, SkiaSharp 렌더링과 WPF 만화 뷰어가 있다. T11 ViewingWindow가 기존 표시 콘텐츠와 준비 객체를 연결하고 진행을 저장한다.
 - T09: App/Video에 LibVLC 영상 준비/활성/해제와 별도 WPF 검증 창이 있다. 승인된 계약과 검증 결과는 docs/VIDEO_ENGINE_VALIDATION.md를 따른다. T11 ViewingMedia 어댑터가 T06 조정자와 공통 화면을 연결하며 고정 영상 패널의 HWND를 준비부터 해제까지 유지한다.
-- T15: AppLifecycle/TrayIcon이 메인 X 숨김·복원·일반 정상 종료를 조정한다. 감상 X는 기존 Leave다. 저장/삭제/해제 오류 시 종료를 차단하며 Quick Hide·전역 키는 T16에 남긴다.
+- T15: AppLifecycle/TrayIcon이 메인 X 숨김·복원·일반 정상 종료를 조정한다. 감상 X는 기존 Leave다. 저장/삭제/해제 오류 시 종료를 차단하며 T16은 이 경계에 모든 창 숨김·앱 음소거·전역 키를 연결한다.
 
 T02 계약에 사용자 승인된 VisitCommit 검증값을 보완하고 T03에서 net10.0 Core와 Core.Tests/Data.Tests를 추가했다. App→Core 단방향이며 SQLite/Windows/엔진 의존성은 App 내부에 둔다. 빈 Infrastructure나 역할별 인터페이스는 만들지 않는다.
 
@@ -83,3 +83,7 @@ T12와의 병렬 경계는 삭제 계약을 변경하지 않는다. T12 통합 �
 ## T15 구현 연결
 
 `ViewingWindow.RequestCloseAsync`는 UI 명령과 SessionCoordinator 실행 작업을 기다린 뒤 Leave 결과와 해제 오류를 확인한다. AppLifecycle은 스캔/삭제 복구·보조 창의 비동기 해제까지 기다린 후 DB/트레이/WPF 순서로 종료한다. 저장 실패와 현재 경로 Unknown, 전역 손상 격리, 미완료 성공 삭제는 ExitBlocked로 보존한다. T15 일반 종료에는 즉시 숨김·음소거 단계가 없다. 최소 기본값만 제공하며 옵션 저장/UI와 전역 키는 이번에 추가하지 않는다. 검증/제약은 docs/T15_LIFECYCLE_VALIDATION.md를 따른다.
+
+## T16 구현 연결
+
+`PrivacyWindows`가 UI 스레드의 WPF/네이티브 모달 HWND 표시와 복원 집합을 관리한다. WPF `Hide`로 모달 루프를 종료하지 않는다. `GlobalHotKeys`는 H/Q 전역 키를 개별 등록·해제한다. `PreparedVideo`는 앱 mute 의도를 보존하면서 별도의 비공개 출력 제한을 적용하여 늦은 Ready와 삭제 실패 재열기도 보호한다. DB/세션/삭제 계약은 바꾸지 않는다. T16은 일반 명시적 앱 종료에도 먼저 숨김+음소거를 적용하고 T15의 ExitBlocked 자동 Restore를 제거한다. 실제 검증과 제한은 docs/T16_QUICK_ACTIONS_VALIDATION.md를 따른다.
