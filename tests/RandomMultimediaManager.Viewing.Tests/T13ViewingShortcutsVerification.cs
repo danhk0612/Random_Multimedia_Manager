@@ -33,6 +33,10 @@ internal static class T13ViewingShortcutsVerification
             var videoCategory = new Category(Guid.NewGuid(), "T13 Videos", MediaType.Video);
             database.SaveCategory(comicCategory);
             database.SaveCategory(videoCategory);
+            string sourcePath = Path.GetFullPath(root);
+            string sourceKey = sourcePath.ToUpperInvariant();
+            database.AddSource(new CategorySource(Guid.NewGuid(), comicCategory.Id, sourcePath, sourceKey));
+            database.AddSource(new CategorySource(Guid.NewGuid(), videoCategory.Id, sourcePath, sourceKey));
 
             MediaItem AddItem(Category category, string path)
             {
