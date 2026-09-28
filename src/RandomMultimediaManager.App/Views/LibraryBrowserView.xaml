@@ -97,9 +97,9 @@
                              IsReadOnly="True" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" />
                     <WrapPanel Grid.Row="10" HorizontalAlignment="Right">
                         <Button Content="감상 열기" Click="OpenManual_Click" Margin="0,0,8,0" Padding="12,5"
-                                IsEnabled="{Binding CanOpenSelected}" />
+                                IsEnabled="{Binding CanOpenSelected, Mode=OneWay}" />
                         <Button Content="탐색기에서 위치 열기" Click="ShowInExplorer_Click" Padding="12,5"
-                                IsEnabled="{Binding HasSelectedItem}" />
+                                IsEnabled="{Binding HasSelectedItem, Mode=OneWay}" />
                     </WrapPanel>
                 </Grid>
             </GroupBox>
