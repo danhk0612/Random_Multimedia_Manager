@@ -342,7 +342,7 @@ internal static class T13ViewingShortcutsVerification
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"T13 cleanup close failed: busy={GetField<bool>(window, "busy")}, " +
-                        $"phase={window.Coordinator.View.Phase}, status={window.Status.Text}, closeError={window.CloseError}: {ex}");
+                        $"phase={window.Coordinator.View.Phase}, closeError={window.CloseError}: {ex}");
                 }
             }
             try { Directory.Delete(root, recursive: true); }
