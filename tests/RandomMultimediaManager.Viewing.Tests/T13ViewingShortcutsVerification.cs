@@ -246,10 +246,13 @@ internal static class T13ViewingShortcutsVerification
                 "T13 volume repeat uses the existing range");
 
             var videoSnapshot = videoMedia.Video!.Snapshot(videoMedia.VideoVisit);
-            long seed = videoSnapshot.DurationMs / 2;
+            long seed = 0;
             Check(videoSnapshot.Seekable && videoMedia.Video!.Seek(videoMedia.VideoVisit, seed), "T13 video supports range-limited seek");
+            await Wait(() => Math.Abs(videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Progress.VideoPositionMs!.Value - seed) < 250
+                && videoControlsEnabled(window), "T13 direct test seek reached its starting point");
+            long seekStart = videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Progress.VideoPositionMs!.Value;
             PressKey(window, Key.Right);
-            long afterRight = Math.Min(seed + 5000, videoSnapshot.DurationMs);
+            long afterRight = Math.Min(seekStart + 5000, videoSnapshot.DurationMs);
             await Wait(() => Math.Abs(videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Progress.VideoPositionMs!.Value - afterRight) < 250
                 && videoControlsEnabled(window),
                 "T13 Right seeks forward five seconds within duration");
