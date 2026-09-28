@@ -17,23 +17,24 @@
 | T10 | 외부 SRT/SMI 자막 | Sol | 완료 (사용자 확인, 일부 수동 검증 승인 생략, PR #11) | T09; D07 자막 결정 |
 | T11 | 공통 감상 UI와 진행 위치 연결 | Astra | 완료 — 기본 동작 사용자 확인, 어려운 수동 검사 생략·미검증 (PR #14 main 통합 완료) | T06/T08/T09; T02 이어보기 계약 |
 | T12 | 삭제와 세션 상태 처리 | Astra | 완료 (PR #16 main 통합 완료, 잔여 수동 검증은 기본 완성 후 실사용으로 이관) | T11; D05 |
-| T13 | 일반 단축키와 전체화면 UX | Sol | 대기 | T11/T12; 로컬 키 배정 결정 |
+| T13 | 일반 단축키와 전체화면 UX | Sol | 착수 가능 | T11/T12; 로컬 키 배정 확정, T17 통합 기준 |
 | T14 | 프로그램 생명주기 정책과 상태 설계 | Astra | 설계 완료 (PR #15 main 통합) | T11; D03/D04 |
 | T15 | 트레이 및 창 동작 | Astra | 구현·Windows 자동 검증 완료 (PR #17 main 통합, 사용자 Windows 확인 대기) | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
-| T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 검토 대기) | T11; T02 수동 방문 계약 |
+| T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
 | T18A | 변경 감지와 경로 상태 갱신 | Astra | 대기 | T05/T12; T02 식별 계약 |
 | T18 | Windows 배포 및 통합 검증 | Astra | 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 바로 다음 작업
 
-T16 PR #18은 main에 통합됐다. 복원 키·트레이 복합 실패 보완과 Windows 자동 검증 4개 성공을 확인했으며, 실제 키보드/트레이 클릭·Explorer 재시작·화면 순간 노출·스피커 청취는 미검증으로 유지한다. T17은 PR #19 검토 대기다.
+T17 PR #19 main 통합 완료. 최신 PR 코드의 Windows 자동 검증 4개 성공을 확인했다. 실제 Explorer 표시와 사용자 클릭은 미검증으로 유지한다.
 
-- T17 구현 브랜치 `task/t17-library-browser`, PR #19. 기준 main에서 시작했고 T16 #18 통합을 확인했다. 상세 구현·Windows 자동/수동 미검증 구분은 docs/T17_LIBRARY_BROWSER_VALIDATION.md를 따른다.
-- 기존 GetItems/GetHistory/GetProgress 및 SessionCoordinator.OpenManualAsync를 사용하고, 공통 감상 호스트에 필요한 최소 UI 진입만 연결한다. DB 스키마·공통 세션 계약·생명주기 정책을 변경해야 한다면 Astra 검토 대상으로 보고한다.
-- T17 통합 뒤 T13의 로컬 키 배정과 T18A의 시작/실행 중 감지 기본값·종료/스캔 직렬화 설계를 재검토한다. 이 변경에서는 다음 Task를 구현하지 않는다.
-- T15/T16 수동 미검증, T12 실사용 검증 이관, T09/T10/T11 기존 생략 및 AVI 무음 조사 보류를 유지한다.
+- 다음은 T13 일반 단축키와 전체화면 UX — Sol 구현 작업. docs/SHORTCUTS_AND_TRAY.md의 T13 로컬 키 배정을 확정했으므로 착수 가능하다.
+- 최신 main에서 task/t13-viewing-shortcuts 브랜치를 사용한다. 기존 버튼/명령·입력 차단·T16 숨김/복원 경계를 재사용한다.
+- T18A는 감지 기본값과 스캔/종료 직렬화 설계가 남은 Astra 작업이다. 이번에는 T13만 배정하며 T18A 구현을 병렬 시작하지 않는다.
+- 이후 T18A 설계/구현 → T18 배포·통합 검증 순서로 진행한다. T19 VSR은 후순위다.
+- T15/T16/T17 수동 미검증, T12 실사용 검증 이관, T09/T10/T11 기존 생략 및 AVI 무음 조사 보류를 유지한다.
 
 
 ## T00 — 초기 기반 정리
@@ -197,8 +198,8 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T13 — 일반 단축키와 전체화면 UX
 
 - 목적: 감상 중 키보드 접근과 전체화면 컨트롤 연결.
-- 담당/상태: Sol / 대기.
-- 선행: T11/T12; 로컬 키 배정 결정.
+- 담당/상태: Sol / 착수 가능.
+- 선행: T11/T12; docs/SHORTCUTS_AND_TRAY.md의 T13 로컬 키 배정 확정.
 - 범위/수정 영역: 공통/만화/영상 입력 및 화면 컨트롤.
 - 완료 조건/검증: 페이지·탐색·볼륨·즐겨찾기·삭제·이전/다음·전체화면에서 명령 일관성, 입력 필드 충돌·컨트롤 숨김 확인.
 - 수정하지 말아야 할 영역: 전역 키·종료/숨김·기록 정책.
@@ -236,7 +237,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T17 — 최소 라이브러리 탐색 및 파일 정보
 
 - 목적: 분류별 파일 탐색과 정리 보조.
-- 담당/상태: Sol / 구현·Windows 자동 검증 완료, PR #19 검토 대기.
+- 담당/상태: Sol / 구현·Windows 자동 검증 완료, PR #19 main 통합 완료.
 - 선행: T11; T02 수동 방문 계약. T12/T15/T16 통합된 최신 main을 사용한다.
 - 범위/수정 영역: 라이브러리 화면·파일 정보·탐색기 연결.
 - 완료 조건/검증: 파일명 검색·즐겨찾기/제외/감상 필터·수동 열기·정보/경로 열기 검증; 메인 랜덤 흐름 유지.
@@ -244,7 +245,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - `task/t17-library-browser` / PR #19는 T16 PR #18 통합 후 최신 main에서 시작했다. 기존 snapshot/progress API와 ViewingWindow의 Run/Navigate/SessionCoordinator 수동 열기를 재사용하며 DB 스키마·공통 세션 계약·저장/세션/삭제/숨김/종료 의미는 변경하지 않았다.
 - Windows x64 10.0.26100 / .NET SDK 10.0.401 Release 검증 커밋 `5d4a33d84ae44fa5a134fc886097ed5b631e1295`: [T11 WPF/세션·만화/영상/자막 통합 36397417863](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417863), [T03 저장·시작/종료 36397417840](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417840), [T06 세션 36397417902](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417902), [T09 영상 36397417777](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417777) 모두 성공했다. Release 빌드 경고 0·오류 0.
 - 자동 검증은 분류/검색/즐겨찾기·랜덤 제외·감상/미감상·Missing·정보·진행 위치, 저장 상태 무변경, 한글/공백 Explorer 인수와 인덱스 후 파일 제거 차단, 최근 감상·제외·비활성 분류 수동 열기, 정상 방문 저장·Forward 보존·동일 ItemId no-op, 종료 중 열린 라이브러리 모달까지 다룬다. Explorer UI의 실제 프로세스/창 표시와 사람의 Windows UI 조작은 미검증이다. T15/T16 등 과거 수동 미검증은 유지한다.
-- 구현·검증·남은 사용자 확인: docs/T17_LIBRARY_BROWSER_VALIDATION.md. PR #19는 열려 있으며 main에 직접 병합하지 않는다.
+- 구현·검증·남은 사용자 확인: docs/T17_LIBRARY_BROWSER_VALIDATION.md. PR #19 main 통합 완료. 사용자 수동 미검증은 유지한다.
 
 ## T18A — 변경 감지와 경로 상태 갱신
 
@@ -273,34 +274,28 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 완료 조건/검증: 공식 SDK/GPU/드라이버 조건, 현재 출력 결합 가능성·성능/복사비용·색/HDR·일반 재생 복귀 검증; 통합 여부와 별도 구현 Task 제안.
 - 수정하지 말아야 할 영역: 초기 엔진 선제 교체·검증 없이 VSR 지원 표기.
 
-## T17 새 Sol 작업 시작 지시문
+## T13 새 Sol 작업 시작 지시문
 
 ```text
-GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T17만 진행해.
+GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T13만 진행해.
 
-AI_WORKFLOW.md 순서대로 최신 main/Git/PR 상태와 PROJECT/REQUIREMENTS/ARCHITECTURE/CURRENT_STATE/TASKS, docs/DATA_AND_RANDOM_POLICY.md의 수동 방문 계약, SHORTCUTS_AND_TRAY 및 T16 검증 문서를 읽어.
-T16 PR #18 통합을 확인하고 task/t17-library-browser 별도 브랜치를 사용해. 다른 작업/미커밋 변경을 보존해.
+최신 main에서 AI_WORKFLOW.md를 따라 Git/PR 상태와 PROJECT/REQUIREMENTS/ARCHITECTURE/CURRENT_STATE/TASKS를 확인해. T17 PR #19 통합을 확인하고 task/t13-viewing-shortcuts 별도 브랜치를 사용해.
+docs/SHORTCUTS_AND_TRAY.md의 T13 로컬 키 배정·입력 충돌/반복 정책, DECISIONS D04, 기존 ViewingWindow/만화·영상 명령과 T16 PrivacyWindows를 읽어.
 
-목적: 분류별 파일을 찾아 정보를 확인하고 기존 자체 감상 화면에서 수동으로 연다.
+목적: 활성 공통 감상 창에서 확정된 일반 조작과 전체화면을 키보드로 사용할 수 있게 한다.
 범위:
-- 분류별 파일 목록, 파일명 검색, 즐겨찾기/영구 랜덤 제외/감상 여부 필터를 구현해. 기존 저장 상태만 사용하고 필터를 데이터 변경으로 해석하지 마.
-- 파일명·경로·미디어 타입·존재 상태·저장된 크기·최근 감상/진행 등 기존 데이터로 제공 가능한 정보를 표시해. 새로운 메타데이터 추출/DB 컬럼을 추가하지 마.
-- 탐색기에서 파일 위치 열기를 연결해. 공백·한글 경로를 처리하고 파일 부재를 정상 열기로 표시하지 마.
-- 수동 열기는 기존 SessionCoordinator.OpenManualAsync를 사용하고 ViewingWindow의 Run/Navigate와 Busy·숨김·종료 차단을 거치게 해. Coordinator를 UI 밖에서 바로 호출해 직렬화 경계를 우회하지 마.
-- 기존 감상 호스트에 최소 진입점을 연결해. 수동 세션의 빈 랜덤 분류 집합, 같은 ItemId no-op, cursor 뒤 삽입/Forward 보존, Resume·실패 시 기존 방문 보존은 기존 계약을 따른다.
-- 최근 감상/영구 랜덤 제외/비활성 분류·소스 때문에 수동 열기를 랜덤 후보 규칙으로 차단하지 마. 삭제 격리 및 실제 열기 실패 처리는 기존 계약을 따른다.
-- 메인 분류 선택→랜덤 감상 흐름을 유지해. 목록 열람 때 전체 디스크 재스캔이나 미디어 디코딩을 수행하지 마. 기존 읽기 API를 사용하고 필요한 목록 가상화·비동기 로딩으로 UI가 멈추지 않게 해.
-- 새 창/진입점은 T15/T16 종료 대기·PrivacyWindows 숨김과 BlocksNewCommands 계약에 포함해. UI 조회가 끝나기 전에 DB가 종료되거나 닫힌 화면에 늦은 결과가 반영되지 않게 기존 수명 경계에 연결해.
+- T13 표의 키만 구현하고 기존 버튼과 같은 명령 경로를 사용해. Run/Navigate·Busy·삭제 확인·저장 실패·숨김/종료 차단을 우회하지 마.
+- 텍스트/숫자 입력·IME·선택 상자·목록/슬라이더·모달의 키 처리를 보존하고, 처리한 키만 소비해. 자동 반복으로 삭제창/방문/토글이 중복 실행되지 않게 해.
+- F11 전체화면과 Esc 해제를 기존 창 상태 및 T16 숨김/복원과 연결해. Esc를 일반 닫기나 빠른 종료로 바꾸지 마.
+- 만화/영상 타입에 맞는 키만 적용해. 기존 재생·페이지·확대·볼륨 범위를 유지하고 엔진/DB/세션 API를 바꾸지 마.
 
 완료 조건:
-Windows x64/.NET 10 Release 빌드, 분류/검색/각 필터와 빈 목록·Missing 표시, 정보·탐색기 위치 열기, 만화/영상 수동 감상을 검증해.
-최근 기록/영구 제외 항목 수동 열기, 같은 항목 no-op 및 기존 Forward 보존, 이어보기, 열기 실패/삭제 격리, 스캔·감상 전환, 목록 로딩/모달·전체화면 중 숨김/종료 회귀를 확인해.
-자동 검증/사용자 확인/미검증을 구분하고 과거 수동 미검증을 통과로 바꾸지 마.
+Windows x64/.NET 10 Release 빌드와 키→기존 명령 연결, 입력 컨트롤/IME·모달 충돌, 반복 입력·Busy·저장 실패/삭제 격리에서 우회 없음, 만화/영상 타입별 조작, 전체화면→숨김→복원→Esc의 상태 보존을 검증해.
+Delete는 테스트 복사본에서 확인/취소 및 한 번만 실행되는지 확인해. 영향을 받은 감상·세션·T15/T16/T17 회귀를 수행하고 자동/사용자/미검증을 구분해.
 
-금지:
-DB 스키마·공통 모델/세션 계약·기록 의미·삭제 저널·생명주기 정책 변경, 기록 초기화, 고급 태그/통계/중복 분석, 일반 단축키(T13), 자동 감지(T18A), VSR, AVI 무음 조사, 무관한 리팩터링.
-필요한 최소 UI 연결을 넘어 공통 계약 변경이 필요하면 구현을 확대하지 말고 이유/영향을 Astra 대상으로 보고해.
+금지: 전역 키·빠른 종료/숨김 정책 변경, DB 스키마·공통 세션·삭제/기록 의미 변경, 키 설정/녹화 UI, 단독 검증 창 일괄 확장, T18A 자동 감지, VSR, AVI 무음 조사, 무관한 리팩터링.
+공통 계약 변경이 필요하면 근거/영향을 Astra 검토 대상으로 보고하고 임의 변경하지 마.
 
-CURRENT_STATE/TASKS와 실제 영향 문서만 갱신하고 커밋·PR·검증 결과·남은 제약을 보고해.
+CURRENT_STATE/TASKS와 실제 영향 문서를 갱신하고 커밋·PR·검증 결과·남은 제약을 보고해.
 직접 병합하거나 다음 Task를 구현하지 마.
 ```
