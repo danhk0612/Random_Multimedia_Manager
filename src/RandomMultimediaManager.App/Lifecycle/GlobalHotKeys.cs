@@ -8,8 +8,8 @@ public sealed class GlobalHotKeys : IDisposable
     private readonly HwndSource source;
     private readonly Action hide, exit;
     private bool disposed;
-    public bool HideRegistered { get; }
-    public bool ExitRegistered { get; }
+    public bool HideRegistered { get; private set; }
+    public bool ExitRegistered { get; private set; }
     public GlobalHotKeys(Action hide, Action exit)
     {
         this.hide = hide; this.exit = exit;
@@ -33,6 +33,7 @@ public sealed class GlobalHotKeys : IDisposable
         if (disposed) return;
         if (HideRegistered) UnregisterHotKey(source.Handle, 1);
         if (ExitRegistered) UnregisterHotKey(source.Handle, 2);
+        HideRegistered = false; ExitRegistered = false;
         disposed = true;
         source.RemoveHook(Message); source.Dispose();
     }

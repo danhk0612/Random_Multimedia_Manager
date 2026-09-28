@@ -25,22 +25,28 @@ public partial class App : Application
             var main = new MainWindow(Database, Deletions);
             MainWindow = main;
             Lifecycle = new(main, Database, Deletions, () => tray?.EnsureAvailable() == true,
-                () => { keys?.Dispose(); tray?.Dispose(); }, () => Shutdown());
+                () => keys?.HideRegistered == true, () => tray?.Dispose(), () => Shutdown());
             main.Lifecycle = Lifecycle;
             main.Show();
+            var unavailable = new List<string>();
+            // Independent attempts: tray construction failure must not skip key registration.
+            try
+            {
+                keys = new(Lifecycle.ToggleHidden, () => _ = Lifecycle.ExitAsync());
+                if (!keys.HideRegistered) unavailable.Add("Ctrl+Shift+H 모두 숨기기/복원 등록 실패");
+                if (!keys.ExitRegistered) unavailable.Add("Ctrl+Shift+Q 빠른 종료 등록 실패");
+            }
+            catch (Exception ex) { unavailable.Add("전역 키 등록 실패: " + ex.Message); }
             try
             {
                 tray = new(Lifecycle.Restore, () => _ = Lifecycle.ExitAsync(), Lifecycle.TrayUnavailable,
-                    Lifecycle.ToggleHidden, Lifecycle.Privacy);
-                keys = new(Lifecycle.ToggleHidden, () => _ = Lifecycle.ExitAsync());
-                var unavailable = new List<string>();
-                if (!keys.HideRegistered) unavailable.Add("Ctrl+Shift+H 모두 숨기기/복원");
-                if (!keys.ExitRegistered) unavailable.Add("Ctrl+Shift+Q 빠른 종료");
-                main.ShowLifecycleError(unavailable.Count == 0
-                    ? "Ctrl+Shift+H 모두 숨기기/복원 · Ctrl+Shift+Q 빠른 종료"
-                    : "전역 키 등록 실패 (해당 키 비활성): " + string.Join(", ", unavailable));
+                    Lifecycle.ToggleHidden, Lifecycle.Privacy, Lifecycle.QuickHideUnavailableReason);
             }
-            catch (Exception ex) { main.ShowLifecycleError("트레이 생성 실패: " + ex.Message); }
+            catch (Exception ex) { unavailable.Add("트레이 생성 실패: " + ex.Message); }
+            if (Lifecycle.QuickHideUnavailableReason() is { } reason) unavailable.Add(reason);
+            main.ShowLifecycleError(unavailable.Count == 0
+                ? "Ctrl+Shift+H 모두 숨기기/복원 · Ctrl+Shift+Q 빠른 종료"
+                : string.Join(" · ", unavailable));
         }
         catch (Exception ex)
         {
@@ -52,10 +58,12 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        keys?.Dispose();
+        // Normal exit already completed DB/tray/hook cleanup in AppLifecycle.
+        // Keep the restoration key until all potentially failing cleanup is past.
+        Database?.Dispose();
         tray?.Dispose();
         Lifecycle?.DisposePrivacy();
-        Database?.Dispose();
+        keys?.Dispose();
         base.OnExit(e);
     }
 }

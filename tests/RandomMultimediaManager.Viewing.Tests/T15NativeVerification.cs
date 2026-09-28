@@ -11,6 +11,7 @@ using RandomMultimediaManager.App.Deletion;
 using RandomMultimediaManager.App.Lifecycle;
 using RandomMultimediaManager.App.Sessions;
 using RandomMultimediaManager.App.ViewModels;
+using RandomMultimediaManager.App.Video;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
 
@@ -183,9 +184,135 @@ internal static class T15NativeVerification
             Check(await f.Lifecycle.ExitAsync() && scan.IsCompleted && !editor.IsScanning,
                 "exit cancels and awaits scan before DB disposal");
         });
+        await Scenario("T16 restore key collision with healthy tray", async f =>
+        {
+            f.Keys!.Dispose();
+            using var blocker = new GlobalHotKeys(() => { }, () => { });
+            f.RegisterKeys();
+            Check(!f.Keys!.HideRegistered && f.TrayAvailable, "T16 actual restore-key collision with tray available");
+            foreach (bool muted in new[] { false, true })
+            {
+                PreparedVideo.SetPrivacyMuted(muted);
+                f.Lifecycle.HideAll();
+                Check(Visible(f.Main) && !f.Lifecycle.IsPrivacyHidden && PreparedVideo.PrivacyMuted == muted,
+                    "T16 rejected hide leaves visibility and mute unchanged " + muted);
+            }
+            PreparedVideo.SetPrivacyMuted(false);
+            Check(f.Status.Contains("비활성") && f.Status.Contains("등록 실패"), "T16 unavailable hide explains key collision");
+            using var icon = new TrayIcon(f.Lifecycle.Restore, () => { }, f.Lifecycle.TrayUnavailable,
+                f.Lifecycle.ToggleHidden, f.Lifecycle.Privacy, f.Lifecycle.QuickHideUnavailableReason);
+            var menu = (ContextMenu)typeof(TrayIcon).GetField("menu",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(icon)!;
+            menu.RaiseEvent(new RoutedEventArgs(ContextMenu.OpenedEvent));
+            var toggle = menu.Items.OfType<MenuItem>().Single(i => Equals(i.Header, "모두 숨기기/복원"));
+            Check(!toggle.IsEnabled && toggle.ToolTip is string reason && reason.Contains("등록 실패"),
+                "T16 tray hide disabled with reason when restore key conflicts");
+            f.TrayAvailable = false;
+            f.Lifecycle.TrayUnavailable();
+            Check(Visible(f.Main) && !f.Status.Contains("복원할 수 있습니다"), "T16 combined failure never advertises unregistered key");
+            Check(await f.Lifecycle.ExitAsync(), "T16 both unavailable can still exit normally");
+        });
+        await Scenario("T16 registered key without tray uses visible exit", async f =>
+        {
+            f.TrayAvailable = false;
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var visit = view.Coordinator.View.Pending!.VisitId;
+            f.Lifecycle.HideAll();
+            Check(Visible(view) && !PreparedVideo.PrivacyMuted && f.Status.Contains("트레이 사용 불가"),
+                "T16 missing tray rejects hide despite registered key");
+            var exit = f.Lifecycle.ExitAsync();
+            Check(Visible(view) && !f.Lifecycle.IsPrivacyHidden && !PreparedVideo.PrivacyMuted
+                && f.Status == "복원 키/트레이를 사용할 수 없어 화면을 유지한 채 정상 종료합니다",
+                "T16 visible normal exit explains missing restoration means");
+            Check(ReferenceEquals(exit, f.Lifecycle.ExitAsync()) && await exit, "T16 visible exit uses same single task");
+            using var read = LibraryDatabase.Open(f.DbPath);
+            Check(read.GetHistory(f.Item.Id).Single().VisitId == visit && !f.Keys!.HideRegistered,
+                "T16 visible exit saves original visit and releases key");
+        });
+        await Scenario("T16 both unavailable with save failure", async f =>
+        {
+            f.Keys!.Dispose();
+            using var blocker = new GlobalHotKeys(() => { }, () => { });
+            f.RegisterKeys(); f.TrayAvailable = false;
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            var pending = view.Coordinator.View.Pending;
+            f.Sql("CREATE TRIGGER t16_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
+            Check(!await f.Lifecycle.ExitAsync() && f.Lifecycle.State == LifecycleState.ExitBlocked,
+                "T16 combined restore failure preserves save failure");
+            Check(Visible(f.Main) && Visible(view) && !PreparedVideo.PrivacyMuted
+                && view.Coordinator.View.Pending == pending && f.Removals == 0
+                && ((Button)view.FindName("RetryButton")).IsEnabled && ((Button)view.FindName("ResumeButton")).IsEnabled,
+                "T16 no restore means: visible recovery controls and Pending retained");
+            f.Sql("DROP TRIGGER t16_fail;");
+            await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
+            Check(await f.Lifecycle.ExitAsync(), "T16 visible recovery retries normal exit");
+        });
+        await Scenario("T16 both unavailable with modal command", async f =>
+        {
+            f.Keys!.Dispose();
+            using var blocker = new GlobalHotKeys(() => { }, () => { });
+            f.RegisterKeys(); f.TrayAvailable = false;
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            _ = view.Dispatcher.BeginInvoke(new Action(() => ((Button)view.FindName("DeleteButton"))
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent))));
+            await Wait(() => view.OwnedWindows.OfType<DeleteConfirmationWindow>().Any());
+            var confirm = view.OwnedWindows.OfType<DeleteConfirmationWindow>().Single();
+            var exit = f.Lifecycle.ExitAsync();
+            await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+            Check(!exit.IsCompleted && Visible(confirm) && confirm.IsEnabled && Visible(view)
+                && !PreparedVideo.PrivacyMuted && f.OsCalls == 0, "T16 no restore means: modal stays visible and cancellable");
+            confirm.Close();
+            Check(await exit && f.OsCalls == 0, "T16 visible modal cancellation retains deletion boundary");
+        });
+        await Scenario("T16 hidden blocked retry retains real restore key", async f =>
+        {
+            var view = await f.OpenViewing();
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            f.Lifecycle.HideAll();
+            f.TrayAvailable = false; f.Lifecycle.TrayUnavailable();
+            Check(!Visible(view) && PreparedVideo.PrivacyMuted && f.Keys!.HideRegistered,
+                "T16 tray re-registration failure keeps privacy and registered key");
+            f.Sql("CREATE TRIGGER t16_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
+            Check(!await f.Lifecycle.ExitAsync() && f.Keys!.HideRegistered && f.Removals == 0,
+                "T16 hidden ExitBlocked retains registered key");
+            var retry = f.Lifecycle.ExitAsync();
+            Check(f.Lifecycle.State == LifecycleState.Closing && f.Keys!.HideRegistered && !Visible(view),
+                "T16 hidden exit retry retains registered key during Closing");
+            f.RestoreKey();
+            Check(Visible(view) && !PreparedVideo.PrivacyMuted, "T16 actual registered key restores during exit retry without tray");
+            Check(!await retry && Visible(view) && f.Keys!.HideRegistered,
+                "T16 repeated save failure retains explicit restoration");
+            f.Sql("DROP TRIGGER t16_fail;");
+            await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
+            Check(await f.Lifecycle.ExitAsync() && !f.Keys!.HideRegistered, "T16 resolved retry releases key only on exit");
+        });
+        await Scenario("T16 late cleanup failure retains restore key", async f =>
+        {
+            f.FailTrayRemoval = true;
+            Check(!await f.Lifecycle.ExitAsync() && f.Lifecycle.State == LifecycleState.ExitBlocked
+                && f.Keys!.HideRegistered && f.Lifecycle.IsPrivacyHidden,
+                "T16 cleanup failure after DB close cannot remove restore key");
+            f.RestoreKey();
+            Check(Visible(f.Main) && !PreparedVideo.PrivacyMuted, "T16 restore still works after cleanup failure");
+            f.FailTrayRemoval = false;
+            f.Icon = new TrayIcon(f.Lifecycle.Restore, () => { }, f.Lifecycle.TrayUnavailable,
+                f.Lifecycle.ToggleHidden, f.Lifecycle.Privacy, f.Lifecycle.QuickHideUnavailableReason);
+            var privacy = f.Lifecycle.Privacy;
+            Check(await f.Lifecycle.ExitAsync() && !f.Keys!.HideRegistered && !f.Keys.ExitRegistered
+                && !f.Icon.Available && !f.Icon.EnsureAvailable(), "T16 normal completion releases keys and tray");
+            var fields = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            Check((bool)typeof(PrivacyWindows).GetField("disposed", fields)!.GetValue(privacy)!
+                && ((System.Collections.Generic.HashSet<IntPtr>)typeof(PrivacyWindows).GetField("attached", fields)!.GetValue(privacy)!).Count == 0,
+                "T16 normal completion disposes privacy hooks and subclasses");
+            using var again = new GlobalHotKeys(() => { }, () => { });
+            Check(again.HideRegistered && again.ExitRegistered, "T16 terminal cleanup permits native key re-registration");
+        });
         await Scenario("T16 all windows and late native dialogs", async f =>
         {
-            using var keys = new GlobalHotKeys(f.Lifecycle.ToggleHidden, () => _ = f.Lifecycle.ExitAsync());
+            var keys = f.Keys!;
             Check(keys.HideRegistered && keys.ExitRegistered, "T16 global key registration");
             using (var collision = new GlobalHotKeys(() => { }, () => { }))
                 Check(!collision.HideRegistered && !collision.ExitRegistered, "T16 conflicts do not replace registered keys");
@@ -331,6 +458,7 @@ internal static class T15NativeVerification
         tray.Dispose();
         Check(!tray.Available && !tray.EnsureAvailable(), "tray disposal is idempotent and cannot re-add");
     }
+    private static bool Visible(Window window) => PrivacyWindows.IsWindowVisible(new WindowInteropHelper(window).Handle);
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
     private delegate bool EnumWindow(IntPtr hwnd, IntPtr data);
@@ -363,7 +491,20 @@ internal static class T15NativeVerification
         public DeletionService Service;
         public MediaItem Item;
         public int Exits, Removals, OsCalls;
-        public bool TrayAvailable = true;
+        public bool TrayAvailable = true, FailTrayRemoval;
+        public GlobalHotKeys? Keys;
+        public TrayIcon? Icon;
+        public void RegisterKeys()
+        {
+            Keys = new(Lifecycle.ToggleHidden, () => _ = Lifecycle.ExitAsync());
+        }
+        public void RestoreKey()
+        {
+            var source = (HwndSource)typeof(GlobalHotKeys).GetField("source",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(Keys)!;
+            SendMessage(source.Handle, 0x312, (IntPtr)1, IntPtr.Zero);
+        }
+        public string Status => ((TextBlock)Main.FindName("LifecycleStatus")).Text;
         public DeletionOutcome Outcome = DeletionOutcome.Succeeded;
         public TaskCompletionSource? DeleteGate;
         public Fixture()
@@ -388,8 +529,21 @@ internal static class T15NativeVerification
             Journal = new(Path.Combine(root, "journal"));
             Service = new(Db, Journal, async _ => { OsCalls++; if (DeleteGate is not null) await DeleteGate.Task; return new(Outcome); });
             Main = new(Db, Service);
-            Lifecycle = new(Main, Db, Service, () => TrayAvailable, () => Removals++, () => Exits++);
+            Lifecycle = new(Main, Db, Service, () => TrayAvailable, () => Keys?.HideRegistered == true,
+                () =>
+                {
+                    if (FailTrayRemoval) throw new IOException("injected tray cleanup failure");
+                    Icon?.Dispose(); Removals++;
+                },
+                () =>
+                {
+                    Check(Lifecycle!.State == LifecycleState.Exited && !Lifecycle.IsPrivacyHidden
+                        && !PreparedVideo.PrivacyMuted && Removals == 1, "T16 cleanup precedes terminal key release");
+                    Keys?.Dispose(); Exits++;
+                });
             Main.Lifecycle = Lifecycle;
+            RegisterKeys();
+            Check(Keys!.HideRegistered && Keys.ExitRegistered, "T16 fixture owns actual global keys");
         }
         public async Task<RandomMultimediaManager.App.Viewing.ViewingWindow> OpenViewing()
         {
@@ -406,7 +560,7 @@ internal static class T15NativeVerification
         }
         public void Dispose()
         {
-            Lifecycle.DisposePrivacy(); Main.Lifecycle = null; Main.Close(); Db.Dispose();
+            Icon?.Dispose(); Lifecycle.DisposePrivacy(); Keys?.Dispose(); Main.Lifecycle = null; Main.Close(); Db.Dispose();
             Directory.Delete(root, true);
         }
     }

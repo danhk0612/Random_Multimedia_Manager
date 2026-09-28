@@ -19,7 +19,8 @@ public sealed class TrayIcon : IDisposable
     private readonly PrivacyWindows? privacyWindows;
     public bool Available { get; private set; }
 
-    public TrayIcon(Action restore, Action exit, Action unavailable, Action? toggleHidden = null, PrivacyWindows? privacy = null)
+    public TrayIcon(Action restore, Action exit, Action unavailable, Action? toggleHidden = null, PrivacyWindows? privacy = null,
+        Func<string?>? quickHideUnavailableReason = null)
     {
         this.restore = restore;
         this.unavailable = unavailable;
@@ -38,7 +39,15 @@ public sealed class TrayIcon : IDisposable
         open.Click += (_, _) => restore();
         menu.Items.Add(open);
         var toggle = new MenuItem { Header = "모두 숨기기/복원", IsEnabled = toggleHidden is not null };
+        void RefreshToggle()
+        {
+            var reason = quickHideUnavailableReason?.Invoke();
+            toggle.IsEnabled = toggleHidden is not null && reason is null;
+            toggle.ToolTip = reason;
+            ToolTipService.SetShowOnDisabled(toggle, true);
+        }
         toggle.Click += (_, _) => toggleHidden?.Invoke();
+        menu.Opened += (_, _) => RefreshToggle();
         menu.Items.Add(toggle);
         menu.Items.Add(new Separator());
         var quit = new MenuItem { Header = "종료" };
