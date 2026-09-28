@@ -25,6 +25,7 @@
 | 영상 엔진·WPF 검증 호스트 | T09 완료 (잔여 수동 검증 사용자 승인 생략, PR #8 main 통합 완료) |
 | 즐겨찾기·영구 제외·이번 제외·삭제 | T06 후보/이번 방문 억제·삭제 결과 전이 구현; 공통 UI는 T11 구현·자동 검증 통과, 실제 삭제는 T12 |
 | 단축키·트레이·빠른 숨김/종료 | T15 PR #17 main 통합. T16 모두 숨김·앱 mute/복원·전역 키·빠른 정상 종료 구현 (PR #18 main 통합), Windows 자동 검증 완료·수동 미검증 |
+| 일반 감상 단축키·전체화면 | T13 구현·Windows 자동 검증 완료, PR #20 검토 대기; 실제 사용자 키 입력/화면 확인은 미실시 |
 | VSR | 후순위, 가능성 미검증 |
 
 ## T12 삭제·복구 구현
@@ -35,6 +36,14 @@
 - Windows 실행 근거: [T11/T12 감상·삭제 및 만화/영상/자막 회귀 35549911943](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911943), [T03 저장 35549911940](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911940), [T05 스캔 35549911953](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911953), [T06 세션 35549911980](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911980), [T09 영상 35549911936](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/35549911936).
 - 2026-09-21 사용자 지시에 따라 T12를 완료 처리한다. 사용자 Windows 삭제 UI 수동 검증은 미실시이며 기본 완성 후 실사용 검증으로 이관했다. 미검증을 통과로 표기하지 않으며 PR #16 main 통합을 완료했다.
 - 상세 구현/검증 및 T14 후속 연결점은 docs/T12_DELETION_VALIDATION.md. 병렬 T14 문서와 상태 절은 수정하지 않았다.
+
+## T13 일반 단축키와 전체화면 UX
+
+- T17 PR #19의 main 통합 커밋 `1df5560ce356f1a01fe718cc92b8ef90c3512767`을 확인하고, main `db6ed3f93ff13ef67a780153c9c314ab9a06657c`에서 `task/t13-viewing-shortcuts`로 분기했다. PR #20은 검토 대기이며 병합하지 않았다.
+- docs/SHORTCUTS_AND_TRAY.md의 확정된 T13 로컬 키 배정으로 공통 감상 창에서 기존 버튼/명령 경로를 호출한다. 텍스트/숫자 입력, IME, 선택 상자, 목록, 슬라이더, 모달, Busy 및 비활성/격리 상태를 우회하지 않는다. Delete는 기존 확인창을 열며 실제 삭제 의미를 바꾸지 않는다.
+- 전체화면은 borderless/maximized 표시와 3초 유휴 후 컨트롤 자동 숨김을 적용한다. 마우스/키 입력으로 컨트롤을 다시 표시하며, Esc 일반 상태는 창 닫기·종료·숨김으로 작동하지 않는다. 기존 창 상태와 T16 PrivacyWindows 숨김/복원을 보존한다.
+- 검증 코드 `2e633372211839cc55abc7e60178ab3f443c1d97`의 Windows Server 2025 x64/.NET SDK 10.0.401 Release 빌드 및 T13 포함 회귀가 성공했다. T11/T12/T15/T16/T17·저장/스캔/만화/영상/자막 영향을 받은 자동 검사 결과는 docs/T13_VIEWING_SHORTCUTS_VALIDATION.md에 기록했다.
+- 자동 검증은 synthetic WPF 키 입력과 테스트 복사본 삭제 확인/취소를 포함한다. 사용자의 실제 Windows 키보드/화면 검증, 물리 키 입력, 청취는 수행하지 않았으며 성공으로 표시하지 않는다. PR #20이 아직 main에 통합되지 않아 후속 작업은 시작하지 않는다.
 
 ## 검증
 
@@ -55,10 +64,9 @@
 
 T17 PR #19 main 통합 완료. 최신 PR 코드의 Windows 자동 검증 4개 성공을 확인했다. 실제 Explorer 표시와 사용자 클릭은 미검증으로 유지한다.
 
-- 다음은 T13 일반 단축키와 전체화면 UX — Sol 구현 작업. docs/SHORTCUTS_AND_TRAY.md의 T13 로컬 키 배정을 확정했으므로 착수 가능하다.
-- 최신 main에서 task/t13-viewing-shortcuts 브랜치를 사용한다. 기존 버튼/명령·입력 차단·T16 숨김/복원 경계를 재사용한다.
+- T13은 PR #20에서 Windows 자동 검증을 마치고 검토를 기다린다. main 통합 전까지 완료로 표기하거나 후속 Task를 시작하지 않는다.
 - T18A는 감지 기본값과 스캔/종료 직렬화 설계가 남은 Astra 작업이다. 이번에는 T13만 배정하며 T18A 구현을 병렬 시작하지 않는다.
-- 이후 T18A 설계/구현 → T18 배포·통합 검증 순서로 진행한다. T19 VSR은 후순위다.
+- T13 통합 이후의 순서는 T18A 설계/구현 → T18 배포·통합 검증이다. T19 VSR은 후순위다.
 - T15/T16/T17 수동 미검증, T12 실사용 검증 이관, T09/T10/T11 기존 생략 및 AVI 무음 조사 보류를 유지한다.
 
 

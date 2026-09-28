@@ -81,6 +81,11 @@ public sealed class ViewingMedia : ISessionMedia, IDeletionMediaState
         Require(token);
         return Video is not null ? Video.CaptureProgress(VideoVisit) : comicWindow!.GetProgress();
     }
+    public Task MoveComicPageFromShortcutAsync(int delta) =>
+        comicWindow?.MovePageAsync(delta) ?? Task.CompletedTask;
+    public void AdjustComicZoomFromShortcut(int direction) => comicWindow?.AdjustZoomFromShortcut(direction);
+    public void FitComicToWindowFromShortcut() => comicWindow?.FitWindowFromShortcut();
+    public void SetFullscreenControlsVisible(bool visible) => comicWindow?.SetFullscreenControlsVisible(visible);
     public PlaybackProgress PauseAndCapture(SessionToken visit)
     {
         Require(visit);
