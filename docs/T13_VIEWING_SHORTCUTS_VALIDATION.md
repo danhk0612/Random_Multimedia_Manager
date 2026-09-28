@@ -6,7 +6,7 @@
 - T17 PR #19는 merge commit `1df5560ce356f1a01fe718cc92b8ef90c3512767`로 main에 통합된 것을 확인했다.
 - 작업 브랜치: `task/t13-viewing-shortcuts`.
 - 검증한 제품 코드 커밋: `2e633372211839cc55abc7e60178ab3f443c1d97`.
-- PR #20: https://github.com/danhk0612/Random_Multimedia_Manager/pull/20 (검토 대기, main 미통합).
+- PR #20: https://github.com/danhk0612/Random_Multimedia_Manager/pull/20 (main 통합 완료, merge `d7504b4`).
 - 키 배정과 충돌/반복 정책: docs/SHORTCUTS_AND_TRAY.md의 T13 표. 제품 코드 변경은 이 범위 및 기존 명령 경로에 한정했다.
 
 ## Windows 자동 검증
