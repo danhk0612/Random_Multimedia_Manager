@@ -65,7 +65,8 @@ internal static class T13ViewingShortcutsVerification
             await Wait(() => ((ListBox)window.FindName("Categories")).Items.Count == 2
                 && ((FrameworkElement)window.FindName("SessionControls")).IsEnabled, "T13 category and session controls loaded");
             var categoryPicker = (ListBox)window.FindName("Categories");
-            categoryPicker.SelectedItems.Add(comicCategory);
+            categoryPicker.SelectedItems.Add(categoryPicker.Items.Cast<Category>().Single(item => item.Id == comicCategory.Id));
+            Check(categoryPicker.SelectedItems.Count == 1, "T13 comic category is selected from the bound items");
             ClickButton(window, "랜덤 시작");
             await Wait(() => window.Current?.Item.CategoryId == comicCategory.Id
                 && window.Coordinator.View.Phase == SessionPhase.Active, "T13 comic session opened");
@@ -188,7 +189,8 @@ internal static class T13ViewingShortcutsVerification
             Check(!normalEscape.Handled && window.IsVisible, "T13 Escape does not close or hide a normal window");
 
             categoryPicker.SelectedItems.Clear();
-            categoryPicker.SelectedItems.Add(videoCategory);
+            categoryPicker.SelectedItems.Add(categoryPicker.Items.Cast<Category>().Single(item => item.Id == videoCategory.Id));
+            Check(categoryPicker.SelectedItems.Count == 1, "T13 video category is selected from the bound items");
             ClickButton(window, "랜덤 시작");
             await Wait(() => window.Current?.Video is not null
                 && window.Current!.Item.Id == video.Id
