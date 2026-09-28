@@ -9,6 +9,8 @@ using LibVLCSharp.Shared.Structures;
 using Microsoft.Win32;
 using RandomMultimediaManager.App.Data;
 using RandomMultimediaManager.App.Sessions;
+using RandomMultimediaManager.App.ViewModels;
+using RandomMultimediaManager.App.Views;
 using RandomMultimediaManager.App.Video;
 using RandomMultimediaManager.Core;
 
@@ -18,12 +20,15 @@ public partial class ViewingWindow : Window
 {
     private readonly LibraryDatabase database;
     private readonly DeletionService? deletions;
+    private Guid? initialManualItemId;
     public SessionCoordinator Coordinator { get; }
     public ViewingMedia? Current { get; private set; }
     private readonly DispatcherTimer timer;
     private Task command = Task.CompletedTask;
     private Task<bool>? closeTask;
     private bool exitRequested, closeAfterRetry;
+    private Window? libraryDialog;
+    private LibraryBrowserViewModel? libraryBrowser;
     public string? CloseError { get; private set; }
     private bool busy, allowClose, closing, seeking, refreshing, fullscreen;
     private DateTime lastCheckpoint = DateTime.UtcNow;
@@ -31,21 +36,34 @@ public partial class ViewingWindow : Window
     private SessionToken? savedToken;
     private WindowState previousState;
 
-    public ViewingWindow(LibraryDatabase database, DeletionService? deletions = null)
+    public ViewingWindow(LibraryDatabase database, DeletionService? deletions = null, Guid? initialManualItemId = null)
     {
         this.database = database;
         this.deletions = deletions;
+        this.initialManualItemId = initialManualItemId;
         InitializeComponent();
         Coordinator = new(database, new ViewingMediaPreparer(VideoSurface, OnMediaActivated, Released));
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background,
             async (_, _) => await Tick(), Dispatcher);
-        Loaded += async (_, _) => await Run(async () =>
+        Loaded += async (_, _) =>
         {
-            Categories.ItemsSource = (await Task.Run(database.GetCategories)).Where(c => c.IsEnabled).ToArray();
-            var settings = await Task.Run(database.GetSettings);
-            Days.Text = settings.HistoryExclusionDays.ToString();
-            ResumeModeBox.SelectedIndex = settings.ResumeMode == ResumeMode.Resume ? 0 : 1;
-        }, whileHidden: true);
+            await Run(async () =>
+            {
+                Categories.ItemsSource = (await Task.Run(database.GetCategories)).Where(c => c.IsEnabled).ToArray();
+                var settings = await Task.Run(database.GetSettings);
+                Days.Text = settings.HistoryExclusionDays.ToString();
+                ResumeModeBox.SelectedIndex = settings.ResumeMode == ResumeMode.Resume ? 0 : 1;
+            }, whileHidden: true);
+            if (initialManualItemId is not { } itemId) return;
+            initialManualItemId = null;
+            if (exitRequested) return;
+            if (PreparedVideo.PrivacyMuted)
+            {
+                Status.Text = "숨김 상태에서 시작한 수동 감상 열기를 취소했습니다. 다시 감상하려면 복원 후 선택하세요.";
+                return;
+            }
+            await Run(() => Navigate(() => Coordinator.OpenManualAsync(Guid.NewGuid(), itemId)));
+        };
         Closed += (_, _) => timer.Stop();
         timer.Start();
     }
@@ -58,7 +76,7 @@ public partial class ViewingWindow : Window
         Volume.Value = 70; Muted.IsChecked = false; Rate.SelectedIndex = 1;
         saved = null; savedToken = null;
         ExternalSubtitles.ItemsSource = null; AudioTracks.ItemsSource = null; SubtitleTracks.ItemsSource = null;
-        Title = $"랜덤 감상 — {Path.GetFileName(media.Item.Path)}";
+        Title = $"감상 — {Path.GetFileName(media.Item.Path)}";
     }
     private void Released(ViewingMedia media)
     {
@@ -100,6 +118,11 @@ public partial class ViewingWindow : Window
         // Let WPF render the pending state before entering native preparation calls.
         await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
         if (closing || exitRequested) return;
+        if (PreparedVideo.PrivacyMuted)
+        {
+            Status.Text = "숨김 중에는 감상을 열 수 없습니다.";
+            return;
+        }
         var result = await action();
         Status.Text = result.Error ?? result.Status switch
         {
@@ -160,6 +183,55 @@ public partial class ViewingWindow : Window
         Suppressed.IsChecked = Coordinator.View.Pending?.SuppressHistory == true;
     });
     private async void Start(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.StartRandomAsync(Guid.NewGuid(), Categories.SelectedItems.Cast<Category>().Select(c => c.Id))));
+    private async void BrowseLibrary(object s, RoutedEventArgs e) => await Run(async () =>
+    {
+        var viewModel = new LibraryBrowserViewModel(database);
+        var browser = new LibraryBrowserView { DataContext = viewModel };
+        var dialog = new Window
+        {
+            Title = "라이브러리에서 파일 선택",
+            Owner = this,
+            Content = browser,
+            Width = 1000,
+            Height = 680,
+            MinWidth = 760,
+            MinHeight = 480,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner
+        };
+        Guid? selectedItemId = null;
+        bool allowDialogClose = false;
+        browser.ManualOpenRequested += id =>
+        {
+            if (closing || exitRequested) return;
+            selectedItemId = id;
+            dialog.DialogResult = true;
+        };
+        dialog.Closing += async (_, args) =>
+        {
+            if (allowDialogClose) return;
+            args.Cancel = true;
+            viewModel.SetExitRequested(true);
+            await viewModel.WaitForPendingReadsAsync();
+            allowDialogClose = true;
+            dialog.Close();
+        };
+        libraryDialog = dialog;
+        libraryBrowser = viewModel;
+        try
+        {
+            dialog.ShowDialog();
+            await viewModel.WaitForPendingReadsAsync();
+            if (selectedItemId is { } itemId && !closing && !exitRequested && !PreparedVideo.PrivacyMuted)
+                await Navigate(() => Coordinator.OpenManualAsync(Guid.NewGuid(), itemId));
+        }
+        finally
+        {
+            viewModel.SetExitRequested(true);
+            await viewModel.WaitForPendingReadsAsync();
+            if (ReferenceEquals(libraryDialog, dialog)) libraryDialog = null;
+            if (ReferenceEquals(libraryBrowser, viewModel)) libraryBrowser = null;
+        }
+    });
     private async void Next(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.NextAsync(Guid.NewGuid())));
     private async void Previous(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.PreviousAsync(Guid.NewGuid())));
     private void Cancel(object s, RoutedEventArgs e)
@@ -290,6 +362,8 @@ public partial class ViewingWindow : Window
     public void SetExitRequested(bool value)
     {
         exitRequested = value;
+        libraryBrowser?.SetExitRequested(value);
+        if (value && libraryDialog is { IsVisible: true }) libraryDialog.Close();
         Coordinator.SetExitRequested(value);
         Controls();
     }

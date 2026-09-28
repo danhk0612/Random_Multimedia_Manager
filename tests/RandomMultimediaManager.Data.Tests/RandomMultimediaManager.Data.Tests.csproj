@@ -14,5 +14,6 @@
     <Compile Include="../../src/RandomMultimediaManager.App/Data/*.cs" Link="Data/%(Filename)%(Extension)" />
     <Compile Include="../../src/RandomMultimediaManager.App/Scanning/*.cs" Link="Scanning/%(Filename)%(Extension)" />
     <Compile Include="../../src/RandomMultimediaManager.App/ViewModels/CategoryEditorViewModel.cs" Link="ViewModels/CategoryEditorViewModel.cs" />
+    <Compile Include="../../src/RandomMultimediaManager.App/ViewModels/LibraryBrowserViewModel.cs" Link="ViewModels/LibraryBrowserViewModel.cs" />
     <EmbeddedResource Include="../../src/RandomMultimediaManager.App/Data/SchemaV1.sql" LogicalName="SchemaV1.sql" /></ItemGroup>
 </Project>
