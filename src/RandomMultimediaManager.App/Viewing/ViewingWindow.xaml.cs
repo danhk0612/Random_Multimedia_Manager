@@ -216,8 +216,11 @@ public partial class ViewingWindow : Window
             await viewModel.WaitForPendingReadsAsync();
             Console.WriteLine("T17 library reads complete");
             allowDialogClose = true;
-            dialog.Close();
-            Console.WriteLine("T17 library close requested after reads");
+            dialog.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (dialog.IsVisible) dialog.Close();
+                Console.WriteLine("T17 library close posted after reads");
+            }), DispatcherPriority.Normal);
         };
         libraryDialog = dialog;
         libraryBrowser = viewModel;
