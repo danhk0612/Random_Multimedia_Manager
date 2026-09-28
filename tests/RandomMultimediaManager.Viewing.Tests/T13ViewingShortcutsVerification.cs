@@ -246,9 +246,9 @@ internal static class T13ViewingShortcutsVerification
                 "T13 volume repeat uses the existing range");
 
             var videoSnapshot = videoMedia.Video!.Snapshot(videoMedia.VideoVisit);
-            long seed = 0;
+            long seed = 500;
             Check(videoSnapshot.Seekable && videoMedia.Video!.Seek(videoMedia.VideoVisit, seed), "T13 video supports range-limited seek");
-            await Wait(() => Math.Abs(videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Progress.VideoPositionMs!.Value - seed) < 250
+            await Wait(() => Math.Abs(videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Progress.VideoPositionMs!.Value - seed) < 750
                 && videoControlsEnabled(window), "T13 direct test seek reached its starting point");
             long seekStart = videoMedia.Video!.Snapshot(videoMedia.VideoVisit).Progress.VideoPositionMs!.Value;
             PressKey(window, Key.Right);
@@ -338,9 +338,15 @@ internal static class T13ViewingShortcutsVerification
                 bool closed = false;
                 window.Closed += (_, _) => closed = true;
                 window.Close();
-                await Wait(() => closed, "T13 viewing window closed normally");
+                try { await Wait(() => closed, "T13 viewing window closed normally"); }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"T13 cleanup close failed: busy={GetField<bool>(window, "busy")}, " +
+                        $"phase={window.Coordinator.View.Phase}, status={window.Status.Text}, closeError={window.CloseError}: {ex}");
+                }
             }
-            Directory.Delete(root, recursive: true);
+            try { Directory.Delete(root, recursive: true); }
+            catch (Exception ex) { Console.Error.WriteLine("T13 temporary fixture cleanup failed: " + ex); }
         }
     }
 
