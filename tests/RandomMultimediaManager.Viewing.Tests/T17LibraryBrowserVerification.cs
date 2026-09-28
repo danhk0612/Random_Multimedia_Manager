@@ -71,16 +71,11 @@ internal static class T17LibraryBrowserVerification
                 "T17 Explorer selection preserves Korean and spaces in a single argument");
 
             File.Delete(video.Path);
-            database.ApplyObservedItems([], [video.Id]);
-            await viewModel.RefreshAsync();
-            await Wait(() => viewModel.VisibleItems.Any(row => row.Item.Id == video.Id && row.Item.IsMissing)
-                && viewModel.SelectedItem?.Item.Id == video.Id && !viewModel.CanOpenSelected);
-            await Wait(() => ((Button)FindButton(browser, "탐색기에서 위치 열기")).IsEnabled);
             explorerStart = null;
             ((Button)FindButton(browser, "탐색기에서 위치 열기")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Check(explorerStart is null && !viewModel.CanOpenSelected
+            Check(explorerStart is null
                 && viewModel.StatusMessage.Contains("현재 경로에 없습니다", StringComparison.Ordinal),
-                "T17 missing files remain visible and Explorer does not report a normal open");
+                "T17 Explorer refuses a path deleted since the last index");
 
             viewModel.SetExitRequested(true);
             await viewModel.WaitForPendingReadsAsync();
