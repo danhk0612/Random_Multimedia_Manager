@@ -226,10 +226,11 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T16 — 빠른 숨김·음소거·종료
 
 - 목적: 빠른 프로그램 수준 동작 구현.
-- 담당/상태: Astra / 구현·Windows 자동 검증 완료 (PR #18), 사용자 수동 미검증.
+- 담당/상태: Astra / 구현·병합 전 복원 수단 보완 및 Windows 자동 검증 완료 (PR #18), 사용자 수동 미검증.
 - 선행: T14/T15.
 - 범위/수정 영역: 키 등록·모든 창 상태·미디어·종료 조정.
 - 완료 조건/검증: 전체화면/다중 창/기존 pause·mute/등록 실패/숨김 중 창 생성/반복 입력/DB 작업 중 종료를 확정 상태표대로 검증.
+- 병합 전 보완: 실제 복원 키+트레이 동시 가용 시만 숨김, 미충족 시 화면/mute 유지 일반 정상 종료, 독립 초기화와 숨김/종료 차단·재시도 중 복원 키 유지, 최종 해제 순서 및 복합 실패 회귀를 적용한다.
 - 구현·검증·남은 사용자 확인: docs/T16_QUICK_ACTIONS_VALIDATION.md. 기존 T15 수동 미검증을 통과로 변경하지 않는다. PR #18 검토·병합 전 후속 Task를 진행하지 않는다.
 - 수정하지 말아야 할 영역: 별도 강제 Kill 등 미승인 종료 방식.
 
@@ -277,14 +278,15 @@ GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T16�
 AI_WORKFLOW.md 순서대로 최신 main/Git/PR 상태, PROJECT/REQUIREMENTS/ARCHITECTURE/CURRENT_STATE/TASKS를 읽어. T15 PR #17 통합을 확인하고 task/t16-quick-hide-exit 별도 브랜치를 사용해. 기존 미커밋 변경과 다른 작업을 보존해.
 docs/SHORTCUTS_AND_TRAY.md 전체, DECISIONS D03/D04, DATA_AND_RANDOM_POLICY, T15_LIFECYCLE_VALIDATION 및 AppLifecycle/TrayIcon/App/MainWindow/ViewingWindow/SessionCoordinator/DeletionService와 미디어 코드를 대조해.
 
-목적: 모든 앱 표시 숨김+앱 음소거와 복원, 먼저 숨김+음소거 후 안전한 정상 종료를 구현한다.
+목적: 모든 앱 표시 숨김+앱 음소거와 복원, 복원 키·트레이가 모두 확보되면 먼저 숨김+음소거 후 안전한 정상 종료를 구현한다.
+2026-09-28 보완: 실제 등록된 Ctrl+Shift+H와 사용 가능한 트레이가 모두 있어야 숨김에 진입한다. 미충족 시 Quick Hide는 무변경·비활성 이유 안내, 명시적 종료는 표시/mute를 유지하고 이유를 안내한 동일 정상 종료다. 키와 트레이 초기화는 독립 시도하며 숨김 후 트레이 실패는 자동 노출하지 않는다. Hidden/Closing/ExitBlocked·재시도 내내 복원 키를 보유하고 실패 가능한 정리와 종료 차단 판단·트레이/후크 정리 후 최종 해제한다. 상세는 SHORTCUTS_AND_TRAY와 DECISIONS의 사용자 확정 보완을 우선한다.
 범위:
 - Quick Hide는 Ctrl+Shift+H 전역 키 기본 활성으로 구현해. 등록 충돌은 해당 기능 비활성·안내로 처리하고 임의 대체 키를 잡지 마. 빠른 종료 키의 기본값/범위는 D03/D04 위임 안에서 결정하고 DECISIONS에 근거와 함께 기록한 뒤 구현해.
 - 모든 앱 창/전체화면/보조 창/앱 소유 대화상자를 숨기고 모든 활성 영상의 앱 mute만 적용해. pause·기록 확정·SuppressHistory 변경은 하지 마.
 - 원래 보이던 창 상태와 앱 mute를 메모리에 보존하고 같은 키/트레이로 복원해. 원래 mute/일시정지 상태와 외부 Windows 음소거를 임의 변경하지 마. 트레이 아이콘은 유지해.
 - 비활성 트레이 모두 숨기기/복원 메뉴를 실제 기능에 연결해. Hidden 중 늦은 Ready·삭제 실패 후 재열기·새 대화상자에서도 영상 소리나 창이 노출되지 않게 기존 준비/활성 경계를 연결해.
-- T15 AppLifecycle의 단일 종료 Task를 재사용해. 즉시 숨김+음소거 뒤 신규 명령 차단, 준비 취소, 진행 중 스캔/감상/삭제·DB 작업 대기, 기존 Leave 저장, 소유 미디어·전역 키·트레이 해제 후 정상 종료해.
-- T15의 ExitBlocked 자동 Restore를 그대로 호출해 비공개 화면을 노출시키지 마. 오류 시 숨김+mute를 유지하며 사용자가 트레이로 복원해 기존 저장/삭제 복구 UI를 사용할 수 있게 해.
+- T15 AppLifecycle의 단일 종료 Task를 재사용해. 복원 키·트레이 동시 확보 시만 숨김+음소거하고 미충족 시 화면을 유지해. 신규 명령 차단, 준비 취소, 진행 중 스캔/감상/삭제·DB 작업 대기, 기존 Leave 저장, 소유 미디어·DB·트레이/후크 정리 후 최종 키 해제로 정상 종료해.
+- T15의 ExitBlocked 자동 Restore를 그대로 호출해 비공개 화면을 노출시키지 마. 숨겨서 종료에 진입했다면 오류 시 숨김+mute와 등록된 복원 키를 유지하고 명시적으로 복원해 기존 저장/삭제 복구 UI를 사용하게 해. 숨김 없이 종료했다면 기존 창/복구 UI를 유지해.
 - 모달 삭제 확인·파일 선택창이 열린 중 Hide/Exit와 복원이 막히지 않게 검증해. 기존 UI 명령 Task를 우회하거나 확인 결과를 삭제 동의로 추정하지 마.
 - SessionCoordinator.WhenIdleAsync/ReleaseError, ViewingWindow.RequestCloseAsync, DeletionService.Pending/HasIncompleteSuccess 및 §6 삭제 경계를 보존해. 현재 방문 Unknown·미완료 성공·저장/해제 오류를 NoOp 종료로 우회하지 마.
 - 반복 Hide/Restore/Exit를 합치고 저장/해제를 중복 실행하지 마. 필요한 연결점만 수정하고 별도 프레임워크나 영속 창 복원 구조를 만들지 마.
