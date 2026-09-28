@@ -54,7 +54,9 @@ internal static class T17LibraryBrowserVerification
             fileList.SelectedIndex = 0;
             await Wait(() => viewModel.SelectedItem?.Item.Id == video.Id, "T17 WPF selected-item binding");
             Check(viewModel.CanOpenSelected, "T17 WPF selected item permits opening");
-            await Wait(() => ((Button)FindButton(browser, "감상 열기")).IsEnabled,
+            var openButton = (Button)FindButton(browser, "감상 열기");
+            Check(ReferenceEquals(openButton.DataContext, viewModel), "T17 WPF open button inherits browser data context");
+            await Wait(() => openButton.IsEnabled,
                 "T17 WPF open button binding");
             await Wait(() => viewModel.SelectedProgressText == "00:01:05");
             Check(viewModel.SelectedItem!.FileName == "한글 video 파일.mp4"
