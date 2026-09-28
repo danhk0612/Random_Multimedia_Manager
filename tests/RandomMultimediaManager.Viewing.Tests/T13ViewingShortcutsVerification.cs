@@ -8,6 +8,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using LibVLCSharp.Shared;
+using Microsoft.Data.Sqlite;
 using RandomMultimediaManager.App.Data;
 using RandomMultimediaManager.App.Deletion;
 using RandomMultimediaManager.App.Lifecycle;
@@ -180,6 +181,40 @@ internal static class T13ViewingShortcutsVerification
             Check(window.Current!.Item.Id == currentComicId, "T13 busy state blocks the keyboard navigation command");
             SetField(window, "busy", false);
 
+            using (var connection = new SqliteConnection($"Data Source={Path.Combine(root, "library.db")}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "CREATE TRIGGER t13_fail_visit BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected T13 failure'); END;";
+                command.ExecuteNonQuery();
+            }
+            Guid saveFailedComicId = window.Current!.Item.Id;
+            Guid saveFailedVisitId = window.Coordinator.View.Pending!.VisitId;
+            var failedNavigationKey = PressKey(window, Key.N);
+            await Wait(() => window.Coordinator.View.Phase == SessionPhase.SaveFailed && !GetField<bool>(window, "busy"),
+                "T13 injected visit save failure became visible");
+            Check(failedNavigationKey.Handled && !((FrameworkElement)window.FindName("SessionControls")).IsEnabled
+                && window.Current?.Item.Id == saveFailedComicId
+                && window.Coordinator.View.Pending?.VisitId == saveFailedVisitId,
+                "T13 SaveFailed navigation key preserves the frozen visit and cannot navigate");
+            WindowStyle failedStyle = window.WindowStyle;
+            WindowState failedWindowState = window.WindowState;
+            var failedFullscreenKey = PressKey(window, Key.F11);
+            Check(failedFullscreenKey.Handled && window.WindowStyle == failedStyle && window.WindowState == failedWindowState,
+                "T13 SaveFailed F11 cannot change the viewing window state");
+            using (var connection = new SqliteConnection($"Data Source={Path.Combine(root, "library.db")}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "DROP TRIGGER t13_fail_visit;";
+                command.ExecuteNonQuery();
+            }
+            var resumeResult = await window.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
+            Invoke(window, "Controls");
+            Check(resumeResult.Status == SessionStatus.Completed && window.Coordinator.View.Phase == SessionPhase.Active
+                && window.Coordinator.View.Pending?.VisitId == saveFailedVisitId,
+                "T13 SaveFailed recovery resumes the existing visit without committing navigation");
+
             PressKey(window, Key.F11);
             Check(window.WindowStyle == WindowStyle.None && window.WindowState == WindowState.Maximized,
                 "T13 F11 enters borderless fullscreen");
@@ -318,13 +353,24 @@ internal static class T13ViewingShortcutsVerification
                 "T13 repeated Delete opens no duplicate confirmation");
 
             int cancellationCount = 0;
-            var cancelTimer = ScheduleDialogAction(dialog => { cancellationCount++; dialog.Close(); });
+            bool modalKeyConsumed = false;
+            bool favoriteBeforeModal = db.GetItems(videoCategory.Id).Single(item => item.Id == video.Id).IsFavorite;
+            Guid modalCurrentId = window.Current!.Item.Id;
+            var cancelTimer = ScheduleDialogAction(dialog =>
+            {
+                cancellationCount++;
+                modalKeyConsumed = PressKey(window, Key.F).Handled || PressKey(window, Key.N).Handled;
+                dialog.Close();
+            });
             var cancelDeleteKey = PressKey(window, Key.Delete);
             cancelTimer.Stop();
             await Wait(() => !GetField<bool>(window, "busy"), "T13 canceled delete dialog returned");
             Check(cancelDeleteKey.Handled && cancellationCount == 1 && File.Exists(videoPath) && deleteCalls == 0
                 && window.Current?.Item.Id == video.Id,
                 "T13 Delete cancellation leaves test copy and visit untouched");
+            Check(!modalKeyConsumed && window.Current?.Item.Id == modalCurrentId
+                && db.GetItems(videoCategory.Id).Single(item => item.Id == video.Id).IsFavorite == favoriteBeforeModal,
+                "T13 modal confirmation keeps parent window shortcuts inactive");
 
             int confirmationCount = 0;
             bool repeatedDeleteConsumed = false;
