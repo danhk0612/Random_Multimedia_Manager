@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +15,7 @@ using RandomMultimediaManager.App.Sessions;
 using RandomMultimediaManager.App.Viewing;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
+using MediaType = RandomMultimediaManager.Core.MediaType;
 
 internal static class T13ViewingShortcutsVerification
 {
