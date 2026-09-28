@@ -2,9 +2,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using RandomMultimediaManager.App.Data;
 using RandomMultimediaManager.App.Sessions;
 using RandomMultimediaManager.App.Viewing;
+using RandomMultimediaManager.App.Views;
 using RandomMultimediaManager.Core;
 using SkiaSharp;
 
@@ -19,7 +21,7 @@ internal static class Program
         window.Loaded += async (_, _) =>
         {
             int code = 0;
-            try { await Verify(surface); await T12NativeVerification.Run(surface); await T15NativeVerification.Run(); await T16VideoVerification.Run(surface); }
+            try { await Verify(surface); await T12NativeVerification.Run(surface); await T15NativeVerification.Run(); await T16VideoVerification.Run(surface); await T17LibraryBrowserVerification.Run(); }
             catch (Exception ex) { Console.Error.WriteLine(ex); code = 1; }
             finally { window.Close(); app.Shutdown(code); }
         };
@@ -144,6 +146,83 @@ internal static class Program
             ui.Close();
             await Wait(()=>closed);
             Check(ui.Coordinator.View.SessionId is null,"actual UI normal close finishes LeaveAsync");
+            db.AddSource(new(Guid.NewGuid(), comicCategory.Id, root, root.ToUpperInvariant(), true, false));
+            db.SetRandomExcluded(comic.Id, true);
+            db.SaveCategory(comicCategory with { IsEnabled = false });
+            var manual = new ViewingWindow(db, null, comic.Id);
+            manual.Show();
+            await Wait(() => manual.Current?.Item.Id == comic.Id
+                && ((FrameworkElement)manual.FindName("SessionControls")).IsEnabled);
+            var manualVisit = manual.Coordinator.View.Pending!;
+            Check(manualVisit.Origin == VisitOrigin.Manual
+                && db.GetHistory(comic.Id).All(history => history.VisitId != manualVisit.VisitId),
+                "T17 manual open permits recently viewed, random-excluded items in inactive categories");
+            bool manualClosed = false; manual.Closed += (_, _) => manualClosed = true;
+            manual.Close();
+            await Wait(() => manualClosed);
+            Check(db.GetHistory(comic.Id).Any(history => history.VisitId == manualVisit.VisitId
+                && history.Origin == VisitOrigin.Manual),
+                "T17 manual viewing uses the existing normal leave and history commit");
+            db.SaveCategory(comicCategory with { IsEnabled = true });
+            db.SetRandomExcluded(comic.Id, false);
+            string secondVideoPath = Path.Combine(root, "전방 항목.mp4");
+            File.Copy(videoPath, secondVideoPath);
+            var secondVideoFile = new FileInfo(secondVideoPath);
+            var secondVideo = new MediaItem(Guid.NewGuid(), videoCategory.Id, MediaType.Video,
+                secondVideoFile.FullName, secondVideoFile.FullName.ToUpperInvariant(), secondVideoFile.Length,
+                secondVideoFile.LastWriteTimeUtc.Ticks);
+            db.ApplyObservedItems([secondVideo], []);
+            var browserSession = new ViewingWindow(db);
+            browserSession.Show();
+            await Wait(() => ((ListBox)browserSession.FindName("Categories")).Items.Count == 2
+                && ((FrameworkElement)browserSession.FindName("SessionControls")).IsEnabled);
+            var videoCategoryPicker = (ListBox)browserSession.FindName("Categories");
+            videoCategoryPicker.SelectedItem = videoCategoryPicker.Items.Cast<Category>()
+                .Single(value => value.Id == videoCategory.Id);
+            ClickOn(browserSession, "랜덤 시작");
+            await Wait(() => browserSession.Current is not null
+                && ((FrameworkElement)browserSession.FindName("SessionControls")).IsEnabled);
+            await ClickOnAndWait(browserSession, "다음",
+                () => browserSession.Coordinator.View.Slots.Count == 2
+                    && ((FrameworkElement)browserSession.FindName("SessionControls")).IsEnabled);
+            Guid forwardItemId = browserSession.Coordinator.View.Slots[1].ItemId;
+            await ClickOnAndWait(browserSession, "이전",
+                () => browserSession.Coordinator.View.Cursor == 0
+                    && ((FrameworkElement)browserSession.FindName("SessionControls")).IsEnabled);
+            Guid priorItemId = browserSession.Coordinator.View.ActiveToken!.ItemId;
+            await SelectFromLibraryAsync(browserSession, comicCategory, comic);
+            await Wait(() => browserSession.Current?.Item.Id == comic.Id
+                && ((FrameworkElement)browserSession.FindName("SessionControls")).IsEnabled);
+            Check(browserSession.Coordinator.View.Cursor == 1
+                && browserSession.Coordinator.View.Slots.Count == 3
+                && browserSession.Coordinator.View.Slots[0].ItemId == priorItemId
+                && browserSession.Coordinator.View.Slots[1].ItemId == comic.Id
+                && browserSession.Coordinator.View.Slots[2].ItemId == forwardItemId,
+                "T17 manual library open inserts after the cursor and preserves Forward history");
+            await ClickOnAndWait(browserSession, "다음",
+                () => browserSession.Current?.Item.Id == forwardItemId
+                    && ((FrameworkElement)browserSession.FindName("SessionControls")).IsEnabled);
+            var beforeNoOp = browserSession.Current;
+            var tokenBeforeNoOp = browserSession.Coordinator.View.ActiveToken;
+            await SelectFromLibraryAsync(browserSession, videoCategory,
+                secondVideo.Id == forwardItemId ? secondVideo : video);
+            await Wait(() => ReferenceEquals(browserSession.Current, beforeNoOp)
+                && browserSession.Coordinator.View.ActiveToken == tokenBeforeNoOp
+                && ((FrameworkElement)browserSession.FindName("SessionControls")).IsEnabled);
+            Check(ReferenceEquals(browserSession.Current, beforeNoOp)
+                && browserSession.Coordinator.View.ActiveToken == tokenBeforeNoOp
+                && ((TextBlock)browserSession.FindName("Status")).Text == "NoOp",
+                "T17 selecting the current ItemId is a no-op in the active viewing session");
+            var beforeBrowserExit = browserSession.Current;
+            var tokenBeforeBrowserExit = browserSession.Coordinator.View.ActiveToken;
+            await RequestExitWithLibraryOpenAsync(browserSession);
+            Check(ReferenceEquals(browserSession.Current, beforeBrowserExit)
+                && browserSession.Coordinator.View.ActiveToken == tokenBeforeBrowserExit,
+                "T17 exit request closes the library modal without changing the active visit");
+            bool browserSessionClosed = false;
+            browserSession.Closed += (_, _) => browserSessionClosed = true;
+            browserSession.Close();
+            await Wait(() => browserSessionClosed);
             // No current visit means LeaveAsync completes synchronously; Close must still run
             // after the original Closing event has unwound (one X, including NoCandidates).
             foreach (bool noCandidates in new[] { false, true })
@@ -170,5 +249,73 @@ internal static class Program
 
         }
         finally { Directory.Delete(root,true); }
+    }
+    private static void ClickOn(ViewingWindow window, string label) => Descendants(window).OfType<Button>()
+        .Single(button => Equals(button.Content, label)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+
+    private static async Task ClickOnAndWait(ViewingWindow window, string label, Func<bool> condition)
+    {
+        ClickOn(window, label);
+        await Wait(condition);
+    }
+
+    private static async Task SelectFromLibraryAsync(ViewingWindow host, Category category, MediaItem item)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        timer.Tick += async (_, _) =>
+        {
+            timer.Stop();
+            try
+            {
+                var dialog = Application.Current.Windows.OfType<Window>()
+                    .Single(window => window.Title == "라이브러리에서 파일 선택");
+                var browser = (LibraryBrowserView)dialog.Content;
+                var viewModel = (RandomMultimediaManager.App.ViewModels.LibraryBrowserViewModel)browser.DataContext;
+                await Wait(() => viewModel.Categories.Count > 0 && viewModel.VisibleItems.Count > 0);
+                var picker = (ComboBox)browser.FindName("CategoryPicker");
+                picker.SelectedItem = viewModel.Categories.Single(value => value.Id == category.Id);
+                await Wait(() => viewModel.VisibleItems.Any(row => row.Item.Id == item.Id));
+                var list = (ListBox)browser.FindName("FileList");
+                list.SelectedItem = viewModel.VisibleItems.Single(row => row.Item.Id == item.Id);
+                await Wait(() => viewModel.SelectedItem?.Item.Id == item.Id);
+                Descendants(browser).OfType<Button>().Single(button => Equals(button.Content, "감상 열기"))
+                    .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                completion.SetResult();
+            }
+            catch (Exception ex) { completion.SetException(ex); }
+        };
+        timer.Start();
+        ClickOn(host, "라이브러리에서 열기");
+        await completion.Task;
+        await Wait(() => !Application.Current.Windows.OfType<Window>()
+                .Any(window => window.Title == "라이브러리에서 파일 선택")
+            && ((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
+    }
+
+    private static async Task RequestExitWithLibraryOpenAsync(ViewingWindow host)
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            try
+            {
+                _ = Application.Current.Windows.OfType<Window>()
+                    .Single(window => window.Title == "라이브러리에서 파일 선택");
+                host.SetExitRequested(true);
+                completion.SetResult();
+            }
+            catch (Exception ex) { completion.SetException(ex); }
+        };
+        timer.Start();
+        ClickOn(host, "라이브러리에서 열기");
+        await completion.Task;
+        await Wait(() => !Application.Current.Windows.OfType<Window>()
+                .Any(window => window.Title == "라이브러리에서 파일 선택")
+            && !((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
+        host.SetExitRequested(false);
+        await Wait(() => ((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
     }
 }

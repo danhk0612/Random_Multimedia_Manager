@@ -24,6 +24,8 @@ public partial class MainWindow : Window
         this.database = database; this.deletions = deletions;
         InitializeComponent();
         CategoryEditor.DataContext = new ViewModels.CategoryEditorViewModel(database);
+        LibraryBrowser.DataContext = new ViewModels.LibraryBrowserViewModel(database);
+        LibraryBrowser.ManualOpenRequested += OpenManualItem;
     }
 
     private static void TraceComicStartup(string message)
@@ -95,6 +97,24 @@ public partial class MainWindow : Window
         finally { Viewing = null; }
     }
 
+    private async void OpenManualItem(Guid itemId)
+    {
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
+        if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel { IsScanning: true })
+        {
+            MessageBox.Show(this, "진행 중인 스캔이 끝난 뒤 감상을 시작하세요.", "라이브러리");
+            return;
+        }
+        if (Viewing is not null) { Viewing.Activate(); return; }
+
+        Viewing = new Viewing.ViewingWindow(database, deletions, itemId) { Owner = this };
+        try { Viewing.ShowDialog(); }
+        finally { Viewing = null; }
+        if (!exitRequested && Lifecycle?.State is not (RandomMultimediaManager.App.Lifecycle.LifecycleState.Closing
+            or RandomMultimediaManager.App.Lifecycle.LifecycleState.Exited))
+            await LibraryBrowser.RefreshAsync();
+    }
+
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
     {
         if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
@@ -108,6 +128,8 @@ public partial class MainWindow : Window
     {
         exitRequested = value;
         MainContent.IsEnabled = !value;
+        if (LibraryBrowser.DataContext is ViewModels.LibraryBrowserViewModel browser)
+            browser.SetExitRequested(value);
         Viewing?.SetExitRequested(value);
         if (comicViewer is not null) comicViewer.IsEnabled = !value;
         if (videoValidation is not null) videoValidation.IsEnabled = !value;
@@ -120,6 +142,8 @@ public partial class MainWindow : Window
             await editor.ScanCompletion;
         }
         await recovery;
+        if (LibraryBrowser.DataContext is ViewModels.LibraryBrowserViewModel browser)
+            await browser.WaitForPendingReadsAsync();
     }
     public async Task CloseAuxiliaryWindowsAsync()
     {

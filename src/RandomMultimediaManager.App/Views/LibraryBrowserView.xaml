@@ -1,0 +1,110 @@
+<UserControl x:Class="RandomMultimediaManager.App.Views.LibraryBrowserView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <WrapPanel Grid.Row="0" Margin="0,0,0,8" VerticalAlignment="Center">
+            <TextBlock Text="분류" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <ComboBox x:Name="CategoryPicker" Width="210" Margin="0,0,8,0"
+                      ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
+                      DisplayMemberPath="Name" SelectionChanged="CategorySelectionChanged" />
+            <Button Content="새로고침" Click="Refresh_Click" Padding="10,4" />
+        </WrapPanel>
+
+        <WrapPanel Grid.Row="1" Margin="0,0,0,10" VerticalAlignment="Center">
+            <TextBlock Text="파일명" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <TextBox Width="200" Margin="0,0,12,0" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Text="즐겨찾기" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <ComboBox Width="130" Margin="0,0,10,0" ItemsSource="{Binding FavoriteFilters}"
+                      DisplayMemberPath="Label" SelectedItem="{Binding SelectedFavoriteFilter}" />
+            <TextBlock Text="랜덤 제외" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <ComboBox Width="130" Margin="0,0,10,0" ItemsSource="{Binding ExcludedFilters}"
+                      DisplayMemberPath="Label" SelectedItem="{Binding SelectedExcludedFilter}" />
+            <TextBlock Text="감상" VerticalAlignment="Center" Margin="0,0,6,0" />
+            <ComboBox Width="145" ItemsSource="{Binding HistoryFilters}"
+                      DisplayMemberPath="Label" SelectedItem="{Binding SelectedHistoryFilter}" />
+        </WrapPanel>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="280" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="3*" MinWidth="300" />
+            </Grid.ColumnDefinitions>
+
+            <ListBox x:Name="FileList" ItemsSource="{Binding VisibleItems}"
+                     SelectedItem="{Binding SelectedItem}" SelectionChanged="FileSelectionChanged"
+                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.CanContentScroll="True">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="3">
+                            <TextBlock Text="{Binding FileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock FontSize="11" Foreground="Gray">
+                                <Run Text="{Binding TypeLabel, Mode=OneWay}" /><Run Text=" · " />
+                                <Run Text="{Binding AvailabilityLabel, Mode=OneWay}" /><Run Text=" · " />
+                                <Run Text="{Binding FavoriteLabel, Mode=OneWay}" /><Run Text=" · " />
+                                <Run Text="{Binding ExclusionLabel, Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <GroupBox Grid.Column="2" Header="파일 정보">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="{Binding SelectedItem.FileName, TargetNullValue='파일을 선택하세요'}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="1" Margin="0,8,0,0" Text="분류 / 타입" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="1" Margin="110,8,0,0">
+                        <Run Text="{Binding SelectedItem.CategoryName}" /><Run Text=" · " />
+                        <Run Text="{Binding SelectedItem.TypeLabel}" />
+                    </TextBlock>
+                    <TextBlock Grid.Row="2" Margin="0,5,0,0" Text="상태" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="2" Margin="110,5,0,0" Text="{Binding SelectedItem.AvailabilityLabel}" />
+                    <TextBlock Grid.Row="3" Margin="0,5,0,0" Text="파일 크기" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="3" Margin="110,5,0,0" Text="{Binding SelectedItem.SizeLabel}" />
+                    <TextBlock Grid.Row="4" Margin="0,5,0,0" Text="수정 시각" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="4" Margin="110,5,0,0" Text="{Binding SelectedItem.LastWriteLabel}" />
+                    <TextBlock Grid.Row="5" Margin="0,5,0,0" Text="즐겨찾기" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="5" Margin="110,5,0,0" Text="{Binding SelectedItem.FavoriteLabel}" />
+                    <TextBlock Grid.Row="6" Margin="0,5,0,0" Text="랜덤 상태" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="6" Margin="110,5,0,0" Text="{Binding SelectedItem.ExclusionLabel}" />
+                    <TextBlock Grid.Row="7" Margin="0,5,0,0" Text="마지막 감상" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="7" Margin="110,5,0,0" Text="{Binding SelectedItem.LastViewedLabel}" />
+                    <TextBlock Grid.Row="8" Margin="0,5,0,0" Text="저장된 진행" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="8" Margin="110,5,0,0" Text="{Binding SelectedProgressText}" TextWrapping="Wrap" />
+                    <TextBox Grid.Row="9" Margin="0,10,0,10" Text="{Binding SelectedItem.Item.Path, TargetNullValue='', Mode=OneWay}"
+                             IsReadOnly="True" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" />
+                    <WrapPanel Grid.Row="10" HorizontalAlignment="Right">
+                        <Button x:Name="ManualOpenButton" Content="감상 열기" Click="OpenManual_Click"
+                                Margin="0,0,8,0" Padding="12,5" IsEnabled="False" />
+                        <Button x:Name="ExplorerButton" Content="탐색기에서 위치 열기"
+                                Click="ShowInExplorer_Click" Padding="12,5" IsEnabled="False" />
+                    </WrapPanel>
+                </Grid>
+            </GroupBox>
+        </Grid>
+
+        <TextBlock Grid.Row="3" Margin="0,8,0,0" Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+    </Grid>
+</UserControl>

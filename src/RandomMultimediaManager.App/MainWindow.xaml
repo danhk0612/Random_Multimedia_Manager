@@ -16,6 +16,13 @@
                 <Button Content="종료" Click="ExitApplication" Padding="8,4" />
             </StackPanel>
         </StackPanel>
-        <views:CategoryEditorView x:Name="CategoryEditor" />
+        <TabControl>
+            <TabItem Header="분류 / 소스">
+                <views:CategoryEditorView x:Name="CategoryEditor" />
+            </TabItem>
+            <TabItem Header="라이브러리">
+                <views:LibraryBrowserView x:Name="LibraryBrowser" />
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </Window>

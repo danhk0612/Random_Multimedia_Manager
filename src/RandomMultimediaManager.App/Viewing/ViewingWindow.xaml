@@ -9,6 +9,7 @@
     <Button Content="랜덤 시작" Click="Start" Margin="6"/>
     <Button Content="이전" Click="Previous" Margin="3"/>
     <Button Content="다음" Click="Next" Margin="3"/>
+    <Button Content="라이브러리에서 열기" Click="BrowseLibrary" Margin="3"/>
     <CheckBox x:Name="Favorite" Content="즐겨찾기" Click="FavoriteChanged" Margin="6"/>
     <CheckBox x:Name="Excluded" Content="영구 랜덤 제외" Click="ExcludedChanged" Margin="6"/>
     <CheckBox x:Name="Suppressed" Content="이번 감상 기록 제외" Click="SuppressedChanged" Margin="6"/>

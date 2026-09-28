@@ -21,19 +21,18 @@
 | T14 | 프로그램 생명주기 정책과 상태 설계 | Astra | 설계 완료 (PR #15 main 통합) | T11; D03/D04 |
 | T15 | 트레이 및 창 동작 | Astra | 구현·Windows 자동 검증 완료 (PR #17 main 통합, 사용자 Windows 확인 대기) | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
-| T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 착수 가능 | T11; T02 수동 방문 계약 |
+| T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 검토 대기) | T11; T02 수동 방문 계약 |
 | T18A | 변경 감지와 경로 상태 갱신 | Astra | 대기 | T05/T12; T02 식별 계약 |
 | T18 | Windows 배포 및 통합 검증 | Astra | 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 바로 다음 작업
 
-T16 PR #18을 main에 통합했다. 복원 키·트레이 복합 실패 보완과 Windows 자동 검증 4개 성공을 확인했다. 실제 키보드/트레이 클릭·Explorer 재시작·화면 순간 노출·스피커 청취는 미검증으로 유지한다.
+T16 PR #18은 main에 통합됐다. 복원 키·트레이 복합 실패 보완과 Windows 자동 검증 4개 성공을 확인했으며, 실제 키보드/트레이 클릭·Explorer 재시작·화면 순간 노출·스피커 청취는 미검증으로 유지한다. T17은 PR #19 검토 대기다.
 
-- 다음은 T17 최소 라이브러리 탐색 및 파일 정보 — Sol 구현 작업. 최신 main에서 task/t17-library-browser 브랜치를 사용한다.
+- T17 구현 브랜치 `task/t17-library-browser`, PR #19. 기준 main에서 시작했고 T16 #18 통합을 확인했다. 상세 구현·Windows 자동/수동 미검증 구분은 docs/T17_LIBRARY_BROWSER_VALIDATION.md를 따른다.
 - 기존 GetItems/GetHistory/GetProgress 및 SessionCoordinator.OpenManualAsync를 사용하고, 공통 감상 호스트에 필요한 최소 UI 진입만 연결한다. DB 스키마·공통 세션 계약·생명주기 정책을 변경해야 한다면 Astra 검토 대상으로 보고한다.
-- T13은 로컬 키 배정 확정이 남아 있다. T17과 ViewingWindow 진입 코드를 함께 수정할 수 있어 이번에는 병렬 배정하지 않는다.
-- T18A는 시작/실행 중 감지 기본값과 종료·스캔 직렬화 설계를 먼저 정리해야 하므로 별도 Astra 작업으로 남긴다. T17 통합 후 T13/T18A 배정을 재검토한다.
+- T17 통합 뒤 T13의 로컬 키 배정과 T18A의 시작/실행 중 감지 기본값·종료/스캔 직렬화 설계를 재검토한다. 이 변경에서는 다음 Task를 구현하지 않는다.
 - T15/T16 수동 미검증, T12 실사용 검증 이관, T09/T10/T11 기존 생략 및 AVI 무음 조사 보류를 유지한다.
 
 
@@ -237,11 +236,15 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T17 — 최소 라이브러리 탐색 및 파일 정보
 
 - 목적: 분류별 파일 탐색과 정리 보조.
-- 담당/상태: Sol / 착수 가능.
+- 담당/상태: Sol / 구현·Windows 자동 검증 완료, PR #19 검토 대기.
 - 선행: T11; T02 수동 방문 계약. T12/T15/T16 통합된 최신 main을 사용한다.
 - 범위/수정 영역: 라이브러리 화면·파일 정보·탐색기 연결.
 - 완료 조건/검증: 파일명 검색·즐겨찾기/제외/감상 필터·수동 열기·정보/경로 열기 검증; 메인 랜덤 흐름 유지.
 - 수정하지 말아야 할 영역: 고급 태그·통계·기록 초기화·DB 변경.
+- `task/t17-library-browser` / PR #19는 T16 PR #18 통합 후 최신 main에서 시작했다. 기존 snapshot/progress API와 ViewingWindow의 Run/Navigate/SessionCoordinator 수동 열기를 재사용하며 DB 스키마·공통 세션 계약·저장/세션/삭제/숨김/종료 의미는 변경하지 않았다.
+- Windows x64 10.0.26100 / .NET SDK 10.0.401 Release 검증 커밋 `5d4a33d84ae44fa5a134fc886097ed5b631e1295`: [T11 WPF/세션·만화/영상/자막 통합 36397417863](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417863), [T03 저장·시작/종료 36397417840](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417840), [T06 세션 36397417902](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417902), [T09 영상 36397417777](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/36397417777) 모두 성공했다. Release 빌드 경고 0·오류 0.
+- 자동 검증은 분류/검색/즐겨찾기·랜덤 제외·감상/미감상·Missing·정보·진행 위치, 저장 상태 무변경, 한글/공백 Explorer 인수와 인덱스 후 파일 제거 차단, 최근 감상·제외·비활성 분류 수동 열기, 정상 방문 저장·Forward 보존·동일 ItemId no-op, 종료 중 열린 라이브러리 모달까지 다룬다. Explorer UI의 실제 프로세스/창 표시와 사람의 Windows UI 조작은 미검증이다. T15/T16 등 과거 수동 미검증은 유지한다.
+- 구현·검증·남은 사용자 확인: docs/T17_LIBRARY_BROWSER_VALIDATION.md. PR #19는 열려 있으며 main에 직접 병합하지 않는다.
 
 ## T18A — 변경 감지와 경로 상태 갱신
 
