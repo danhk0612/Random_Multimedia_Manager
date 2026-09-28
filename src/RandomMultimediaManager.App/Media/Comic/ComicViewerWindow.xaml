@@ -4,7 +4,7 @@
         Title="만화 뷰어" Width="1180" Height="820" Background="#202020"
         KeyDown="OnKeyDown">
     <DockPanel>
-        <Border DockPanel.Dock="Top" Background="#303030" Padding="8">
+        <Border x:Name="Toolbar" DockPanel.Dock="Top" Background="#303030" Padding="8">
             <WrapPanel VerticalAlignment="Center">
                 <Button x:Name="OpenButton" Content="열기" Click="OpenFile" Margin="0,0,8,0" Padding="10,4" />
                 <Button Content="◀" Click="PreviousPage" Margin="0,0,4,0" Padding="10,4" />
@@ -28,7 +28,7 @@
                 <TextBlock x:Name="ZoomText" Foreground="White" VerticalAlignment="Center" />
             </WrapPanel>
         </Border>
-        <Border DockPanel.Dock="Bottom" Background="#303030" Padding="8">
+        <Border x:Name="StatusBar" DockPanel.Dock="Bottom" Background="#303030" Padding="8">
             <TextBlock x:Name="StatusText" Foreground="White" Text="ZIP/CBZ를 여세요. Ctrl+휠: 확대, 드래그: 팬" />
         </Border>
         <Grid x:Name="ViewerHost" Background="#161616"

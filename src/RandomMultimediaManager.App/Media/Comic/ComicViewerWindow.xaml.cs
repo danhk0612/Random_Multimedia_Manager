@@ -119,8 +119,31 @@ public partial class ComicViewerWindow : Window
             await OpenAsync(dialog.FileName);
     });
 
-    private async void PreviousPage(object sender, RoutedEventArgs e) => await Track(() => MoveAsync(-1));
-    private async void NextPage(object sender, RoutedEventArgs e) => await Track(() => MoveAsync(1));
+    private async void PreviousPage(object sender, RoutedEventArgs e) => await MovePageAsync(-1);
+    private async void NextPage(object sender, RoutedEventArgs e) => await MovePageAsync(1);
+
+    public Task MovePageAsync(int delta) => Track(() => MoveAsync(delta));
+
+    public void AdjustZoomFromShortcut(int direction)
+    {
+        if (!_viewModel.IsReady || direction == 0) return;
+        _viewModel.AdjustZoom(direction > 0 ? 120 : -120);
+        UpdateUi();
+        RenderCanvas();
+    }
+
+    public void FitWindowFromShortcut()
+    {
+        var fitWindowItem = FitModeBox.Items.Cast<ComboBoxItem>()
+            .Single(item => Equals(item.Tag?.ToString(), nameof(ComicFitMode.FitWindow)));
+        if (ReferenceEquals(FitModeBox.SelectedItem, fitWindowItem)) ApplyFitMode(ComicFitMode.FitWindow);
+        else FitModeBox.SelectedItem = fitWindowItem;
+    }
+
+    public void SetFullscreenControlsVisible(bool visible)
+    {
+        Toolbar.Visibility = StatusBar.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
 
     private async Task MoveAsync(int delta)
     {
@@ -181,11 +204,14 @@ public partial class ComicViewerWindow : Window
     private void FitModeChanged(object sender, SelectionChangedEventArgs e)
     {
         if (FitModeBox.SelectedItem is ComboBoxItem item && Enum.TryParse(item.Tag?.ToString(), out ComicFitMode mode))
-        {
-            _viewModel.SetFitMode(mode);
-            UpdateUi();
-            RenderCanvas();
-        }
+            ApplyFitMode(mode);
+    }
+
+    private void ApplyFitMode(ComicFitMode mode)
+    {
+        _viewModel.SetFitMode(mode);
+        UpdateUi();
+        RenderCanvas();
     }
 
     private void ViewerSizeChanged(object sender, SizeChangedEventArgs e)
@@ -203,9 +229,7 @@ public partial class ComicViewerWindow : Window
 
         if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
         {
-            _viewModel.AdjustZoom(e.Delta);
-            UpdateUi();
-            RenderCanvas();
+            AdjustZoomFromShortcut(Math.Sign(e.Delta));
             e.Handled = true;
             return;
         }
@@ -252,12 +276,13 @@ public partial class ComicViewerWindow : Window
 
     private async void OnKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key is Key.Right or Key.PageDown)
+        if (Keyboard.Modifiers != ModifierKeys.None) return;
+        if (e.Key == Key.Right)
         {
             await Track(() => MoveAsync(_viewModel.ReadingDirection == ComicReadingDirection.LeftToRight ? 1 : -1));
             e.Handled = true;
         }
-        else if (e.Key is Key.Left or Key.PageUp)
+        else if (e.Key == Key.Left)
         {
             await Track(() => MoveAsync(_viewModel.ReadingDirection == ComicReadingDirection.LeftToRight ? -1 : 1));
             e.Handled = true;

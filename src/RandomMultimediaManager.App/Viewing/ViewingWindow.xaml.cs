@@ -3,8 +3,11 @@ using RandomMultimediaManager.App.Deletion;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
+using LibVLCSharp.Shared;
 using LibVLCSharp.Shared.Structures;
 using Microsoft.Win32;
 using RandomMultimediaManager.App.Data;
@@ -24,13 +27,15 @@ public partial class ViewingWindow : Window
     public SessionCoordinator Coordinator { get; }
     public ViewingMedia? Current { get; private set; }
     private readonly DispatcherTimer timer;
+    private readonly DispatcherTimer fullscreenControlsTimer;
     private Task command = Task.CompletedTask;
     private Task<bool>? closeTask;
     private bool exitRequested, closeAfterRetry;
     private Window? libraryDialog;
     private LibraryBrowserViewModel? libraryBrowser;
     public string? CloseError { get; private set; }
-    private bool busy, allowClose, closing, seeking, refreshing, fullscreen;
+    private bool busy, allowClose, closing, seeking, refreshing, fullscreen, fullscreenControlsVisible = true;
+    private bool imeComposing;
     private DateTime lastCheckpoint = DateTime.UtcNow;
     private PlaybackProgress? saved;
     private SessionToken? savedToken;
@@ -43,6 +48,13 @@ public partial class ViewingWindow : Window
         this.initialManualItemId = initialManualItemId;
         InitializeComponent();
         Coordinator = new(database, new ViewingMediaPreparer(VideoSurface, OnMediaActivated, Released));
+        fullscreenControlsTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
+        { Interval = TimeSpan.FromSeconds(3) };
+        fullscreenControlsTimer.Tick += (_, _) => HideFullscreenControls();
+        TextCompositionManager.AddPreviewTextInputStartHandler(this, CompositionStarted);
+        TextCompositionManager.AddTextInputHandler(this, CompositionCompleted);
+        Keyboard.AddLostKeyboardFocusHandler(this, (_, _) => imeComposing = false);
+        Deactivated += (_, _) => imeComposing = false;
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background,
             async (_, _) => await Tick(), Dispatcher);
         Loaded += async (_, _) =>
@@ -64,7 +76,7 @@ public partial class ViewingWindow : Window
             }
             await Run(() => Navigate(() => Coordinator.OpenManualAsync(Guid.NewGuid(), itemId)));
         };
-        Closed += (_, _) => timer.Stop();
+        Closed += (_, _) => { timer.Stop(); fullscreenControlsTimer.Stop(); };
         timer.Start();
     }
 
@@ -72,7 +84,7 @@ public partial class ViewingWindow : Window
     {
         Current = media;
         ComicSurface.Content = media.ComicContent;
-        VideoControls.Visibility = media.Video is null ? Visibility.Collapsed : Visibility.Visible;
+        ApplyFullscreenControlsVisibility();
         Volume.Value = 70; Muted.IsChecked = false; Rate.SelectedIndex = 1;
         saved = null; savedToken = null;
         ExternalSubtitles.ItemsSource = null; AudioTracks.ItemsSource = null; SubtitleTracks.ItemsSource = null;
@@ -82,7 +94,7 @@ public partial class ViewingWindow : Window
     {
         if (!ReferenceEquals(Current, media)) return;
         Current = null; ComicSurface.Content = null;
-        VideoControls.Visibility = Visibility.Collapsed;
+        ApplyFullscreenControlsVisibility();
     }
     private void Controls()
     {
@@ -358,10 +370,236 @@ public partial class ViewingWindow : Window
     private async void EndSeek(object s, MouseButtonEventArgs e) { await VideoAction((v,t) => v.Seek(t,(long)Position.Value)); seeking = false; }
     private void Fullscreen(object s, RoutedEventArgs e)
     {
-        if (closing || exitRequested) return;
-        if (!fullscreen) { previousState = WindowState; WindowState = WindowState.Normal; WindowStyle = WindowStyle.None; WindowState = WindowState.Maximized; }
-        else { WindowState = WindowState.Normal; WindowStyle = WindowStyle.SingleBorderWindow; WindowState = previousState; }
-        fullscreen = !fullscreen;
+        if (!CanAcceptSessionInput) return;
+        SetFullscreen(!fullscreen);
+    }
+
+    private void OnPreviewMouseActivity(object sender, MouseEventArgs e) => ShowFullscreenControls();
+    private void OnPreviewMouseActivity(object sender, MouseButtonEventArgs e) => ShowFullscreenControls();
+
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (fullscreen) ShowFullscreenControls();
+        if (e.Handled || !IsEnabled || closing || exitRequested || PreparedVideo.PrivacyMuted || imeComposing
+            || e.Key is Key.ImeProcessed or Key.DeadCharProcessed
+            || IsShortcutInputControl(e.OriginalSource as DependencyObject)
+            || IsShortcutInputControl(Keyboard.FocusedElement as DependencyObject)) return;
+
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (TryHandleShortcut(key, Keyboard.Modifiers, e.IsRepeat)) e.Handled = true;
+    }
+
+    private void CompositionStarted(object sender, TextCompositionEventArgs e) => imeComposing = true;
+    private void CompositionCompleted(object sender, TextCompositionEventArgs e) => imeComposing = false;
+
+    private bool CanAcceptViewingInput => IsEnabled && !busy && !closing && !exitRequested && !PreparedVideo.PrivacyMuted;
+    private bool CanAcceptSessionInput => CanAcceptViewingInput && SessionControls.IsEnabled;
+    private bool CanAcceptVideoInput => CanAcceptViewingInput && VideoControls.IsEnabled;
+
+    private bool TryHandleShortcut(Key key, ModifierKeys modifiers, bool isRepeat)
+    {
+        if (modifiers == ModifierKeys.None)
+        {
+            switch (key)
+            {
+                case Key.F:
+                    if (Current is null) return true;
+                    if (CanAcceptSessionInput && Favorite.IsEnabled && !isRepeat)
+                    {
+                        Favorite.IsChecked = Favorite.IsChecked != true;
+                        FavoriteChanged(Favorite, new RoutedEventArgs());
+                    }
+                    return true;
+                case Key.B:
+                    if (CanAcceptSessionInput && !isRepeat) Previous(this, new RoutedEventArgs());
+                    return true;
+                case Key.N:
+                    if (CanAcceptSessionInput && !isRepeat) Next(this, new RoutedEventArgs());
+                    return true;
+                case Key.I:
+                    if (Current is null) return true;
+                    if (CanAcceptSessionInput && Suppressed.IsEnabled && !isRepeat)
+                    {
+                        Suppressed.IsChecked = Suppressed.IsChecked != true;
+                        SuppressedChanged(Suppressed, new RoutedEventArgs());
+                    }
+                    return true;
+                case Key.Delete:
+                    if (DeleteButton.IsEnabled && CanAcceptViewingInput && !isRepeat)
+                        DeleteCurrent(DeleteButton, new RoutedEventArgs());
+                    return true;
+                case Key.F11:
+                    if (CanAcceptSessionInput && !isRepeat) SetFullscreen(!fullscreen);
+                    return true;
+                case Key.Escape:
+                    if (!fullscreen) return false;
+                    if (CanAcceptSessionInput && !isRepeat) SetFullscreen(false);
+                    return true;
+                case Key.PageUp:
+                case Key.PageDown:
+                    if (Current?.ComicContent is null) return false;
+                    if (CanAcceptViewingInput && Current.ComicContent.IsEnabled)
+                    {
+                        var media = Current;
+                        int delta = key == Key.PageUp ? -1 : 1;
+                        _ = Run(() => media.MoveComicPageFromShortcutAsync(delta));
+                    }
+                    return true;
+                case Key.Space:
+                    if (Current?.Video is not { } spaceVideo) return false;
+                    if (CanAcceptVideoInput && !isRepeat)
+                    {
+                        if (spaceVideo.Snapshot(Current.VideoVisit).State == VLCState.Playing)
+                            Pause(this, new RoutedEventArgs());
+                        else
+                            Play(this, new RoutedEventArgs());
+                    }
+                    return true;
+                case Key.Left:
+                case Key.Right:
+                    if (Current?.Video is null) return false;
+                    if (CanAcceptVideoInput)
+                    {
+                        long delta = key == Key.Left ? -5000 : 5000;
+                        _ = VideoAction((video, visit) =>
+                            video.Seek(visit, video.CaptureProgress(visit).VideoPositionMs!.Value + delta));
+                    }
+                    return true;
+                case Key.Up:
+                case Key.Down:
+                    if (Current?.Video is null) return false;
+                    if (CanAcceptVideoInput)
+                        Volume.Value = Math.Clamp(Volume.Value + (key == Key.Up ? 5 : -5), Volume.Minimum, Volume.Maximum);
+                    return true;
+                case Key.M:
+                    if (Current?.Video is null) return false;
+                    if (CanAcceptVideoInput && !isRepeat)
+                    {
+                        Muted.IsChecked = Muted.IsChecked != true;
+                        Mute(Muted, new RoutedEventArgs());
+                    }
+                    return true;
+            }
+        }
+
+        if (TryGetComicZoomDirection(key, modifiers, out int zoomDirection))
+        {
+            if (Current?.ComicContent is null) return false;
+            if (CanAcceptViewingInput && Current.ComicContent.IsEnabled)
+            {
+                var media = Current;
+                _ = Run(() =>
+                {
+                    media.AdjustComicZoomFromShortcut(zoomDirection);
+                    return Task.CompletedTask;
+                });
+            }
+            return true;
+        }
+
+        if (modifiers == ModifierKeys.Control && (key is Key.D0 or Key.NumPad0))
+        {
+            if (Current?.ComicContent is null) return false;
+            if (CanAcceptViewingInput && Current.ComicContent.IsEnabled)
+            {
+                var media = Current;
+                _ = Run(() =>
+                {
+                    media.FitComicToWindowFromShortcut();
+                    return Task.CompletedTask;
+                });
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetComicZoomDirection(Key key, ModifierKeys modifiers, out int direction)
+    {
+        direction = 0;
+        if (modifiers == ModifierKeys.Control && key is (Key.Add or Key.Subtract or Key.OemMinus))
+            direction = key == Key.Add ? 1 : -1;
+        else if ((modifiers == ModifierKeys.Control || modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+            && key == Key.OemPlus)
+            direction = 1;
+        return direction != 0;
+    }
+
+    private static bool IsShortcutInputControl(DependencyObject? element)
+    {
+        while (element is not null)
+        {
+            if (element is TextBoxBase or PasswordBox or ItemsControl or RangeBase) return true;
+            element = element switch
+            {
+                ContentElement content => ContentOperations.GetParent(content),
+                Visual visual => VisualTreeHelper.GetParent(visual),
+                _ => LogicalTreeHelper.GetParent(element)
+            };
+        }
+        return false;
+    }
+
+    private void SetFullscreen(bool enabled)
+    {
+        if (closing || exitRequested || PreparedVideo.PrivacyMuted || fullscreen == enabled) return;
+        if (enabled)
+        {
+            previousState = WindowState;
+            WindowState = WindowState.Normal;
+            WindowStyle = WindowStyle.None;
+            WindowState = WindowState.Maximized;
+            LayoutRoot.Margin = new Thickness(0);
+            fullscreen = true;
+            fullscreenControlsVisible = true;
+            ApplyFullscreenControlsVisibility();
+            ShowFullscreenControls();
+            Keyboard.Focus(this);
+        }
+        else
+        {
+            fullscreenControlsTimer.Stop();
+            WindowState = WindowState.Normal;
+            WindowStyle = WindowStyle.SingleBorderWindow;
+            LayoutRoot.Margin = new Thickness(8);
+            WindowState = previousState;
+            fullscreen = false;
+            fullscreenControlsVisible = true;
+            ApplyFullscreenControlsVisibility();
+        }
+    }
+
+    private void ShowFullscreenControls()
+    {
+        if (!fullscreen || PreparedVideo.PrivacyMuted) return;
+        fullscreenControlsVisible = true;
+        ApplyFullscreenControlsVisibility();
+        fullscreenControlsTimer.Stop();
+        fullscreenControlsTimer.Start();
+    }
+
+    private void HideFullscreenControls()
+    {
+        if (!fullscreen || !fullscreenControlsVisible) return;
+        if (!IsEnabled || PreparedVideo.PrivacyMuted
+            || IsShortcutInputControl(Keyboard.FocusedElement as DependencyObject))
+        {
+            fullscreenControlsTimer.Stop();
+            fullscreenControlsTimer.Start();
+            return;
+        }
+        Keyboard.Focus(this);
+        fullscreenControlsVisible = false;
+        ApplyFullscreenControlsVisibility();
+    }
+
+    private void ApplyFullscreenControlsVisibility()
+    {
+        bool visible = !fullscreen || fullscreenControlsVisible;
+        TopChrome.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        VideoControls.Visibility = Current?.Video is null || !visible ? Visibility.Collapsed : Visibility.Visible;
+        Current?.SetFullscreenControlsVisible(visible);
     }
     public void SetExitRequested(bool value)
     {
