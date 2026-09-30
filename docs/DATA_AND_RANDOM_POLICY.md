@@ -287,3 +287,134 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 - `LibraryDatabase.CaptureDeletion`은 기존 DB writer lock 안에서 캡처와 격리를 원자적으로 수행한다. `IsDeletionBlocked`/`DeletionPaths`를 후보·신규 열기에 연결하며 스캔/진행/방문 쓰기도 같은 격리를 확인한다. 스키마 및 ApplyDeletion 의미는 변경하지 않았다.
 - AppliedDeletion 표식은 저널 파일 제거 후에도 보존한다. 저널 제거 직후 전원 단절에 따른 파일 재등장에도 기존 멱등 표식을 적용한다. 삭제 저널 파일 자체는 성공 정리 후 제거한다.
 - 구체적인 오류·재시작·사용자 확인 및 검증 범위는 docs/T12_DELETION_VALIDATION.md. T14 생명주기 문서의 최종 연결은 T12 통합 후 대조하며 트레이/빠른 종료를 구현하지 않았다.
+
+## T18A 변경 감지 설계 — 검토안, 구현 미착수
+
+기준: main `26875a5ad2ba601182d34facd5aae8811bac6ad6`, T13 PR #20 merge `d7504b47e72340abc97346b825192a0723073594`. 이 절은 설계 산출물이며 구현 완료/제품 정책 승인이 아니다. 사용자 결정의 단일 목록은 DECISIONS.md의 D10~D12다. 아래 안전 경계는 기존 계약을 보존하는 설계이며 설정 기본값·자동 검사 시점은 승인 후 구현한다.
+
+### 1. 실제 코드 근거와 필요한 차이
+
+경로는 `src/RandomMultimediaManager.App/` 기준이다.
+
+| 근거 | 현재 동작 | T18A에서 필요한 최소 변경 |
+|---|---|---|
+| Scanning/LibraryScanner.cs: ScanCategoryAsync/ScanCategory | 분류별 활성 소스 열거→같은 PathKey의 모든 분류 Missing ID 수집→ApplyObservedItems; 내부에서 수집과 저장을 모두 수행 | 기존 분류 단위 스캐너 재사용. 앱 전체 실행 admission을 추가하고 부재 재확인·격리 대기 결과를 구분 |
+| Data/LibraryDatabase.Catalog.cs: ApplyObservedItems | 하나의 transaction; 크기/수정시각 변경 시 PlaybackProgress 제거, 이력/선호 보존; 격리 경로 하나라도 포함되면 예외로 전체 rollback | SQL/삭제 의미 유지. 격리 예외를 성공이나 일부 저장으로 표시하지 않음 |
+| MainWindow.xaml.cs: OpenViewing/OpenManualItem | IsScanning이면 감상 진입 거부, ShowDialog 동안 메인 편집/스캔 차단 | 수동/자동 모두 공유하는 실행 상태로 검사 교체. 모달 종료 전에는 스캔을 시작하지 않음 |
+| Viewing/ViewingWindow.xaml.cs: Run/CheckpointAsync/RequestCloseAsync | 5초 checkpoint, 명령·미디어 대기 후 Leave/해제; SaveFailed면 닫기 실패 | 변경 신호가 Pending/진행을 건드리지 않도록 감상 창 전체 수명 동안 반영 보류 |
+| Sessions/SessionCoordinator.cs 및 .Deletion.cs | Busy/토큰/FrozenCommit/삭제 결과 전이 소유 | 공개 세션 API와 방문/Seen/cursor 의미 변경 불필요 |
+| Deletion/DeletionService.cs, DeletionJournal.cs, Data/LibraryDatabase.Deletion.cs | 시작 격리/복구, CaptureDeletion writer lock, Pending/GloballyBlocked/HasIncompleteSuccess, durable AppliedDeletion | 기존 복구가 우선. watcher는 저널을 읽어 성공 추정하거나 격리를 해제하지 않음 |
+| Lifecycle/AppLifecycle.cs, MainWindow.StopScanningAsync | 수동 CancelScan/ScanCompletion·복구·목록 읽기 대기 후 DB 해제 | 감지 정지/콜백 무효화와 모든 자동 작업 drain을 기존 종료 경로에 포함 |
+| ViewModels/LibraryBrowserViewModel.cs | snapshot 읽기·loadVersion/progressVersion으로 늦은 결과 차단, 읽기 Task drain | 성공한 스캔 뒤 기존 RefreshAsync 호출. 다른 분류 Missing 갱신도 고려 |
+| Data/LibraryDatabase.cs, .Reads.cs, .Catalog.cs | user_version=1만 지원, AppSettings는 기간/Resume 두 필드 | 승인 후 v2 migration과 스캔 설정만 별도 저장하는 최소 API 추가 |
+
+현재 DB writer lock은 SQL 동시 실행만 막는다. “이전 파일 진행 checkpoint→스캔의 진행 제거→늦은 checkpoint 재생성”의 의미 충돌은 막지 못하므로 감상 중 자동 반영을 허용할 근거가 아니다. Busy=false, pause, 숨김, 현재 항목 없음, SaveFailed 복구 중이라는 이유로 감상 창 수명 보호를 풀지 않는다. 감상 종료의 Leave/리소스 해제가 성공하고 MainWindow.Viewing이 해제된 다음이 안전한 스캔 시작점이다.
+
+문서와 코드 대조에서 보완이 필요한 경계: 스캐너는 시작 때 드라이브를 확인하지만 열거 도중 DirectoryNotFoundException/FileNotFoundException을 바로 부재 prefix로 기록한다. 중간 드라이브 분리도 이 예외로 나타나는지는 Windows 재현이 필요하며 현재 통과로 보지 않는다. “오프라인≠Missing” 기존 계약을 자동 감지에서도 지키려면 적용 전 부재 증거를 재확인해야 한다. 새 데이터 정책으로 바꾸는 것이 아니라 기존 계약의 관찰 경계를 보완한다.
+
+### 2. 옵션·권장안과 저장 설계
+
+| 옵션 | 권장안 (사용자 결정 대기) | 의미 |
+|---|---|---|
+| 시작 시 라이브러리 검사 | 켬 | DB/삭제 시작 복구 완료 및 메인·트레이·키 초기화 후 활성 분류를 한 번 순차 검사 요청. 첫 화면을 전체 스캔 완료까지 막지 않음 |
+| 실행 중 변경 감지 | 끔 | 켜면 watcher와 누락 회복 재검사를 함께 사용. 큰 라이브러리의 예상치 못한 디스크 작업을 기본으로 시작하지 않음 |
+| 감지 켠 동안 무신호 누락 회복 | 10분 간격 | 활성 분류 전체 재검사 요청을 합침. 간격은 기술 상수 제안이며 별도 주기 설정 UI 없음 |
+| 감지 비활성→활성 | 즉시 기준 스캔 요청 | watcher부터 준비하고 기준 스캔을 요청하여 등록 전 변경을 보완 |
+| 감지 비활성화 | 신규 자동 요청 중단 | 자동 열거는 취소 요청, 이미 ApplyObservedItems에 진입한 transaction은 완료를 기다림. 수동 스캔은 유지 |
+
+시작 검사와 실행 중 감지는 독립 bool이며 네 조합을 지원한다. 둘 다 꺼도 수동 스캔은 유지한다. 자동 대상은 활성 분류의 활성 소스, IncludeSubdirectories를 그대로 따른다. 비활성 분류의 명시적 수동 스캔은 현재 의미를 유지한다. 감지 켠 상태에서 분류/소스를 활성화·추가·경로/하위 포함 변경하면 새 구성 기준 스캔을 요청한다. 감지가 꺼졌으면 소스 편집만으로 자동 검사를 추가하지 않는다.
+
+설정은 기존 `%LOCALAPPDATA%/RandomMultimediaManager/library.db`의 AppSettings 단일 행에 둔다. 별도 JSON/레지스트리/실행 폴더 저장은 추가하지 않는다. 승인될 경우 `ScanOnStartup INTEGER NOT NULL DEFAULT 1 CHECK(... IN (0,1))`, `WatchLibraryChanges INTEGER NOT NULL DEFAULT 0 CHECK(... IN (0,1))` 두 열을 v1→v2 transaction으로 추가한다. DEFAULT 값은 D10 확정값으로 치환하며 기존 사용자/신규 DB에 동일하게 적용한다. 기존 v1 SQL을 몰래 바꾸지 않고 신규 DB도 v1 초기화→v2 순차 적용한다. version/열/설정 행 검증, rollback, 상위 버전 거부를 유지한다.
+
+기존 AppSettings/SaveSettings는 감상 창에서 기간·Resume 저장에 사용된다. 이 경로가 오래 읽은 감지 옵션을 덮어쓰지 않도록 별도 최소 `LibraryScanSettings` 값과 `GetLibraryScanSettings/SaveLibraryScanSettings` 전용 열 읽기/쓰기 API를 제안한다. 기존 SaveSettings의 두 열 갱신은 유지한다. 설정 저장 성공 후에만 watcher를 재구성하고 실패 시 기존 동작/표시 값을 유지한다. 옵션 UI는 기존 메인 분류/스캔 영역에 두 체크 항목과 저장·상태만 연결한다. 설정 변경은 실행 중 스캔의 취소/완료 경계 뒤 적용하며 일반 설정 프레임워크를 만들지 않는다.
+
+### 3. 최소 감지 구조와 누락 회복
+
+App/Scanning의 앱 소유 조정자 하나가 수동/시작/감지/재검사 요청을 받는다. 전용 서비스 프로세스·DB 큐·파일별 이벤트 이력은 없다.
+
+- FileSystemWatcher는 활성 소스별 구성한다. 중첩/공유 소스에서 같은 이벤트를 받아도 분류 ID별 dirty 표식 하나로 합친다. IncludeSubdirectories는 소스 값 그대로이며 로컬 드라이브·reparse/대소문자 경로 제한과 확장자는 T05 그대로다.
+- Created/Deleted/Changed/Renamed는 “해당 분류를 재확인” 신호일 뿐이다. 파일명·디렉터리명·크기·수정시각·속성 변경을 관찰하고 디렉터리 이동 이벤트를 확장자 필터로 버리지 않는다. 이벤트 경로로 MediaItem을 직접 생성/삭제하거나 rename 두 경로의 상태를 연결하지 않는다.
+- 콜백은 소스/구성 generation과 분류 dirty version만 갱신한다. DB/디스크 IO/창 열기는 하지 않는다. dispatcher로의 알림도 한 건으로 합쳐 이벤트 수만큼 작업을 쌓지 않는다. 메모리는 소스/분류 수에 비례하고 파일 이벤트 수에 비례하지 않는다.
+- 기술값 제안: 마지막 신호 뒤 2초 모아서 실행하되 최초 dirty 뒤 30초가 되면 실행 자격을 준다. 수명 게이트 대기는 이 시간보다 우선한다. 실행 중 추가 신호는 시작 시 캡처한 version과 달라지므로 완료 때 지우지 않고 다음 1회 검사로 합친다. 계속 변경되는 분류가 다른 분류를 막지 않도록 순환한다.
+- 앱 전체에서 스캐너는 한 번에 하나다. 요청은 분류 ID 기준 병합하며 수동 요청은 대기 자동 요청보다 우선한다. 이미 실행 중인 같은 분류의 수동 요청은 같은 Task를 사용하고 뒤에 새 스캔을 무한 적재하지 않는다.
+- Error/overflow는 해당 분류 dirty 및 watcher 재구성 필요로 기록한다. buffer 크기 증대만으로 정확성을 보장하지 않는다. 정상 등록 뒤 재검사하며 이벤트가 아예 오지 않는 누락은 D11 주기 재검사 또는 수동/다음 시작 검사로 회복한다.
+- 시작/재등록 시 watcher를 먼저 준비한 뒤 스캔한다. 실패한 소스는 기존 DB 상태를 유지하고 watcher 재시도 대상으로 남긴다. 기존 구성 콜백은 generation으로 무시한다.
+- 기술값 제안: 등록/IO 실패 재시도는 30초→2분→10분 상한이며, 정상 완료 시 초기화한다. 접근 거부/영구 미지원 경로도 무한 즉시 재시도하지 않는다. 주기·backoff·dirty는 메모리만이며 프로세스 재시작 후 시작 옵션과 수동 검사로 복구한다.
+- OS 변경과 열거는 원자적 snapshot이 아니다. 스캔 뒤 다시 바뀔 수 있으며 즉시·완전 동기화를 보장하지 않는다. 파일 복사 중의 메타데이터는 재검사로 수렴하고 미디어 준비 성공은 기존 열기 경로만 판단한다. 복사 완료 추정이나 디코더 실행은 추가하지 않는다.
+
+기술 근거: [Microsoft FileSystemWatcher 문서](https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher?view=net-10.0), 2026-09-29 KST 본문 접근 확인. 문서는 중복 이벤트·buffer overflow 누락·폴더 이동 알림의 한계를 설명한다. 위 기본값/주기는 프로젝트 제안이며 Microsoft 권장 수치가 아니다.
+
+### 4. 직렬화·취소·재시도 상태표
+
+UI Dispatcher에서 “게이트 검사+작업 등록”을 await 없이 한 번에 수행한다. DB lock을 잡은 채 Dispatcher/파일 IO를 기다리지 않는다. 모달 UI 차단만을 자동 작업 안전장치로 사용하지 않는다.
+
+| 상태 | 수동/자동 스캔 | 편집·감상·삭제/복구 | 해제/재시도 |
+|---|---|---|---|
+| 초기 DB/삭제 복구 | 신규 실행 금지 | 기존 InitializeAsync/복구 우선 | 복구 반환 후 구성. 전역 손상 격리면 기존 시작 차단 유지 |
+| 유휴, 감상 창 없음 | 수동 즉시, 자동 dirty만 실행 | 같은 admission으로 소스 저장/감상 진입과 경쟁 방지 | 작업 완료 뒤 다음 요청 |
+| 스캔 열거 중 | 실행 하나, 요청 병합 | 감상 진입은 기존처럼 완료 후 안내. 소스 저장·제거/타입 편집/삭제 복구는 취소 요청 후 완료 대기 | 편집 적용→구성 generation 증가→새 구성으로 다시 관찰 |
+| ApplyObservedItems 호출 진입 후 | 취소로 중간 rollback 요구 금지 | 편집/감상/복구는 transaction 결과까지 대기 | 실제 성공/실패 보고 후 gate 해제 |
+| 감상 창 존재: Empty/Opening/Active/checkpoint | 수동 거부·대기 안내, 자동 dirty만 보관 | 기존 Run/Busy/토큰/취소/저장 경로 유지 | 정상 창 닫기·Leave·해제 완료 후 실행 |
+| SaveFailed/CommitUnknown/해제 오류 | 자동 반영 계속 보류 | 기존 재시도/감상 복귀만 해당 계약대로 | Busy=false나 창 숨김으로 보호 해제 금지 |
+| 삭제 명령/저널 복구 진행 | 시작 보류, 실행 중 스캔 취소·drain 후 복구 입장 | OS 결과·저널·AppliedDeletion 경계 완료까지 배타 | 이벤트는 dirty만 유지 |
+| durable 경로 격리만 남음 | 격리와 무관한 분류는 허용, 관련 분류는 보류 | 기존 사용자 확인으로만 격리 해제 | 해제 후 해당 분류 재스캔 |
+| 전역 손상 격리/미완료 성공 삭제 | 신규 스캔 중단 | 기존 복구·종료 차단 정책 유지 | 복구 해결 뒤 재평가 |
+| Hidden (Closing 아님) | D12 권장안: 유휴면 자동 허용, 감상 존재 시 보류 | 신규 사용자 명령 차단은 T16 그대로 | 오류/완료가 창·토스트·소리·Restore를 만들지 않음 |
+| Closing | 신규 요청/타이머/콜백 차단, 열거 취소 | 기존 Leave·삭제/DB 완료 대기 | dirty 소진을 기다리지 않고 승인 작업만 drain |
+| ExitBlocked | 자동 실행 정지 유지 | 복원·기존 저장/삭제 복구 허용. 수동 스캔도 재개 조건 전 거부 | 명시적 복원 후 DB 사용 가능·감상 없음·복구 종료 확인 시 감지 재구성/기준 검사 |
+| Exited | 모든 콜백 무효, DB 접근 없음 | 없음 | 없음 |
+
+관련 격리 분류 판정은 활성 소스가 격리 PathKey를 포함하거나 그 분류의 기존 항목에 격리 PathKey가 있는 경우로 한다. 소스 밖의 옛 항목도 고려한다. 전역 손상은 전체를 막는다. 현재 ApplyObservedItems는 격리 항목을 건너뛰는 API가 아니므로 이번 설계에서는 필터로 몰래 누락시키지 않고 **관련 분류 전체를 보류**한다. 경쟁이 발생하면 기존 DB 격리 검증이 최종 방어선이며 rollback 후 복구 대기로 보고한다. 사용자 결정 D12의 보수적 지연 비용을 설명한다.
+
+소스 편집은 감상을 강제로 끝내지 않는다. 현 UI의 감상 모달 동안 편집 불가 경계는 유지한다. 스캔 중 편집 의도는 즉시 저장하지 않고 취소/drain 후 처리하며 이전 구성의 결과는 이후 적용하지 않는다. 이미 DB 반영된 관찰은 되돌리지 않지만 소스 제거를 Missing으로 해석하지 않는다. DB/조정자 외부 직접 호출을 새로 만들지 않는다.
+
+수동 취소는 해당 실행을 취소하고 같은 분류를 자동으로 곧바로 재시작하지 않도록 보류한다. 다음 새 이벤트/주기/명시적 수동 요청에서 재시도한다. Closing 취소는 재시도 타이머를 만들지 않는다. 취소가 마지막 검사보다 늦어 저장이 이미 시작됐으면 Completed/실패로 실제 결과를 표시하며 “저장하지 않음”을 표시하지 않는다.
+
+### 5. 관찰·실패 복구 규칙
+
+| 관찰/실패 | 반영 기준 | 회복 |
+|---|---|---|
+| 파일 추가/이동/이름변경 | T02 경로 키 기준. 새 키는 새 ID/기본 상태, 옛 키는 부재 확인 뒤 Missing | 같은 분류 재스캔; 다른 분류 이력 승계 없음 |
+| 대소문자 변경/같은 경로 재등장 | 기존 ID/분류별 상태 유지, Present로 복귀 | 내용 동일성으로 주장하지 않음 |
+| 같은 키 크기/수정시각 변경 | 현재 ApplyObservedItems대로 진행만 제거, 이력/선호 유지 | 감상 창 닫힌 후 반영. 동일 메타데이터 교체 탐지는 보장 안 함 |
+| 외부 삭제 신호 | 신호만으로 Missing/기록 제거 금지 | T05 관찰로 Missing, 이력/진행/선호 보존 |
+| 앱 삭제 신호 | 저널/격리 해제나 성공 완료 추정 금지 | T12가 성공 정리 완료 후 새 스캔. 새로 나타난 파일 OS 재삭제 없음 |
+| 드라이브 시작부터 부재/중간 분리 | Unavailable인 범위의 기존 상태 보존 | 준비 복귀 후 watcher 재생성·전체 분류 검사 |
+| 소스 폴더 실제 삭제 | 드라이브/유효 조상 접근 가능하고 명시적 부재 확인된 범위만 Missing | 복귀 후 재관찰 |
+| 접근 거부/reparse/메타데이터 오류 | 실패 prefix/항목은 이전 상태 유지 | 정상 관찰 범위만 원자적 반영, 경고/재시도 유지 |
+| 일부 열거 성공 뒤 실패 | 확인된 Present 및 부재 증거가 유효한 범위만 반영 | 결과는 “부분 완료/경고”, 전체 동기화 성공 표시 금지 |
+| 취소(반영 진입 전) | 분류 결과 전체 미반영 | 임시 결과 폐기, 다음 요청은 새 관찰 |
+| SQL 예외/격리 경쟁 | 기존 transaction 전체 rollback; 감상 SaveFailed와 별도 스캔 오류 | 오래된 관찰 payload 반복 적용 대신 새 스캔 |
+| process 종료/재시작 | dirty/타이머는 복구하지 않음. 기존 DB/저널만 유지 | D10 시작 검사 또는 수동 검사. 둘 다 안 하면 미확인 상태가 남음을 안내 |
+
+부재 증거 보완: 열거 중 NotFound를 곧바로 확정하지 않고 적용 전에 해당 드라이브 준비 상태·지원되는 조상 경로를 재확인한다. 드라이브/조상 접근 실패나 모순 관찰이면 해당 소스의 부재 후보를 버린다. 온라인인 유효 조상 아래 실제 없음만 허용하고 bool File.Exists=false만으로 구분하지 않는다. Missing 후보 경로가 다시 나타나면 Missing하지 않고 dirty를 유지한다. 부재/Present가 상충하면 Present 우선, 불확실하면 보존한다. 다른 분류까지 갱신하는 Missing ID 역시 같은 검증을 거친다. 파일 IO를 DB transaction에 넣지 않으며 재확인 직후의 외부 변경까지 완전 차단한다고 주장하지 않는다.
+
+### 6. 종료·목록·최소 API 영향
+
+- AppLifecycle Closing admission과 동시에 감지 조정자를 stopping으로 바꾸고 watcher 이벤트/주기 요청을 끈다. generation을 무효화하여 이미 발행된 콜백도 무시한다.
+- 진행 중 열거에 취소를 전달하고 실행 Task를 기다린다. ApplyObservedItems가 시작됐다면 DB 결과까지 기다린다. 파일 IO가 OS에서 지연되면 취소가 즉시 끝난다고 보장하지 않고 강제 Kill/시간 제한 종료도 추가하지 않는다.
+- 기존 StopScanningAsync를 모든 스캔 Task·복구·관련 목록 읽기까지 drain하도록 확장한다. ViewingWindow 정상 닫기와 이 drain은 서로 기다리는 순환을 만들지 않는다. 감상 창이 살아 있으면 스캔은 시작할 수 없고 dirty는 drain 대상이 아니다.
+- watcher 해제 실패/살아 있는 작업이 있으면 DB를 닫지 않고 ExitBlocked로 남긴다. DB 해제 후 다른 정리 실패로 ExitBlocked인 경우 DB가 살아 있다고 가정해 감지를 다시 시작하지 않는다. 재개 조건은 실제 DB 수명 확인을 포함한다.
+- ExitBlocked에서 단순 SetExitRequested(false) 또는 Restore 호출만으로 감지를 켜지 않는다. 명시적 복원 후 정상 작업 가능 조건을 확인한 경우에만 새 generation/기준 스캔으로 재개하고, 불충족이면 복구 UI만 유지한다. 종료 재시도는 기존 단일 Task·T16 복원 키 수명을 유지한다.
+- 스캔 성공 뒤 T17 선택 분류 RefreshAsync로 DB snapshot을 다시 읽는다. 스캐너가 다른 분류의 같은 PathKey도 Missing으로 바꾸므로 스캔한 분류와 현재 선택 분류가 달라도 갱신한다. 검색/필터/선택 ItemId를 가능한 한 보존하고 닫힘/Closing에서는 새 읽기를 만들지 않는다. 이미 시작한 읽기는 기존 version/drain 경계를 따른다.
+- 필요한 공통 변경은 앱 수준 스캔 admission/idle·stop/drain, watcher generation, 설정 전용 값/API, 관찰 결과의 “부분 완료/복구 대기/취소” 표시뿐이다. 구체 메서드명은 구현 시 정하되 저장/세션 공개 의미는 유지한다. v2는 설정 두 열만이며 MediaItem/ViewHistory/PlaybackProgress/VisitCommit/AppliedDeletion/저널 형식 변경은 없다.
+- Settings/Core 값 추가와 lifecycle 연결은 여러 모듈 변경이므로 다음 구현도 Astra 담당이다. 범용 작업 큐/이벤트 버스/ORM/새 패키지는 필요 없다.
+
+### 7. 다음 구현의 필수 검증 (현재 미실행)
+
+| ID | 자동 검증 조건 | Windows 실제 확인/한계 |
+|---|---|---|
+| A01 | v1 데이터가 있는 DB→v2 및 빈 DB, migration 실패 rollback/재실행/상위 버전 거부; 기존 이력/진행/설정 보존 | 기존 사용자 DB 복사본으로 시작 |
+| A02 | 옵션 4조합/저장 실패/재시작, 기존 Resume 저장과 감지 설정 상호 비덮어쓰기 | 체크 항목과 상태 표시 |
+| A03 | 실제 파일 추가/삭제/rename/대소문자/폴더 이동/중첩 소스; 분류별 ID·이력·선호 보존 | 한글·공백·다수 파일 복사 |
+| A04 | 중복 폭주·순서 역전·실행 중 신호·overflow·무신호 누락 주입, dirty version과 메모리/Task 상한 | 실제 watcher에서도 최종 스캔 수렴; 이벤트 횟수/순서는 단정하지 않음 |
+| A05 | 하위 포함 on/off·비활성 소스/분류·경로 편집·옛 콜백; 제외 범위 Missing 금지 | reparse/대소문자 미지원과 확장자 회귀 |
+| A06 | 시작 오프라인·열거 중 분리·NotFound/접근 거부 주입·부분 실패/다시 나타난 파일 | 분리 가능한 테스트 드라이브와 권한 제한 폴더. 실제 분리 미실시는 별도 미검증 |
+| A07 | 수동/자동 동시 요청·편집/취소/Apply 직전·직후 경합, transaction rollback | UI 응답·수동 우선·취소 안내 |
+| A08 | Active/Opening/Empty/SaveFailed/CommitUnknown/checkpoint 동안 자동 DB 변경 0, 닫기 성공 뒤에만 반영 | 만화/영상 감상 중 외부 교체→진행 부활 없음 |
+| A09 | Prepared/Unknown/손상/Succeeded 정리 실패·해제 후 재등장; 격리 분류 보류·다른 분류 처리 | 테스트 복사본만, OS 재삭제·이력 임의 제거 0 |
+| A10 | Closing 시 콜백/타이머 차단·진행 저장 완료 대기·DB 해제 후 접근 0·중복 종료; ExitBlocked DB 생존/해제 후 재개 거부 | 실제 종료/복원 키/트레이 실패 조합 |
+| A11 | Hidden 자동 성공/오류/재시도에서 Show/Restore/소리 발생 0, 감상 중 보류 | 순간 노출·물리 키·스피커는 사용자 확인과 구분 |
+| A12 | 다른 분류 Missing 반영 뒤 T17 갱신·필터/선택 보존·늦은 읽기/닫기 drain | 실제 목록 갱신과 수동 열기 |
+
+Windows x64/.NET 10 Release 빌드, T03 저장·T05 스캔·T06 세션 및 T11의 T12/T13/T15/T16/T17 통합 회귀를 수행한다. watcher/시간/IO 경합은 제어 가능한 오류 주입 검사와 실제 Windows 임시 폴더 검사를 함께 사용한다. 기존 사용자 미디어는 테스트로 삭제하지 않는다. 이 설계 PR은 문서/코드 대조만 수행했으며 새 Windows 빌드·런타임 검증 결과를 주장하지 않는다. 과거 수동 미검증·사용자 승인 생략은 유지한다.
