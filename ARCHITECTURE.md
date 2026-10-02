@@ -94,3 +94,7 @@ T12와의 병렬 경계는 삭제 계약을 변경하지 않는다. T12 통합 �
 `LibraryBrowserViewModel`은 기존 분류별 파일 snapshot과 저장 진행 위치를 읽어 표시한다. 파일명 검색, 즐겨찾기/랜덤 제외/감상 상태 필터는 조회 조건일 뿐 영속 상태를 바꾸지 않으며, 디스크 재스캔이나 미디어 디코딩을 시작하지 않는다. 파일 정보는 기존 인덱스·방문·진행 데이터만 사용한다. Explorer 위치 열기는 한글/공백 경로를 단일 `/select,<path>` 인수로 전달하고, 현재 경로 부재가 확인되면 실행하지 않는다.
 
 메인 라이브러리에서 연 항목과 ViewingWindow 안에서 연 항목 모두 기존 `Run`/`Navigate` 및 `SessionCoordinator.OpenManualAsync` 경계를 통과한다. 기존 same-ItemId no-op, Forward 보존, 정상 Leave 기록, 최근 감상·제외된 항목 수동 진입 정책을 그대로 따른다. 라이브러리 비동기 읽기는 창 닫기/빠른 종료에서 대기하고 닫힌 화면의 늦은 갱신을 막는다. 데이터 스키마·공통 모델/세션·저장/삭제/숨김/종료 계약은 변경하지 않는다. 자동/수동 검증 경계는 docs/T17_LIBRARY_BROWSER_VALIDATION.md를 따른다.
+
+## T18A 설계 검토안 (제품 구현 전)
+
+변경 감지의 상세 설계는 [DATA_AND_RANDOM_POLICY.md의 T18A 절](docs/DATA_AND_RANDOM_POLICY.md#t18a-변경-감지-설계--검토안-구현-미착수)을 따른다. 앱 소유 단일 스캔 조정자가 수동/자동 요청과 편집·감상·삭제·종료 admission을 연결하는 안이며 현재 구현으로 표기하지 않는다. 감상 창 수명 동안 스캔을 보류하여 ApplyObservedItems의 진행 무효화와 checkpoint 경쟁을 피한다. 기존 저장/세션/삭제 의미는 유지하며 설정 두 열의 v2 migration은 설계만 작성했다. D10~D12 정책 확정과 설계 main 통합 후 Astra 구현으로 진행한다.

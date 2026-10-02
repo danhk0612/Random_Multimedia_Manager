@@ -22,7 +22,7 @@
 | T15 | 트레이 및 창 동작 | Astra | 구현·Windows 자동 검증 완료 (PR #17 main 통합, 사용자 Windows 확인 대기) | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
-| T18A | 변경 감지와 경로 상태 갱신 | Astra | 설계 착수 가능; 구현 대기 | T05/T12; T02 식별 계약 |
+| T18A | 변경 감지와 경로 상태 갱신 | Astra | 설계 문서 작성 완료·검토/정책 확정 대기; 구현 미착수 | T05/T12; T02 식별 계약 |
 | T18 | Windows 배포 및 통합 검증 | Astra | 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
@@ -30,7 +30,7 @@
 
 T13 PR #20을 main에 통합했다 (merge `d7504b4`). 검증한 제품 코드 이후에는 문서만 변경됐으며 Windows 자동 검증 4개 성공을 확인했다. 실제 사용자 키보드/화면·오디오 확인은 미검증이다.
 
-- 다음은 **T18A 설계 단계 — Astra Work**. 시작 검사/실행 중 감지 옵션과 기본값, 감상·삭제·스캔·종료 직렬화 계약을 먼저 정리한다. 아래 TASKS.md의 새 작업 지시문을 따른다.
+- T18A 설계 문서 작성 완료·검토 대기. DATA_AND_RANDOM_POLICY.md의 T18A 절과 DECISIONS.md D10~D12를 검토한다. 구현은 미착수다.
 - 이번 배정은 문서 설계 PR까지다. 미확정 정책을 확정 요구사항으로 승격하지 않고, 설계 검토·필요 정책 확정·main 통합 후 T18A 구현을 배정한다.
 - T18A 구현과 T18 패키징은 아직 병렬 착수하지 않는다. 이후 순서는 T18A 구현 → T18 배포·통합 검증이며 T19 VSR은 후순위다.
 - T13/T15/T16/T17 수동 미검증, T12 실사용 검증 이관, T09/T10/T11 기존 생략 및 AVI 무음 조사 보류를 유지한다.
@@ -252,7 +252,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18A — 변경 감지와 경로 상태 갱신
 
 - 목적: 외부 파일 변경과 라이브러리 정합성 유지.
-- 담당/상태: Astra / 설계 착수 가능, 구현 대기. 설계 PR 검토·정책 확정·main 통합 후 구현한다.
+- 담당/상태: Astra / 설계 문서 작성 완료·검토 대기, 구현 미착수. D10~D12 확정·설계 PR main 통합 후 구현한다.
 - 선행: T05/T12; T02 식별 계약.
 - 범위/수정 영역: 변경 감지·스캔·경로 추가/Missing 갱신(이동 상태 승계 없음).
 - 완료 조건/검증: 추가/삭제/이름변경·이벤트 중복/누락 뒤 재스캔, 잘못된 기록 병합 방지, 시작 검증 옵션 확인.
@@ -278,6 +278,8 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 
 ## T18A 새 Astra Work 시작 지시문
 
+설계 단계의 원래 범위 기록이다. 설계 문서 작성은 완료했으며 다음 작업은 아래 조건부 구현 지시문을 사용한다.
+
 ```text
 GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A 설계 단계를 Astra Work로 진행해.
 
@@ -299,4 +301,46 @@ docs/DATA_AND_RANDOM_POLICY.md, docs/DECISIONS.md, docs/SHORTCUTS_AND_TRAY.md와
 CURRENT_STATE.md와 TASKS.md에서 설계 준비/완료와 구현 미착수를 구분해. 커밋·PR·남은 결정 사항을 보고하고 직접 병합하지 마.
 
 금지: 자동 fingerprint/이동 병합, 기록/랜덤 의미 변경, 실제 파일 삭제, VSR, AVI 무음 조사, T18 패키징 구현, 무관한 리팩터링. 설계 검토·정책 확정·main 통합 전에 구현을 시작하지 마.
+```
+
+## T18A 다음 Astra Work 구현 지시문 — 정책 확정·설계 main 통합 후에만 사용
+
+```text
+GitHub 저장소 https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A 구현 단계만 진행해.
+
+최신 main에서 AI_WORKFLOW.md에 따라 Git/PR/기준 문서를 확인해.
+T13 PR #20 및 T18A 설계 PR의 main 통합, DECISIONS.md D10~D12의 승인/수정 결정 기록을 확인해.
+하나라도 없으면 구현하지 말고 차단 사유를 보고해. 제안 기본값을 임의 확정하지 마.
+task/t18a-change-detection 브랜치를 사용해. 기존 브랜치/미커밋 변경을 보존해.
+
+DATA_AND_RANDOM_POLICY.md의 T18A 전체 설계, DECISIONS.md, SHORTCUTS_AND_TRAY.md와 실제 T05/T12/T11/T15/T16/T17 코드를 대조해.
+목적은 수동·시작·감지 스캔을 안전한 하나의 실행 경계로 연결하고 외부 변경 뒤 경로 상태를 갱신하는 것이다.
+
+수정 영역:
+- App/Scanning: 앱 소유 단일 조정자, 분류별 dirty/version·watcher generation, 중복/overflow/누락 재검사·backoff·취소/drain.
+- 기존 LibraryScanner: 승인된 활성 범위와 기존 확장자/경로 제한 유지, 중간 오프라인·부재 재확인·부분 실패·격리 대기 구분.
+- App/Data와 필요한 최소 Core 설정 값: 확정된 두 bool의 v1→v2 migration 및 설정 전용 읽기/쓰기. 기존 기간/Resume 저장이 새 값을 덮어쓰지 않게 해.
+- App/MainWindow/CategoryEditorViewModel 및 기존 메인 UI: 두 옵션과 수동/자동 공유 admission, 소스 편집 취소/drain, 감상 진입 경계.
+- AppLifecycle/StopScanningAsync: 신규 감지 차단→열거 취소→입장한 DB 작업/콜백/읽기 drain→기존 정상 종료. ExitBlocked의 실제 DB 수명과 명시적 복원 후 재개 조건을 지켜.
+- T17 목록은 성공 반영 후 기존 RefreshAsync로 갱신하고 필터/선택 및 늦은 읽기 차단을 유지해.
+
+감상 창이 존재하는 동안 Pending/checkpoint와 스캔 반영을 경쟁시키지 마.
+삭제 격리·저널/AppliedDeletion 의미를 유지하고 watcher로 삭제 성공/기록 제거를 추정하지 마.
+동일 경로 교체·이동/이름변경·분류별 상태는 기존 T02/T05 계약대로 처리해.
+Hidden을 종료로 보거나 오류/완료 알림으로 자동 노출하지 마.
+진행 중 transaction은 취소 성공으로 보고하지 말고 실제 결과를 기다려.
+
+완료 조건:
+설계 A01~A12의 자동 검사 및 실제 Windows 임시 폴더 watcher 검증,
+Windows x64/.NET 10 Release 빌드, T03/T05/T06와 T11 통합 회귀를 수행해.
+오류 주입과 실제 드라이브/물리 키/청취 검증을 구분해. 미실시를 통과로 적지 마.
+CURRENT_STATE.md/TASKS.md와 실제 영향 계약/검증 문서만 갱신하고 커밋·PR·결과·제약을 보고해.
+
+금지:
+승인된 설정 두 열 외 스키마 변경, 삭제 저널/VisitCommit/감상/랜덤 정책 변경,
+자동 fingerprint/이동 병합/상태 승계, 감상 중 자동 스캔 반영, 이벤트 직접 DB 갱신,
+새 미디어 형식·UNC/네트워크 지원 확대, 신규 패키지/범용 작업 프레임워크,
+사용자 미디어 테스트 삭제, VSR·AVI 무음 조사·T18 패키징·무관한 리팩터링.
+설계와 실제 코드 충돌 또는 추가 정책/공통 계약 변경이 필요하면 해당 변경을 멈추고 근거·영향·선택지를 보고해.
+직접 병합하거나 다음 Task를 구현하지 마.
 ```
