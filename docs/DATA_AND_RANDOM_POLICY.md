@@ -292,133 +292,186 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 
 ## T18A 변경 감지 설계 — 검토안, 구현 미착수
 
-> 2026-10-03 사용자 승인 D13에 따라 로컬·매핑 드라이브/RaiDrive·UNC 경로를 모두 지원할 목표 범위로 확장했다. 현재 코드는 기존 로컬 계약이며 네트워크 지원 완료가 아니다. PR #21의 로컬 전용 설계와 설정 두 열 가정은 보완 대상이다. D10~D12 기본값은 아직 확정되지 않았고 10분 전체 재검사안을 그대로 구현하지 않는다. 아래 로컬 전용 제안은 설계 보완 전 구현 지시로 사용하지 않는다.
+기준 main `c8252a0`, PR #21 merge `7fb2ad4` 포함. D13은 로컬·매핑/RaiDrive·직접 UNC 지원 목표의 승인이다. 아래는 그 목표를 위한 **설계 제안**이며 제품 구현/호환성 확인이 아니다. 이전 PR #21의 전역 두 bool 및 10분 전체 검사는 이 절로 대체한다. 제품 정책 결정은 DECISIONS.md D10~D12/D14~D16, 구현 인계는 TASKS.md T18A-1~6을 따른다. §1~8의 현재 v1 구현 계약은 migration 전까지 유지한다.
 
-기준: main `26875a5ad2ba601182d34facd5aae8811bac6ad6`, T13 PR #20 merge `d7504b47e72340abc97346b825192a0723073594`. 이 절은 설계 산출물이며 구현 완료/제품 정책 승인이 아니다. 사용자 결정의 단일 목록은 DECISIONS.md의 D10~D12다. 아래 안전 경계는 기존 계약을 보존하는 설계이며 설정 기본값·자동 검사 시점은 승인 후 구현한다.
+### 1. 코드 대조와 변경 책임
 
-### 1. 실제 코드 근거와 필요한 차이
+아래 경로는 `src/RandomMultimediaManager.App/` 기준이다. 문서의 “로컬 전용”과 달리 드라이브 문자 형식 검사는 매핑 드라이브도 통과할 수 있다. 이것은 의도된 네트워크 지원이나 검증 완료의 근거가 아니다.
 
-경로는 `src/RandomMultimediaManager.App/` 기준이다.
-
-| 근거 | 현재 동작 | T18A에서 필요한 최소 변경 |
+| 실제 코드/계약 | 현재 동작·차이 | 필요한 설계 변경 / 담당 Task |
 |---|---|---|
-| Scanning/LibraryScanner.cs: ScanCategoryAsync/ScanCategory | 분류별 활성 소스 열거→같은 PathKey의 모든 분류 Missing ID 수집→ApplyObservedItems; 내부에서 수집과 저장을 모두 수행 | 기존 분류 단위 스캐너 재사용. 앱 전체 실행 admission을 추가하고 부재 재확인·격리 대기 결과를 구분 |
-| Data/LibraryDatabase.Catalog.cs: ApplyObservedItems | 하나의 transaction; 크기/수정시각 변경 시 PlaybackProgress 제거, 이력/선호 보존; 격리 경로 하나라도 포함되면 예외로 전체 rollback | SQL/삭제 의미 유지. 격리 예외를 성공이나 일부 저장으로 표시하지 않음 |
-| MainWindow.xaml.cs: OpenViewing/OpenManualItem | IsScanning이면 감상 진입 거부, ShowDialog 동안 메인 편집/스캔 차단 | 수동/자동 모두 공유하는 실행 상태로 검사 교체. 모달 종료 전에는 스캔을 시작하지 않음 |
-| Viewing/ViewingWindow.xaml.cs: Run/CheckpointAsync/RequestCloseAsync | 5초 checkpoint, 명령·미디어 대기 후 Leave/해제; SaveFailed면 닫기 실패 | 변경 신호가 Pending/진행을 건드리지 않도록 감상 창 전체 수명 동안 반영 보류 |
-| Sessions/SessionCoordinator.cs 및 .Deletion.cs | Busy/토큰/FrozenCommit/삭제 결과 전이 소유 | 공개 세션 API와 방문/Seen/cursor 의미 변경 불필요 |
-| Deletion/DeletionService.cs, DeletionJournal.cs, Data/LibraryDatabase.Deletion.cs | 시작 격리/복구, CaptureDeletion writer lock, Pending/GloballyBlocked/HasIncompleteSuccess, durable AppliedDeletion | 기존 복구가 우선. watcher는 저널을 읽어 성공 추정하거나 격리를 해제하지 않음 |
-| Lifecycle/AppLifecycle.cs, MainWindow.StopScanningAsync | 수동 CancelScan/ScanCompletion·복구·목록 읽기 대기 후 DB 해제 | 감지 정지/콜백 무효화와 모든 자동 작업 drain을 기존 종료 경로에 포함 |
-| ViewModels/LibraryBrowserViewModel.cs | snapshot 읽기·loadVersion/progressVersion으로 늦은 결과 차단, 읽기 Task drain | 성공한 스캔 뒤 기존 RefreshAsync 호출. 다른 분류 Missing 갱신도 고려 |
-| Data/LibraryDatabase.cs, .Reads.cs, .Catalog.cs | user_version=1만 지원, AppSettings는 기간/Resume 두 필드 | 승인 후 v2 migration과 스캔 설정만 별도 저장하는 최소 API 추가 |
+| ViewModels/CategoryEditorViewModel.cs, SourcePathRules.NormalizeLocalFolder | UNC 명시 거부, 드라이브 문자 절대 경로 허용 | IO 없는 공통 정규화와 비동기 소스 확인 분리 / 1, 5 |
+| Core/Models.cs, Data/LibraryDatabase.Catalog.cs | PathKey=대문자 Path; (CategoryId,PathKey) 유일, 소스 소속은 경로 포함; DB 검증은 pair만 확인 | 기존 키·ID 보존, 연결 대상 바인딩/정책 별도 저장 / 1 |
+| Scanning/LibraryScanner.cs | 드라이브 루트 길이 3 가정; DriveInfo.IsReady, 상위 reparse/case 검사; NotFound를 부재 prefix로 수집; 수집과 Apply 결합 | UNC 공유 경계, 소스별 수집 및 결과 증거·generation 검사 / 1, 2 |
+| Data/LibraryDatabase.Catalog.cs, ApplyObservedItems | 메타데이터 변화 시 진행 제거, 이력/선호 보존; 격리 포함 시 transaction 실패; 같은 PathKey 모든 분류 Missing | 감상 전체 수명 보류, 소스 간 상충/불확실 관찰 보존 / 2 |
+| Sessions/SessionCoordinator.cs, ChooseRandom/Move | 추첨 후 preparer 호출; 한 명령 한 후보, 실패 시 Seen/cursor/Pending 유지 | 연결·바인딩 확인과 일시 실패 억제. 자동 연쇄 추첨 금지 / 4 |
+| Media/Comic/ComicArchive.cs, ComicViewerViewModel.cs | FileStream/ZipArchive 및 암호화 검사·seek, 페이지 복사/디코딩, 앞1/뒤2·256 MiB 캐시 | 느린 open/read/dispose 소유권 추적; 다운로드 상한 보장 불가 / 4 |
+| Video/PreparedVideo.cs | Dispatcher에서 File.Exists, native 생성/Stop/Dispose 일부 Task.Run | UI의 원격 존재 확인 분리; native 호출별 스레드 제약 보존·지연 검사 / 4 |
+| Video/ExternalSubtitles.cs | Directory.Exists/열거, File.ReadAllBytes, 임시 UTF-8 변환 | 자막 없음과 접근 실패 구분; 늦은 로드 폐기, 영상 Ready와 실패 분리 / 4 |
+| Views/LibraryBrowserView.xaml.cs | 클릭 시 File.Exists 후 Explorer `/select,` 단일 인수 | 비동기 상태 확인, UNC 인수 회귀; DB 목록은 재열거 없이 표시 / 5 |
+| Deletion/WindowsFileDeletion.cs | NotFound/Win32 2·3을 Missing=true; 영구삭제 실패 반환; recycle sink로 비휴지통 거부 | 원격 NotFound/응답 유실 분리, capability와 결과 증거 구분 / 3 |
+| DeletionService/Journal, Data/LibraryDatabase.Deletion.cs/.Visits.cs | 단일 PathKey 격리·v1 저널·OperationId AppliedDeletion; 시작 복구는 OS 재실행 안 함 | 별칭 집합 격리·v2 저널, 대상별 키 검증·원자 정리 / 1, 3 |
+| ViewingWindow.Run/CheckpointAsync/RequestCloseAsync, MainWindow.StopScanningAsync, Lifecycle/AppLifecycle | checkpoint/Leave·명령·scan/복구 drain 후 DB 해제; 실패 시 복원 수단 유지 | 모든 원격 작업 등록, Closing 이후 새 IO 금지·미완료 작업 drain / 2, 4, 6 |
 
-현재 DB writer lock은 SQL 동시 실행만 막는다. “이전 파일 진행 checkpoint→스캔의 진행 제거→늦은 checkpoint 재생성”의 의미 충돌은 막지 못하므로 감상 중 자동 반영을 허용할 근거가 아니다. Busy=false, pause, 숨김, 현재 항목 없음, SaveFailed 복구 중이라는 이유로 감상 창 수명 보호를 풀지 않는다. 감상 종료의 Leave/리소스 해제가 성공하고 MainWindow.Viewing이 해제된 다음이 안전한 스캔 시작점이다.
+현재 코드에서 실제 네트워크 오류를 재현한 것은 아니다. 위 차이는 소스 검토 결과이며 Windows/NAS/RaiDrive 성공 결과로 쓰지 않는다.
 
-문서와 코드 대조에서 보완이 필요한 경계: 스캐너는 시작 때 드라이브를 확인하지만 열거 도중 DirectoryNotFoundException/FileNotFoundException을 바로 부재 prefix로 기록한다. 중간 드라이브 분리도 이 예외로 나타나는지는 Windows 재현이 필요하며 현재 통과로 보지 않는다. “오프라인≠Missing” 기존 계약을 자동 감지에서도 지키려면 적용 전 부재 증거를 재확인해야 한다. 새 데이터 정책으로 바꾸는 것이 아니라 기존 계약의 관찰 경계를 보완한다.
+### 2. 경로·저장소 분류·바인딩
 
-### 2. 옵션·권장안과 저장 설계
+**문자열 정규화는 네트워크 접속 없이 수행한다.** 드라이브 절대 경로와 `\\server\share\folder`를 받는다. UNC의 최소 루트는 `\\server\share\`이며 서버만 있는 경로는 거부한다. 공유 루트도 소스로 등록 가능하다. `/`→`\`, 완전 절대 경로의 `.`/`..` 해소, 루트 외 끝 구분자 제거, 표시용 대소문자 보존·키 ToUpperInvariant·BINARY·Unicode 비병합은 유지한다. UNC `..`가 공유 루트 밖으로 나가거나 정규화 전후 서버/공유가 달라지는 입력은 거부한다. 상대/드라이브 상대/URL/장치 `\\?\`·`\\.\`/ADS/끝 공백·마침표는 계속 거부한다. 포함 비교는 루트와 구성요소 경계로 하며 `share`와 `share2`, `A`와 `AB`를 합치지 않는다.
 
-| 옵션 | 권장안 (사용자 결정 대기) | 의미 |
+서버명 대소문자는 키에서 같아도 호스트명/IP/FQDN/DFS/8.3/하드링크는 자동 병합하지 않는다. 원격 대소문자 구분 저장소에서 구분되는 두 이름을 한 키로 저장할 수 없으므로 충돌 또는 명시적 case-sensitive 증거가 있으면 해당 범위 반영을 보류한다. Windows 전용 case 정보 조회 미지원만으로 원격 전체를 거부하지 않되, 대소문자 비구분임을 검증했다고 주장하지 않는다. 서버/공유 위로 조상 검사를 올라가지 않는다. reparse/정션은 기존 거부를 유지하며 클라우드 placeholder가 이에 해당하면 해당 경로는 제한으로 표시한다. D13이 모든 provider 기능 지원을 뜻하지 않는다.
+
+| 분류 | 판단 근거 | 확인 불가 시 |
 |---|---|---|
-| 시작 시 라이브러리 검사 | 켬 | DB/삭제 시작 복구 완료 및 메인·트레이·키 초기화 후 활성 분류를 한 번 순차 검사 요청. 첫 화면을 전체 스캔 완료까지 막지 않음 |
-| 실행 중 변경 감지 | 끔 | 켜면 watcher와 누락 회복 재검사를 함께 사용. 큰 라이브러리의 예상치 못한 디스크 작업을 기본으로 시작하지 않음 |
-| 감지 켠 동안 무신호 누락 회복 | 10분 간격 | 활성 분류 전체 재검사 요청을 합침. 간격은 기술 상수 제안이며 별도 주기 설정 UI 없음 |
-| 감지 비활성→활성 | 즉시 기준 스캔 요청 | watcher부터 준비하고 기준 스캔을 요청하여 등록 전 변경을 보완 |
-| 감지 비활성화 | 신규 자동 요청 중단 | 자동 열거는 취소 요청, 이미 ApplyObservedItems에 진입한 transaction은 완료를 기다림. 수동 스캔은 유지 |
+| Local | 드라이브 유형·장치/볼륨 정보와 매핑 조회를 함께 확인 | 문자 또는 Fixed 보고만으로 확정하지 않음 |
+| RemoteMapped | Windows 연결의 원격 대상 확인; 가능한 경우 WNetGetConnection로 대상 이름 조회 | API 실패가 로컬 증거는 아님. 다른 로그온 세션 연결도 이용 불가일 수 있음 |
+| RemoteUNC | 문법상 서버+공유 루트 | 공유 접근 성공과 실제 파일 부재는 별도 |
+| VirtualOrUnknown | RaiDrive 등 provider 정보가 불충분하거나 판단 상충 | 원격 보수 정책. 사용자가 “원격/가상”으로 명시 가능; “로컬” 지정만으로 삭제 안전성 승격 금지 |
 
-시작 검사와 실행 중 감지는 독립 bool이며 네 조합을 지원한다. 둘 다 꺼도 수동 스캔은 유지한다. 자동 대상은 활성 분류의 활성 소스, IncludeSubdirectories를 그대로 따른다. 비활성 분류의 명시적 수동 스캔은 현재 의미를 유지한다. 감지 켠 상태에서 분류/소스를 활성화·추가·경로/하위 포함 변경하면 새 구성 기준 스캔을 요청한다. 감지가 꺼졌으면 소스 편집만으로 자동 검사를 추가하지 않는다.
+**PathKey(논리 항목)와 Binding(현재 연결 대상)을 구분한다.** Binding은 드라이브 루트 또는 UNC 공유 루트 단위로 저장한다. 대상 이름/provider/가능한 볼륨 근거와 신뢰 수준을 보존하되 파일 내용 fingerprint는 만들지 않는다. 볼륨 일련번호 하나나 같은 서버 이름은 영구 물리 동일성 증명이 아니다. 소스를 제거해도 기존 항목 수동 열기에 필요한 바인딩은 남긴다. 어느 소스에도 속하지 않는 과거 항목도 같은 루트 검사를 통과해야 한다.
 
-설정은 기존 `%LOCALAPPDATA%/RandomMultimediaManager/library.db`의 AppSettings 단일 행에 둔다. 별도 JSON/레지스트리/실행 폴더 저장은 추가하지 않는다. 승인될 경우 `ScanOnStartup INTEGER NOT NULL DEFAULT 1 CHECK(... IN (0,1))`, `WatchLibraryChanges INTEGER NOT NULL DEFAULT 0 CHECK(... IN (0,1))` 두 열을 v1→v2 transaction으로 추가한다. DEFAULT 값은 D10 확정값으로 치환하며 기존 사용자/신규 DB에 동일하게 적용한다. 기존 v1 SQL을 몰래 바꾸지 않고 신규 DB도 v1 초기화→v2 순차 적용한다. version/열/설정 행 검증, rollback, 상위 버전 거부를 유지한다.
+D14 제안: 같은 `Z:\`가 다른 공유/계정 대상으로 바뀌면 `BindingChanged`로 차단한다. 스캔 Present/Missing, 랜덤·수동/Back/Forward 열기·Explorer·삭제를 허용하지 않는다. 이전 기록은 그대로 남기고 원래 대상 복원 또는 **다른 루트 경로로 등록**하도록 안내한다. 이 버전에는 같은 경로의 새 대상을 받아들이며 기록을 초기화/이전하는 기능을 넣지 않는다. 드라이브 문자 변경이나 매핑→UNC 등록은 새 PathKey·새 ItemId이며 자동 이동 승계가 없다.
 
-기존 AppSettings/SaveSettings는 감상 창에서 기간·Resume 저장에 사용된다. 이 경로가 오래 읽은 감지 옵션을 덮어쓰지 않도록 별도 최소 `LibraryScanSettings` 값과 `GetLibraryScanSettings/SaveLibraryScanSettings` 전용 열 읽기/쓰기 API를 제안한다. 기존 SaveSettings의 두 열 갱신은 유지한다. 설정 저장 성공 후에만 watcher를 재구성하고 실패 시 기존 동작/표시 값을 유지한다. 옵션 UI는 기존 메인 분류/스캔 영역에 두 체크 항목과 저장·상태만 연결한다. 설정 변경은 실행 중 스캔의 취소/완료 경계 뒤 적용하며 일반 설정 프레임워크를 만들지 않는다.
+바인딩 확인은 시작의 필요 작업, 소스 저장/스캔 전후, 열기/삭제 직전 및 재연결 때 한다. 불일치/끊김/설정 변경 때 메모리 generation을 올려 이전 관찰·Ready 적용을 막는다. 최초 기존 데이터에는 원래 대상 증거가 없으므로 원격/불명 바인딩은 사용자 확인 후 채택한다. 증거를 얻을 수 없는 provider는 매 앱 시작·관찰된 재연결 때 같은 대상이라는 사용자 확인이 필요하다는 제안이다. 확인 전 DB 목록/기록 조회는 가능하다. 확인 후에도 OS가 숨기는 대상 변경 및 검사와 실제 IO 사이의 경합은 탐지 보장 불가이며 특히 삭제 확인창에 대상 경로를 표시한다. 보안 경계나 원격 서버 신원 인증으로 주장하지 않는다.
 
-### 3. 최소 감지 구조와 누락 회복
+### 3. 소스별 갱신과 색인
 
-App/Scanning의 앱 소유 조정자 하나가 수동/시작/감지/재검사 요청을 받는다. 전용 서비스 프로세스·DB 큐·파일별 이벤트 이력은 없다.
+DB/로컬 삭제 저널의 최소 안전 초기화 후 기존 DB 목록을 먼저 표시한다. 네트워크 조회/스캔 완료가 첫 화면 조건이 아니다. 자동 기준값은 D10~D12 **제안**이다.
 
-- FileSystemWatcher는 활성 소스별 구성한다. 중첩/공유 소스에서 같은 이벤트를 받아도 분류 ID별 dirty 표식 하나로 합친다. IncludeSubdirectories는 소스 값 그대로이며 로컬 드라이브·reparse/대소문자 경로 제한과 확장자는 T05 그대로다.
-- Created/Deleted/Changed/Renamed는 “해당 분류를 재확인” 신호일 뿐이다. 파일명·디렉터리명·크기·수정시각·속성 변경을 관찰하고 디렉터리 이동 이벤트를 확장자 필터로 버리지 않는다. 이벤트 경로로 MediaItem을 직접 생성/삭제하거나 rename 두 경로의 상태를 연결하지 않는다.
-- 콜백은 소스/구성 generation과 분류 dirty version만 갱신한다. DB/디스크 IO/창 열기는 하지 않는다. dispatcher로의 알림도 한 건으로 합쳐 이벤트 수만큼 작업을 쌓지 않는다. 메모리는 소스/분류 수에 비례하고 파일 이벤트 수에 비례하지 않는다.
-- 기술값 제안: 마지막 신호 뒤 2초 모아서 실행하되 최초 dirty 뒤 30초가 되면 실행 자격을 준다. 수명 게이트 대기는 이 시간보다 우선한다. 실행 중 추가 신호는 시작 시 캡처한 version과 달라지므로 완료 때 지우지 않고 다음 1회 검사로 합친다. 계속 변경되는 분류가 다른 분류를 막지 않도록 순환한다.
-- 앱 전체에서 스캐너는 한 번에 하나다. 요청은 분류 ID 기준 병합하며 수동 요청은 대기 자동 요청보다 우선한다. 이미 실행 중인 같은 분류의 수동 요청은 같은 Task를 사용하고 뒤에 새 스캔을 무한 적재하지 않는다.
-- Error/overflow는 해당 분류 dirty 및 watcher 재구성 필요로 기록한다. buffer 크기 증대만으로 정확성을 보장하지 않는다. 정상 등록 뒤 재검사하며 이벤트가 아예 오지 않는 누락은 D11 주기 재검사 또는 수동/다음 시작 검사로 회복한다.
-- 시작/재등록 시 watcher를 먼저 준비한 뒤 스캔한다. 실패한 소스는 기존 DB 상태를 유지하고 watcher 재시도 대상으로 남긴다. 기존 구성 콜백은 generation으로 무시한다.
-- 기술값 제안: 등록/IO 실패 재시도는 30초→2분→10분 상한이며, 정상 완료 시 초기화한다. 접근 거부/영구 미지원 경로도 무한 즉시 재시도하지 않는다. 주기·backoff·dirty는 메모리만이며 프로세스 재시작 후 시작 옵션과 수동 검사로 복구한다.
-- OS 변경과 열거는 원자적 snapshot이 아니다. 스캔 뒤 다시 바뀔 수 있으며 즉시·완전 동기화를 보장하지 않는다. 파일 복사 중의 메타데이터는 재검사로 수렴하고 미디어 준비 성공은 기존 열기 경로만 판단한다. 복사 완료 추정이나 디코더 실행은 추가하지 않는다.
-
-기술 근거: [Microsoft FileSystemWatcher 문서](https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher?view=net-10.0), 2026-09-29 KST 본문 접근 확인. 문서는 중복 이벤트·buffer overflow 누락·폴더 이동 알림의 한계를 설명한다. 위 기본값/주기는 프로젝트 제안이며 Microsoft 권장 수치가 아니다.
-
-### 4. 직렬화·취소·재시도 상태표
-
-UI Dispatcher에서 “게이트 검사+작업 등록”을 await 없이 한 번에 수행한다. DB lock을 잡은 채 Dispatcher/파일 IO를 기다리지 않는다. 모달 UI 차단만을 자동 작업 안전장치로 사용하지 않는다.
-
-| 상태 | 수동/자동 스캔 | 편집·감상·삭제/복구 | 해제/재시도 |
+| 소스 | 시작 검사 제안 | 실행 중 제안 | 누락 회복/예약 제안 |
 |---|---|---|---|
-| 초기 DB/삭제 복구 | 신규 실행 금지 | 기존 InitializeAsync/복구 우선 | 복구 반환 후 구성. 전역 손상 격리면 기존 시작 차단 유지 |
-| 유휴, 감상 창 없음 | 수동 즉시, 자동 dirty만 실행 | 같은 admission으로 소스 저장/감상 진입과 경쟁 방지 | 작업 완료 뒤 다음 요청 |
-| 스캔 열거 중 | 실행 하나, 요청 병합 | 감상 진입은 기존처럼 완료 후 안내. 소스 저장·제거/타입 편집/삭제 복구는 취소 요청 후 완료 대기 | 편집 적용→구성 generation 증가→새 구성으로 다시 관찰 |
-| ApplyObservedItems 호출 진입 후 | 취소로 중간 rollback 요구 금지 | 편집/감상/복구는 transaction 결과까지 대기 | 실제 성공/실패 보고 후 gate 해제 |
-| 감상 창 존재: Empty/Opening/Active/checkpoint | 수동 거부·대기 안내, 자동 dirty만 보관 | 기존 Run/Busy/토큰/취소/저장 경로 유지 | 정상 창 닫기·Leave·해제 완료 후 실행 |
-| SaveFailed/CommitUnknown/해제 오류 | 자동 반영 계속 보류 | 기존 재시도/감상 복귀만 해당 계약대로 | Busy=false나 창 숨김으로 보호 해제 금지 |
-| 삭제 명령/저널 복구 진행 | 시작 보류, 실행 중 스캔 취소·drain 후 복구 입장 | OS 결과·저널·AppliedDeletion 경계 완료까지 배타 | 이벤트는 dirty만 유지 |
-| durable 경로 격리만 남음 | 격리와 무관한 분류는 허용, 관련 분류는 보류 | 기존 사용자 확인으로만 격리 해제 | 해제 후 해당 분류 재스캔 |
-| 전역 손상 격리/미완료 성공 삭제 | 신규 스캔 중단 | 기존 복구·종료 차단 정책 유지 | 복구 해결 뒤 재평가 |
-| Hidden (Closing 아님) | D12 권장안: 유휴면 자동 허용, 감상 존재 시 보류 | 신규 사용자 명령 차단은 T16 그대로 | 오류/완료가 창·토스트·소리·Restore를 만들지 않음 |
-| Closing | 신규 요청/타이머/콜백 차단, 열거 취소 | 기존 Leave·삭제/DB 완료 대기 | dirty 소진을 기다리지 않고 승인 작업만 drain |
-| ExitBlocked | 자동 실행 정지 유지 | 복원·기존 저장/삭제 복구 허용. 수동 스캔도 재개 조건 전 거부 | 명시적 복원 후 DB 사용 가능·감상 없음·복구 종료 확인 시 감지 재구성/기준 검사 |
-| Exited | 모든 콜백 무효, DB 접근 없음 | 없음 | 없음 |
+| 확인된 Local | 켬, UI 준비 후 | 이벤트 감지 켬 | 마지막 완료 후 24시간, 앱 실행·유휴 중 한 번 |
+| RemoteUNC/RemoteMapped | 끔 | 수동 기본, watcher 필수 아님 | 사용자가 예약을 켤 때 24시간 기본, 1~168시간 선택 |
+| RaiDrive/Unknown | 끔 | 수동 기본, 확인 전 자동 금지 | 선택 예약도 동일; 캐시/연결 상태를 함께 표시 |
 
-관련 격리 분류 판정은 활성 소스가 격리 PathKey를 포함하거나 그 분류의 기존 항목에 격리 PathKey가 있는 경우로 한다. 소스 밖의 옛 항목도 고려한다. 전역 손상은 전체를 막는다. 현재 ApplyObservedItems는 격리 항목을 건너뛰는 API가 아니므로 이번 설계에서는 필터로 몰래 누락시키지 않고 **관련 분류 전체를 보류**한다. 경쟁이 발생하면 기존 DB 격리 검증이 최종 방어선이며 rollback 후 복구 대기로 보고한다. 사용자 결정 D12의 보수적 지연 비용을 설명한다.
+소스별 `ScanOnStartup`, `RefreshMode(Manual/Events/Scheduled)`, `IntervalHours`를 둔다. Events는 확인된 Local에서만 선택; 원격 이벤트 신뢰성 개선은 이번 필수 범위가 아니다. 시작 검사와 갱신 모드는 독립이며 모두 꺼도 수동 가능하다. 기존/신규 소스 기본은 D10 확정값을 사용한다. 로컬이라고 뒤늦게 확인돼도 사용자가 저장한 옵션은 덮어쓰지 않는다. 주기는 마지막 성공한 소스 범위 검사 기준, 앱이 꺼져 있던 횟수를 몰아서 실행하지 않고 재시작/절전 복귀 시 자격 있는 한 건만 합친다. OS 예약 작업은 추가하지 않는다.
 
-소스 편집은 감상을 강제로 끝내지 않는다. 현 UI의 감상 모달 동안 편집 불가 경계는 유지한다. 스캔 중 편집 의도는 즉시 저장하지 않고 취소/drain 후 처리하며 이전 구성의 결과는 이후 적용하지 않는다. 이미 DB 반영된 관찰은 되돌리지 않지만 소스 제거를 Missing으로 해석하지 않는다. DB/조정자 외부 직접 호출을 새로 만들지 않는다.
+색인은 이름/종류/확장자/크기/수정시각의 디렉터리 메타데이터만 사용한다. 해시·썸네일·ZIP 목록·영상 probe·자막 내용은 색인 중 읽지 않는다. provider가 메타데이터 요청만으로 다운로드하는 것까지 차단할 수 없으며 그런 provider는 수동 사용을 권한다. 앱이 미디어 본문을 요청하지 않는지 오류 주입/IO 계측으로 검사한다.
 
-수동 취소는 해당 실행을 취소하고 같은 분류를 자동으로 곧바로 재시작하지 않도록 보류한다. 다음 새 이벤트/주기/명시적 수동 요청에서 재시도한다. Closing 취소는 재시도 타이머를 만들지 않는다. 취소가 마지막 검사보다 늦어 저장이 이미 시작됐으면 Completed/실패로 실제 결과를 표시하며 “저장하지 않음”을 표시하지 않는다.
+앱 소유 단일 조정자가 **SourceId 단위** 요청을 합친다. 원격 한 소스의 예약이 같은 분류의 수동 전용 다른 소스까지 열거하게 하지 않는다. 분류 수동 스캔은 활성 소스 각각에 대한 명시적 요청이다. 파일 유일성은 여전히 분류+PathKey이며 중첩 결과는 중복 저장하지 않는다. 비활성/제거 소스와 이번에 관찰하지 않은 범위는 Missing 근거가 아니다. 다른 분류의 동일 키 Missing도 같은 바인딩과 확정 증거가 있을 때만 적용한다.
 
-### 5. 관찰·실패 복구 규칙
+Local watcher는 dirty 신호일 뿐 DB 쓰기가 아니다. 소스/구성 generation+dirty version을 사용하고 파일별 무제한 큐는 두지 않는다. 기술값 제안은 2초 debounce/최대 30초 합침이다. watcher를 먼저 붙인 뒤 기준 스캔하며, 중복/순서 역전/디렉터리 이동/overflow는 해당 소스 재검사로 수렴한다. 실행 중 신호는 완료 때 지우지 않는다. 수동 요청 우선, 같은 실행은 공유하고 소스 순환으로 편중을 막는다. 끔→켬은 새 기준 검사, 끔은 자동 열거 취소 요청·이미 시작한 DB 쓰기 완료 대기다.
 
-| 관찰/실패 | 반영 기준 | 회복 |
+자동 재시도는 켜진 소스에만 적용한다. 일시 오류는 30초→2분→10분 상한 backoff 제안이며 성공 시 초기화한다. 인증/권한/바인딩 문제는 자동 반복 대신 사용자 조치 대기다. 수동 취소는 즉시 자동 재시작하지 않는다. 완료 시각은 부분 실패로 갱신하지 않으며 오류 주입으로 재시도 폭주가 없는지 검사한다. 원격 수동 소스를 backoff라는 이름으로 자동 열거하지 않는다.
+
+### 4. 연결·부재·후보 및 감상
+
+연결 상태(Unknown/Available/Unavailable/AccessDenied/BindingChanged)와 항목 IsMissing을 분리한다. 연결 상태는 메모리 관찰이며 재시작 시 Available을 신뢰하지 않는다. UI의 기존 목록은 마지막 관찰값이며 실시간 온라인 목록이 아니다.
+
+| 관찰 | DB·기록 처리 | 다음 동작 |
 |---|---|---|
-| 파일 추가/이동/이름변경 | T02 경로 키 기준. 새 키는 새 ID/기본 상태, 옛 키는 부재 확인 뒤 Missing | 같은 분류 재스캔; 다른 분류 이력 승계 없음 |
-| 대소문자 변경/같은 경로 재등장 | 기존 ID/분류별 상태 유지, Present로 복귀 | 내용 동일성으로 주장하지 않음 |
-| 같은 키 크기/수정시각 변경 | 현재 ApplyObservedItems대로 진행만 제거, 이력/선호 유지 | 감상 창 닫힌 후 반영. 동일 메타데이터 교체 탐지는 보장 안 함 |
-| 외부 삭제 신호 | 신호만으로 Missing/기록 제거 금지 | T05 관찰로 Missing, 이력/진행/선호 보존 |
-| 앱 삭제 신호 | 저널/격리 해제나 성공 완료 추정 금지 | T12가 성공 정리 완료 후 새 스캔. 새로 나타난 파일 OS 재삭제 없음 |
-| 드라이브 시작부터 부재/중간 분리 | Unavailable인 범위의 기존 상태 보존 | 준비 복귀 후 watcher 재생성·전체 분류 검사 |
-| 소스 폴더 실제 삭제 | 드라이브/유효 조상 접근 가능하고 명시적 부재 확인된 범위만 Missing | 복귀 후 재관찰 |
-| 접근 거부/reparse/메타데이터 오류 | 실패 prefix/항목은 이전 상태 유지 | 정상 관찰 범위만 원자적 반영, 경고/재시도 유지 |
-| 일부 열거 성공 뒤 실패 | 확인된 Present 및 부재 증거가 유효한 범위만 반영 | 결과는 “부분 완료/경고”, 전체 동기화 성공 표시 금지 |
-| 취소(반영 진입 전) | 분류 결과 전체 미반영 | 임시 결과 폐기, 다음 요청은 새 관찰 |
-| SQL 예외/격리 경쟁 | 기존 transaction 전체 rollback; 감상 SaveFailed와 별도 스캔 오류 | 오래된 관찰 payload 반복 적용 대신 새 스캔 |
-| process 종료/재시작 | dirty/타이머는 복구하지 않음. 기존 DB/저널만 유지 | D10 시작 검사 또는 수동 검사. 둘 다 안 하면 미확인 상태가 남음을 안내 |
+| 시작 오프라인/인증·권한 실패/열거 중 단절 | 기존 Present/Missing·기록·진행·선호 유지 | 상태 표시, 명시적 재확인 또는 켜진 정책의 재시도 |
+| 원격 빈 목록/캐시된 목록 | 열거 성공만으로 누락 항목 Missing 금지 | 같은 binding의 부모 접근+개별 명시적 NotFound 증거가 추가로 필요 |
+| 원격 NotFound | 서버/공유 자체 부재는 Unavailable; 정상 부모와 대상 확인이 상충/불명하면 보존 | provider가 authoritative 부재를 구분 못 하면 Missing을 자동 확정하지 않음 |
+| 일부 열거 뒤 실패 | 바인딩 유지가 확인된 성공 Present만 반영 가능; 실패 prefix 부재 금지 | 부분 완료 표시. 바인딩 변경이면 그 소스 결과 전부 폐기 |
+| 로컬 정상 조상 아래 명시적 부재 | 적용 직전 준비 상태·지원 조상·재등장 재확인 후 Missing | 외부 부재는 기록/진행을 삭제하지 않음 |
+| 같은 key Present/Missing 충돌 | Present 우선, 불명 범위 보존 | dirty 유지해 새 관찰. rename 자동 승계 금지 |
+| 재연결 | 온라인 추정만으로 Missing 해제/삭제 성공 처리 금지 | 바인딩 재확인 후 소스 정책에 맞춰 새 스캔 |
+| DB 실패/적용 전 취소 | transaction rollback/해당 적용 묶음 미반영 | 오래된 결과 재사용 없이 새 관찰 |
 
-부재 증거 보완: 열거 중 NotFound를 곧바로 확정하지 않고 적용 전에 해당 드라이브 준비 상태·지원되는 조상 경로를 재확인한다. 드라이브/조상 접근 실패나 모순 관찰이면 해당 소스의 부재 후보를 버린다. 온라인인 유효 조상 아래 실제 없음만 허용하고 bool File.Exists=false만으로 구분하지 않는다. Missing 후보 경로가 다시 나타나면 Missing하지 않고 dirty를 유지한다. 부재/Present가 상충하면 Present 우선, 불확실하면 보존한다. 다른 분류까지 갱신하는 Missing ID 역시 같은 검증을 거친다. 파일 IO를 DB transaction에 넣지 않으며 재확인 직후의 외부 변경까지 완전 차단한다고 주장하지 않는다.
+원격 캐시를 우회하는 범용 보장은 없다. D16 제안은 “부재 증거를 제공 못하는 provider는 자동 Missing 제한”을 허용한다. 반복 관찰이나 일정 시간 경과만으로 부재를 확정하지 않는다. 관찰 직후 외부 변경까지 원자적으로 막는다는 보장은 없다.
 
-### 6. 종료·목록·최소 API 영향
+D16 제안: 연결 불가/바인딩 미확인 소속 항목은 신규 랜덤에서 일시 제외한다. 여러 소스로 덮이면 같은 binding에서 접근 가능한 소스가 하나 있는 경우만 허용한다. 파일별 열기 실패는 현재 세션의 별도 실패 집합에 보관해 다음 추첨에서 반복 선택을 막는다. Seen/영구 제외/IsMissing을 대신 수정하지 않는다. 해제는 명시적 재확인 성공 또는 새 감상 세션이고, 자동 순환 재추첨은 여전히 없다. 수동/Back/Forward는 명시적 재확인 기회지만 실패 시 기존 cursor/Forward/Pending을 유지한다. UI는 기간상 후보 없음과 연결 문제로 일시 제외됨을 구분한다. 이 정책은 기존 후보 계약 확장이므로 승인 전 구현 금지다.
 
-- AppLifecycle Closing admission과 동시에 감지 조정자를 stopping으로 바꾸고 watcher 이벤트/주기 요청을 끈다. generation을 무효화하여 이미 발행된 콜백도 무시한다.
-- 진행 중 열거에 취소를 전달하고 실행 Task를 기다린다. ApplyObservedItems가 시작됐다면 DB 결과까지 기다린다. 파일 IO가 OS에서 지연되면 취소가 즉시 끝난다고 보장하지 않고 강제 Kill/시간 제한 종료도 추가하지 않는다.
-- 기존 StopScanningAsync를 모든 스캔 Task·복구·관련 목록 읽기까지 drain하도록 확장한다. ViewingWindow 정상 닫기와 이 drain은 서로 기다리는 순환을 만들지 않는다. 감상 창이 살아 있으면 스캔은 시작할 수 없고 dirty는 drain 대상이 아니다.
-- watcher 해제 실패/살아 있는 작업이 있으면 DB를 닫지 않고 ExitBlocked로 남긴다. DB 해제 후 다른 정리 실패로 ExitBlocked인 경우 DB가 살아 있다고 가정해 감지를 다시 시작하지 않는다. 재개 조건은 실제 DB 수명 확인을 포함한다.
-- ExitBlocked에서 단순 SetExitRequested(false) 또는 Restore 호출만으로 감지를 켜지 않는다. 명시적 복원 후 정상 작업 가능 조건을 확인한 경우에만 새 generation/기준 스캔으로 재개하고, 불충족이면 복구 UI만 유지한다. 종료 재시도는 기존 단일 Task·T16 복원 키 수명을 유지한다.
-- 스캔 성공 뒤 T17 선택 분류 RefreshAsync로 DB snapshot을 다시 읽는다. 스캐너가 다른 분류의 같은 PathKey도 Missing으로 바꾸므로 스캔한 분류와 현재 선택 분류가 달라도 갱신한다. 검색/필터/선택 ItemId를 가능한 한 보존하고 닫힘/Closing에서는 새 읽기를 만들지 않는다. 이미 시작한 읽기는 기존 version/drain 경계를 따른다.
-- 필요한 공통 변경은 앱 수준 스캔 admission/idle·stop/drain, watcher generation, 설정 전용 값/API, 관찰 결과의 “부분 완료/복구 대기/취소” 표시뿐이다. 구체 메서드명은 구현 시 정하되 저장/세션 공개 의미는 유지한다. v2는 설정 두 열만이며 MediaItem/ViewHistory/PlaybackProgress/VisitCommit/AppliedDeletion/저널 형식 변경은 없다.
-- Settings/Core 값 추가와 lifecycle 연결은 여러 모듈 변경이므로 다음 구현도 Astra 담당이다. 범용 작업 큐/이벤트 버스/ORM/새 패키지는 필요 없다.
+이미 Ready 후 끊김/디코딩 오류는 기존 Active Pending을 지우지 않는다. 마지막 유효 진행을 보존하며 정상 Leave에서 기존 억제 여부대로 저장한다. 재연결됐다고 자동으로 새 Visit를 만들거나 재생을 재시작하지 않는다. 다른 후보 준비 실패는 기존 감상 유지, 늦은 Ready는 token+binding generation 확인 후 폐기/해제한다.
 
-### 7. 다음 구현의 필수 검증 (현재 미실행)
+ZIP은 중앙 디렉터리/암호화 검사와 페이지 seek가 원격 읽기를 유발한다. 앱 전체 추출 없이 기존 페이지 캐시를 유지하더라도 provider는 큰 부분 또는 전체 파일을 캐시할 수 있다. 영상은 기존 libVLC 파일 열기/버퍼·seek를 사용하고 URL 스트리밍 엔진으로 바꾸지 않는다. 자막은 해당 영상 폴더와 선택된 파일만 읽으며 자동 선택 순서를 유지한다. 자막 접근 실패는 “없음”과 구분하고 영상 실패로 합치지 않는다. 별도 다운로드 관리자·영구 미디어 캐시·RaiDrive 로그인/API는 추가하지 않는다.
 
-| ID | 자동 검증 조건 | Windows 실제 확인/한계 |
+### 5. 별칭·휴지통·삭제 복구
+
+D14/D15 제안이다. 매핑 경로와 UNC는 **서로 다른 PathKey/ItemId/기록**을 유지한다. 단, 삭제 안전성에 한해 현재 Windows가 알려준 매핑 대상+상대 경로가 정확히 같은 UNC인 경우를 검증된 별칭으로 취급한다. 호스트 IP/별명/DFS·내용·크기·시각으로 추론하지 않는다. 삭제 대상 바인딩 재확인 후 모든 분류의 동일 키 및 검증된 별칭 키를 캡처한다. 성공 정리는 이 사전 캡처 집합만 대상으로 하며 상태 병합 기능이 아니다.
+
+미확인 별칭의 기록은 성공 정리 대상에 추정 추가하지 않는다. 원격 삭제의 영향 집합을 완전히 확인할 수 없을 때는 **모든 원격/Unknown 항목의 열기·checkpoint·스캔 반영·편집/새 삭제를 임시 격리**하는 보수안을 제안한다. durable 저널에 이 광역 격리 범위를 기록해 재시작에도 복원한다. 소스 밖 과거 원격 항목도 포함한다. 정상 결과 정리 후 해제하고 나머지 별칭은 후속 관찰로 Missing만 갱신하며 기록은 보존한다. 이 비용과 “미확인 별칭의 기록까지 지우지 않음”은 D15에서 승인받는다. 로컬 하드링크 등의 기존 비식별 한계는 확대하지 않는다.
+
+| 휴지통 capability / 작업 결과 | 처리 |
+|---|---|
+| Supported (해당 provider/대상에서 검증됨) | 기본 휴지통 유지, 매 작업 recycle-only 보장 필요. 과거 성공이 이번 성공 증거는 아님 |
+| Unsupported | 휴지통 선택 불가·이유 표시. 사용자가 별도 영구삭제 확인을 해야만 새 작업 시작 |
+| Unknown | 비파괴 조회·provider별 시험 없이 Supported 추정 금지. recycle-only가 보장되지 않으면 휴지통 작업을 시작하지 않음 |
+| OS 발행 전 명확한 실패/취소 | 기록 보존·저널 정리 후 기존 방문 복귀; 오프라인을 Missing으로 바꾸지 않음 |
+| OS 발행 후 응답 단절/timeout/불완전 callback | Unknown, 저널·격리·Pending 보존; 경로가 안 보인다는 이유로 성공 판단 금지 |
+| 명확한 성공 callback/영구삭제 성공 응답 | Succeeded durable 기록→DB 원자 정리+AppliedDeletion→저널 제거→격리 해제 |
+| 명확한 실패/취소 응답 | OS 변경 없음을 확인할 수 있을 때만 Failed/Cancelled; 불명은 Unknown |
+
+현재 recycle flag/sink는 보존하되 원격 provider가 recycle-only를 지키는지 검증해야 한다. NAS/클라우드 자체 휴지통과 Windows Shell 휴지통은 같은 기능으로 간주하지 않는다. 영구삭제는 서버 측 보존/스냅샷 완전 제거까지 보장하지 않는다. 실패 후 자동 영구삭제·로그인·권한 상승·OS 삭제 자동 재실행은 금지한다.
+
+저널 v2 제안: 기존 OperationId/모드/시각/phase와 실행 Path/PathKey에 binding 근거·generation, 격리 범위, 각 target의 ItemId+PathKey+기존 size/time을 추가한다. 삭제 전 대상 집합과 격리를 DB 경계에서 캡처하고 durable Prepared 쓰기 성공 전 OS 호출 금지다. 네트워크 탐색을 DB writer lock 안에서 하지 않는다. 별칭 확인 결과는 admission 아래 재검증하고 대상 캡처 때 일치 여부를 검사한다.
+
+ApplyDeletion은 v2의 각 target 키를 검증하고 모든 대상 기록/진행/VisitCommit 정리 및 AppliedDeletion을 한 transaction으로 처리한다. 일부만 완료 처리하지 않는다. 재시작 복구는 저장된 집합을 사용하고 새 매핑에 대상을 다시 해석하지 않는다. Succeeded는 실제 파일 재조회 없이 DB 정리만 재시도; Prepared/Unknown은 원래 대상 정보를 표시하는 기존 사용자 확인으로 해결한다. 재매핑 상태에서도 새 대상 파일을 삭제하지 않는다. 살아 있는 OS 작업이 있으면 사용자 성공/실패 확인으로 먼저 격리를 풀 수 없다. 저널 손상으로 집합/범위를 못 읽으면 전역 차단을 유지한다.
+
+v1 저널은 기존 단일 키 의미로 읽고 OS 재실행 없이 복구한다. v1이 원격일 가능성이 있으면 alias 증거가 없으므로 보수 광역 격리를 추가하되 성공 정리는 원래 targets에만 적용한다. v1 저널을 파일 IO로 보강·덮어쓰지 않는다. 미완료 성공 삭제 및 현재 Pending에 걸린 Unknown은 계속 종료 차단이다.
+
+### 6. 지연 IO·직렬화·정상 종료
+
+UI에서 remote Exists/GetAttributes/열거/연결 조회/open/dispose를 동기 호출하지 않는다. IO를 worker로 옮겨도 취소 가능성이 생기는 것은 아니다. native player/WPF 생성·UI 조작은 해당 스레드 계약을 따르고 무조건 Task.Run으로 옮기지 않는다. 각 IO의 소유 Task와 리소스가 누구에게 있는지 등록한다. timeout은 지연 안내/취소 요청 기준일 뿐 실제 완료나 해제 성공이 아니다. 종료 시간 상한은 보장하지 않는다.
+
+| 상태 | 허용/차단 및 순서 |
+|---|---|
+| DB/저널 초기 복구 | 네트워크 스캔보다 우선; 격리 확보 후 목록 표시. 복구 UI가 해결 전 OS 호출을 만들지 않음 |
+| 유휴 | Dispatcher admission에서 검사+등록을 await 없이 수행. 앱 전체 스캔 하나, 소스별 요청 병합 |
+| 열거 중 | 편집/감상/복구는 취소 요청 후 실제 Task drain; 반환되지 않으면 대기 상태 유지. 새로운 worker로 재시도 금지 |
+| Apply 진입 이후 | 취소로 성공을 무효화하지 않고 transaction 결과까지 기다림. DB lock 안에서 IO/Dispatcher 대기 금지 |
+| 감상 창 존재(Empty/Opening/Active/SaveFailed 포함) | 스캔 반영·재바인딩 보류, dirty만 유지. pause/숨김/Busy=false로 예외 허용 안 함 |
+| 삭제·복구 | 실행 스캔 drain 후 배타 입장. 저널/OS 결과/DB 정리/재열기 끝까지 명령 소유권 유지 |
+| durable 격리만 남음 | 관련 분류 전체 스캔 보류; 원격 광역 격리는 원격 포함 분류 보류. 무관한 로컬만 가능 |
+| Hidden | D12 승인 시 허용된 유휴 정책만 실행; 감상 중 보류. 오류·완료가 Show/Restore/소리 발생시키지 않음 |
+| Closing | 새 사용자 명령·타이머·watcher·재시도 admission 차단, generation 무효화, 열거/준비 취소 요청 |
+| 종료 drain | 실제 IO·명령·미디어/자막 해제·목록 읽기·삭제 결과/DB 경계 완료 대기; dirty 소진 대기는 하지 않음 |
+| 지연/ExitBlocked | 원래 Task를 계속 추적. 복원·대기 상태 확인 가능, 중복 종료는 동일 작업 공유. 새 scan/open/OS 삭제 시작 불가 |
+| drain 완료 | 기존 Leave 저장→미디어 해제→DB→트레이/후크→최종 전역 키 해제. 실패 시 기존 복원 경로 유지 |
+
+진행 중 파일 IO를 버리고 DB부터 닫는 fire-and-forget, timeout 뒤 강제 Kill, 미완료 thread 강제 종료는 추가하지 않는다. 지연 안내 시점(예: 10초)은 기술값 제안이며 사용자 선택 timeout으로 종료 성공 처리하지 않는다. 영원히 반환하지 않는 provider라면 정상 종료도 대기할 수 있음을 표시한다. 별도 helper process 격리는 이번 범위 밖이며 필요 판정 시 별도 구조 검토다.
+
+Closing과 감상 닫기가 서로 scan gate를 기다리는 순환을 만들지 않는다. 이미 감상 중이면 실행 스캔이 없어야 한다. Quick Hide는 기존 실제 복원 키+트레이 조건과 mute만 사용하며 Pending 확정이 아니다. ExitBlocked에서 Restore/SetExitRequested(false)만으로 감지를 재개하지 않는다. 실제 DB 생존·모든 IO 완료·감상 해제·삭제 복구 완료 및 명시적 정상 작업 복귀를 확인한 뒤 새 generation으로 재개한다. DB가 이미 닫혔으면 복원 UI만 유지한다.
+
+### 7. 최소 모델·migration 제안
+
+기존 v1 스키마는 이번에 수정하지 않는다. T18A-1에서 **승인 후** v1→v2 순차 transaction을 구현한다. 신규 DB도 v1→v2 경로를 사용한다. 설정 두 bool만 추가하는 PR #21 안은 폐기한다.
+
+| 저장 위치 | 최소 필드/제약 제안 | 의미 |
 |---|---|---|
-| A01 | v1 데이터가 있는 DB→v2 및 빈 DB, migration 실패 rollback/재실행/상위 버전 거부; 기존 이력/진행/설정 보존 | 기존 사용자 DB 복사본으로 시작 |
-| A02 | 옵션 4조합/저장 실패/재시작, 기존 Resume 저장과 감지 설정 상호 비덮어쓰기 | 체크 항목과 상태 표시 |
-| A03 | 실제 파일 추가/삭제/rename/대소문자/폴더 이동/중첩 소스; 분류별 ID·이력·선호 보존 | 한글·공백·다수 파일 복사 |
-| A04 | 중복 폭주·순서 역전·실행 중 신호·overflow·무신호 누락 주입, dirty version과 메모리/Task 상한 | 실제 watcher에서도 최종 스캔 수렴; 이벤트 횟수/순서는 단정하지 않음 |
-| A05 | 하위 포함 on/off·비활성 소스/분류·경로 편집·옛 콜백; 제외 범위 Missing 금지 | reparse/대소문자 미지원과 확장자 회귀 |
-| A06 | 시작 오프라인·열거 중 분리·NotFound/접근 거부 주입·부분 실패/다시 나타난 파일 | 분리 가능한 테스트 드라이브와 권한 제한 폴더. 실제 분리 미실시는 별도 미검증 |
-| A07 | 수동/자동 동시 요청·편집/취소/Apply 직전·직후 경합, transaction rollback | UI 응답·수동 우선·취소 안내 |
-| A08 | Active/Opening/Empty/SaveFailed/CommitUnknown/checkpoint 동안 자동 DB 변경 0, 닫기 성공 뒤에만 반영 | 만화/영상 감상 중 외부 교체→진행 부활 없음 |
-| A09 | Prepared/Unknown/손상/Succeeded 정리 실패·해제 후 재등장; 격리 분류 보류·다른 분류 처리 | 테스트 복사본만, OS 재삭제·이력 임의 제거 0 |
-| A10 | Closing 시 콜백/타이머 차단·진행 저장 완료 대기·DB 해제 후 접근 0·중복 종료; ExitBlocked DB 생존/해제 후 재개 거부 | 실제 종료/복원 키/트레이 실패 조합 |
-| A11 | Hidden 자동 성공/오류/재시도에서 Show/Restore/소리 발생 0, 감상 중 보류 | 순간 노출·물리 키·스피커는 사용자 확인과 구분 |
-| A12 | 다른 분류 Missing 반영 뒤 T17 갱신·필터/선택 보존·늦은 읽기/닫기 drain | 실제 목록 갱신과 수동 열기 |
+| SourceRefreshPolicy (새 표) | SourceId PK/FK, ScanOnStartup bool, RefreshMode enum, IntervalHours nullable(있으면 1~168), LastCompletedAtUtc nullable | 소스별 자동 범위. 소스 삭제 시 정책만 cascade, 항목/기록 보존 |
+| StorageBinding (새 표) | RootKey PK, Kind enum, ExpectedTarget nullable, EvidenceKind enum, Revision 정수≥0, RequiresConfirmation bool | 루트 재매핑 방지. 원격 비밀번호/token 저장 금지; 소스 제거에도 보존 |
+| 기존 CategorySource/MediaItem 등 | 기존 ID·Path/PathKey·유일성·분류 관계 유지 | 바인딩은 루트로 조회, 항목-소스 관계 표/자동 상태 병합 없음 |
+| 삭제 저널 (파일 v2) | §5 target별 key/바인딩·격리 범위 | SQL user_version과 독립 버전, v1 읽기 호환 |
 
-Windows x64/.NET 10 Release 빌드, T03 저장·T05 스캔·T06 세션 및 T11의 T12/T13/T15/T16/T17 통합 회귀를 수행한다. watcher/시간/IO 경합은 제어 가능한 오류 주입 검사와 실제 Windows 임시 폴더 검사를 함께 사용한다. 기존 사용자 미디어는 테스트로 삭제하지 않는다. 이 설계 PR은 문서/코드 대조만 수행했으며 새 Windows 빌드·런타임 검증 결과를 주장하지 않는다. 과거 수동 미검증·사용자 승인 생략은 유지한다.
+RefreshMode=Manual이면 주기는 null, Events/Scheduled면 주기 필수라는 제약을 둔다. Kind는 마지막 분류 정보이며 실시간 연결 상태가 아니다. 사용자 확인의 영속 기록과 이번 프로세스의 실제 확인 여부를 구분하며 Unknown은 재시작 시 다시 미확인이다. 루트 revision은 명시적 설정/바인딩 변경 시 증가시키고 실행 generation은 메모리에 둔다.
+
+migration은 네트워크 IO를 수행하지 않는다. 기존 소스·과거 항목의 서로 다른 루트를 Unknown/RequiresConfirmation로 추출하고 키/이력/진행/VisitCommit/AppliedDeletion은 그대로 보존한다. 이후 Local 확인 경로에서 D10 승인 기본값을 적용하되 수동 저장 여부를 구분해야 하므로 **정책 행 부재를 미선택 상태**로 사용한다. 사용자 저장 또는 최초 분류 후 승인 기본값을 채택할 때 행을 생성한다. 그 전 유효 정책은 Manual/시작 끔이다. 저장 실패 시 이전 정책/감지를 유지한다. 기존 SaveSettings(기간/Resume)와 별도 source-policy API를 사용해 상호 덮어쓰지 않는다.
+
+migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 검증·외래키 검사를 유지한다. v2 DB를 v1 앱으로 열면 지원하지 않는 버전으로 거부하며 자동 downgrade 하지 않는다. 남은 저널을 복구하기 전에 스캔/감상 admission을 열지 않는다. 저널 v2 적용 코드가 준비되기 전 원격 삭제 UI는 활성화하지 않는다.
+
+### 8. 지원·검증 기준 (새 실행 결과 없음)
+
+| 환경 | 목표 지원 | 제약 / 반드시 실제 확인 |
+|---|---|---|
+| Local NTFS | 기존 등록·스캔·ZIP/영상/자막·Explorer·삭제 + 이벤트 | 기존 reparse/case 제한, 분리 드라이브·watcher 누락·휴지통 회귀 |
+| SMB 직접 UNC | 공유 루트/하위 등록, 수동/선택 예약, 감상·위치 열기 | 인증은 Windows 선행, 서버/권한/단절 구분, Windows 휴지통은 별도 검증 |
+| SMB 매핑 | 드라이브 경로 + 위 기능, 매핑/UNC 삭제 격리 | 동일 로그온 세션, 대상 변경 차단, 별칭별 상태 비공유 |
+| RaiDrive/가상 드라이브 | Windows 파일 경로를 통한 위 기능 | backend/version별 seek·캐시·메타데이터·recycle 차이, placeholder 제한, 대상 미확인 시 사용자 확인 |
+
+| ID | 오류 주입·자동 검증 조건 | Windows/NAS/RaiDrive 실제 확인 |
+|---|---|---|
+| N01 | UNC 공유 경계/한글/공백/슬래시/대소문자·경로 탈출·장치/ADS 거부, 기존 키 불변 | Explorer 단일 인수/공유 루트 및 provider case 충돌 |
+| N02 | v1 데이터/빈 DB→v2, 실패 rollback/재시작/상위 버전 거부, 별도 설정 비덮어쓰기 | 사용자 DB 복사본, v1/v2 저널 혼재 복구 |
+| N03 | WNet 실패를 Local로 오판 안 함, 같은 문자 대상 변경/늦은 결과 폐기, 과거 소스 밖 항목 차단 | 매핑 해제/다른 공유 재매핑, 앱 재시작·로그온 세션 차이 |
+| N04 | 소스별 시작/모드/예약, 누락·overflow·폭주·편집 generation·수동 우선/취소 | 로컬 실제 watcher 수렴, 원격 수동 소스 자동 IO 0 |
+| N05 | 빈 캐시/권한/오프라인/중간 NotFound/부분 결과에 거짓 Missing 0 | NAS 연결 끊기/재연결, RaiDrive 캐시 목록·비어 보이는 경우 |
+| N06 | 한 명령 한 후보·일시 실패 억제/명시 재확인·Seen 불변, 기존 방문 보존 | 만화 페이지/영상 seek 중 단절, 자막 실패 분리 |
+| N07 | Prepared 이전 OS 호출 0, 별칭 target별 원자 정리·광역 격리·v1 호환·손상 전역 차단 | 테스트 복사본을 매핑+UNC로 등록해 성공/실패/결과 불명 |
+| N08 | 원격 NotFound/응답 유실 Unknown, 중복 복구 AppliedDeletion 멱등·재매핑 후 OS 재삭제 0 | NAS/각 RaiDrive backend의 recycle 지원/미지원·명시 영구삭제 |
+| N09 | 멈춘 IO fake를 해제할 때까지 gate 유지, 늦은 Ready 폐기, 신규 작업 수 상한 | 느린 share에서 UI/복원 키 응답·open/Stop/Dispose 지연 |
+| N10 | Active/Empty/Opening/checkpoint/SaveFailed 중 스캔 DB 반영 0, 닫기 성공 후 반영 | 감상 중 외부 교체 후 진행 부활 없음 |
+| N11 | Closing 새 IO 0·실제 drain 후 DB 해제·중복 종료·DB 닫힌 ExitBlocked 재개 금지 | 숨김/트레이 실패+저장 실패+지연 IO 복합 확인 |
+| N12 | 색인 미디어 본문 open 0, T17 필터/선택 보존·늦은 읽기 차단 | provider 전송량/seek/cache와 실제 ZIP/영상/자막·Explorer |
+
+T18A-6에서 Windows x64/.NET 10 Release 및 기존 T03/T05/T06/T07/T09/T10/T11(T12~17 포함) 중 영향 회귀를 수행한다. 오류 주입 통과가 NAS/RaiDrive 실물 통과를 대신하지 않는다. 외부 삭제 시험은 새 테스트 복사본만 사용한다. 실물 환경이 없으면 환경·backend/version과 미검증 항목을 적고 사용자 실사용 확인으로 넘긴다. 기존 수동 미검증·승인 생략·AVI 조사 보류는 유지한다.
+
+### 9. 확인한 기술 근거
+
+2026-10-03 아래 공식 페이지 본문 접근을 재확인했다. API 설명을 근거로 안전 경계를 설계했으며 provider 동작 검증을 대신하지 않는다. 기본값/주기와 D14~D16은 프로젝트 제안이다.
+
+- [WNetGetConnectionW](https://learn.microsoft.com/en-us/windows/win32/api/winnetwk/nf-winnetwk-wnetgetconnectionw): 매핑 대상 조회와 로그온 세션 제한. 모든 가상 provider의 식별 성공을 보장하지 않는다.
+- [FileSystemWatcher](https://learn.microsoft.com/en-us/dotnet/api/system.io.filesystemwatcher?view=net-10.0): 이벤트 중복·누락을 전제로 재관찰한다.
+- [Canceling Pending I/O Operations](https://learn.microsoft.com/en-us/windows/win32/fileio/canceling-pending-i-o-operations): 취소 요청과 IO 완료는 별개다.
+- [IFileOperation.SetOperationFlags](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-ifileoperation-setoperationflags): recycle 관련 플래그만으로 원격 휴지통 존재를 주장하지 않는다.
