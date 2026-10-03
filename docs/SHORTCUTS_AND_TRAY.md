@@ -181,3 +181,5 @@ D04의 키 기본값 위임에 따라 다음을 확정한다. 전역 등록은 �
 ## T18A 감지와 생명주기 연결 — 설계 검토안
 
 상세 상태표와 종료 drain/ExitBlocked 재개 조건은 DATA_AND_RANDOM_POLICY.md의 T18A 절을 따른다. 감지 정지는 Closing admission에서 시작하고 DB 해제 전에 콜백·스캔·목록 읽기를 정리하는 안이다. Hidden은 종료가 아니며 자동 오류/완료로 창을 노출하거나 앱 mute를 바꾸지 않는다. Hidden 유휴 검사 정책은 DECISIONS.md D12 결정 대기다. 기존 T16 복원 키/트레이 조건, 단일 정상 종료, Pending/삭제 실패 보존은 변경하지 않는다. 제품 구현은 아직 없다.
+
+네트워크 보완: 취소 요청/timeout은 IO 완료가 아니다. T18A 설계의 소유 Task drain과 원격 삭제 격리를 완료하기 전 DB/복원 키를 해제하지 않는다. 살아 있는 IO를 둔 ExitBlocked에서 복원만으로 신규 작업을 재개하지 않는다. 실제 원격 종료 시간 상한은 보장하지 않으며 강제 종료는 추가하지 않는다. 상세 상태표는 DATA_AND_RANDOM_POLICY.md T18A §6, 구현은 T18A-2/4/6이다.

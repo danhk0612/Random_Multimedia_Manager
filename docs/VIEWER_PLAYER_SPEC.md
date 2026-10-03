@@ -346,3 +346,7 @@ RTX Video Super Resolution
 - 다음 파일로 이동하면 이전 미디어의 불필요한 비동기 작업 취소
 - 영상 재생 UI 스레드가 디코딩 작업에 장시간 블록되지 않아야 함
 - 대용량 파일에서도 전체 파일을 메모리에 적재하지 않음
+
+## T18A 원격 파일 경로 설계 연결 (구현 전)
+
+D13에 따른 UNC/매핑/RaiDrive 지원은 DATA_AND_RANDOM_POLICY.md T18A §2~6의 바인딩·가용성·IO 수명 계약을 적용한 뒤 검증한다. ZIP seek/페이지 프리로드 및 libVLC 버퍼링은 provider 측 다운로드를 유발할 수 있어 전체 전송 방지를 보장하지 않는다. 기존 캐시 크기·자막 우선순위·Ready/Pending·해제 소유권은 유지한다. 자막 접근 실패는 영상 Ready와 분리하고 늦은 준비 결과는 token과 binding generation으로 폐기한다. 코드 변경은 T18A-4이며 실제 원격 재생은 미검증이다.
