@@ -22,13 +22,13 @@
 | T15 | 트레이 및 창 동작 | Astra | 구현·Windows 자동 검증 완료 (PR #17 main 통합, 사용자 Windows 확인 대기) | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
-| T18A | 변경 감지와 경로 상태 갱신 | Astra | 네트워크 설계 PR #22 main 통합; 정책 승인 완료, T18A-1 PR #23 구현·Windows 자동 검증 완료/main 미통합; 후속 미착수 | T05/T12; T02 식별 계약 |
+| T18A | 변경 감지와 경로 상태 갱신 | Astra | 네트워크 설계 PR #22 main 통합; 정책 승인 완료, T18A-1 PR #23 구현·Windows 자동 검증 완료/main 통합 완료; 후속 미착수 | T05/T12; T02 식별 계약 |
 | T18 | Windows 배포 및 통합 검증 | Astra | 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 바로 다음 작업
 
-T18A 네트워크 보완 설계 및 아래 T18A-1~6 구현 인계를 작성했다. D13 지원 목표는 사용자 확정이며 현재 코드의 네트워크 지원 완료를 뜻하지 않는다. 설계 PR #22는 `2959391`로 main에 통합했다. DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23의 main 통합을 기다린다. 이전 전역 두 bool·10분 전체 검사는 구현 기준이 아니다.
+T18A 네트워크 보완 설계 및 아래 T18A-1~6 구현 인계를 작성했다. D13 지원 목표는 사용자 확정이며 현재 코드의 네트워크 지원 완료를 뜻하지 않는다. 설계 PR #22는 `2959391`로 main에 통합했다. DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 바로 다음 작업은 Astra의 T18A-2이며 최신 main에서 시작한다. 이전 전역 두 bool·10분 전체 검사는 구현 기준이 아니다.
 
 T18 배포와 제품 구현을 병렬 진행하지 않는다. 기존 수동 미검증/승인 생략 및 AVI 무음 조사 보류는 유지한다.
 
@@ -248,7 +248,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18A — 변경 감지와 경로 상태 갱신
 
 - 목적: 외부 파일 변경과 라이브러리 정합성 유지.
-- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 미통합); T18A-2~6 미착수.
+- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 통합 완료); T18A-2~6 미착수.
 - 선행: T05/T12; T02 식별 계약.
 - 범위/수정 영역: 변경 감지·스캔·경로 추가/Missing 갱신(이동 상태 승계 없음).
 - 완료 조건/검증: 추가/삭제/이름변경·이벤트 중복/누락 뒤 재스캔, 잘못된 기록 병합 방지, 시작 검증 옵션 확인.
@@ -272,13 +272,13 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 완료 조건/검증: 공식 SDK/GPU/드라이버 조건, 현재 출력 결합 가능성·성능/복사비용·색/HDR·일반 재생 복귀 검증; 통합 여부와 별도 구현 Task 제안.
 - 수정하지 말아야 할 영역: 초기 엔진 선제 교체·검증 없이 VSR 지원 표기.
 
-## T18A 구현 인계 — T18A-1 구현·Windows 자동 검증 완료, main 통합 대기
+## T18A 구현 인계 — T18A-1 main 통합 완료, 다음 T18A-2
 
 모든 작업은 최신 main의 AI_WORKFLOW 및 DATA_AND_RANDOM_POLICY T18A 전체와 해당 절을 읽는다. D10~D12/D14~D16이 결정되고 이 보완 설계 PR이 main에 통합되었는지 먼저 확인한다. 미충족이면 코드 변경 없이 차단을 보고한다. 아래 순서에 따라 **지정된 하나의 Task만** 진행하고 문서/검증 결과·PR까지 제출하며 직접 병합/다음 Task 착수는 하지 않는다. 완료 문서는 CURRENT_STATE/TASKS의 실제 영향 범위만 갱신한다.
 
 | ID | 담당 | 선행 (main 통합 기준) | 목적·수정 영역 | 완료 조건 | 금지 범위 |
 |---|---|---|---|---|---|
-| T18A-1 (완료, PR #23 main 미통합) | Astra | 보완 설계 통합·정책 결정 | 공통 경로/바인딩·소스 정책 값과 v2 migration/API, v1/v2 저널 읽기 계약; Core, Data, 경로 검증, Journal | N01~N03 저장/정규화/호환, 기존 키·ID·기록 보존. 실제 API/저널 필드를 문서화 | 자동 갱신 실행·원격 삭제 활성화·미디어 엔진 변경 |
+| T18A-1 (완료, PR #23 main 통합 완료) | Astra | 보완 설계 통합·정책 결정 | 공통 경로/바인딩·소스 정책 값과 v2 migration/API, v1/v2 저널 읽기 계약; Core, Data, 경로 검증, Journal | N01~N03 저장/정규화/호환, 기존 키·ID·기록 보존. 실제 API/저널 필드를 문서화 | 자동 갱신 실행·원격 삭제 활성화·미디어 엔진 변경 |
 | T18A-2 | Astra | 1 | 소스 단위 관찰/증거·단일 scan admission·watcher/예약·IO 등록/drain; Scanning/MainWindow/AppLifecycle | N04~N05/N09~N11 조정자 범위, 감상 중 반영 0·부재 오판 방지·DB 해제 후 접근 0 | 삭제 결과/후보 정책·UI 전체 개편 |
 | T18A-3 | Astra | 1, 2 | 별칭/광역 격리·원격 결과 분류·recycle capability·저널/대상별 원자 정리; Deletion/Data/SessionCoordinator.Deletion | N07~N09, v1 복구/재매핑/중복 정리, OS 재삭제 0·임의 영구삭제 0 | 추정 별칭 기록 삭제·정상 종료 우회 |
 | T18A-4 | Astra | 1, 2, 3 | 승인된 일시 후보 억제·바인딩 확인, ZIP/영상/자막 지연 IO와 기존 세션/해제 연결 | N06/N09~N12 감상 범위, 한 명령 한 후보·기존 Pending·Ready 보호 | 재생 엔진 교체·본문 선다운로드·새 캐시/클라우드 API |
@@ -296,18 +296,34 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ### 새 작업 시작 지시문
 
 ```text
-https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A-1만 진행해.
-최신 main에서 AI_WORKFLOW.md와 기준 문서를 읽고 T18A 보완 설계 PR 통합 및
-DECISIONS.md D10~D12/D14~D16 결정 완료를 확인해. 미충족이면 구현하지 마.
-DATA_AND_RANDOM_POLICY.md T18A §1~2/5/7과 TASKS.md T18A-1 행 전체를 따라
-경로·바인딩·소스 정책·migration 및 저널 호환 계약만 구현해.
-task/t18a-1-path-storage 브랜치를 사용하고 기존 데이터·v1 저널을 보존해.
-N01~N03 및 영향 저장 회귀를 검증하고 실제 결과/미검증을 구분해 문서·PR로 보고해.
-원격 삭제/자동 검사 실행을 활성화하거나 직접 병합·T18A-2/T18로 진행하지 마.
+https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A-2만 진행해.
+
+최신 main에서 AI_WORKFLOW.md, PROJECT.md, 관련 REQUIREMENTS.md/ARCHITECTURE.md,
+CURRENT_STATE.md와 TASKS.md를 읽어. T18A-1 PR #23(main 통합 08adddc)과
+D10~D12/D14~D16 승인 상태를 실제 저장소에서 확인해.
+docs/DATA_AND_RANDOM_POLICY.md T18A 전체, 특히 §2~4/6~8과
+TASKS.md의 T18A-2 행을 작업 계약으로 사용해.
+
+task/t18a-2-scan-lifecycle 브랜치에서 다음을 구현해.
+- T18A-1 API를 사용한 실제 연결 근거 수집과 revision/generation 검증.
+- SourceId 단위 관찰·단일 스캔 실행 조정, 로컬 watcher, 소스별 시작/예약 정책.
+- 수동 전용 원격 소스의 자동 열거 금지, 불확실한 원격 부재/부분 실패 시 상태 보존.
+- 감상 창 전체 수명과 삭제 격리·소스 편집 경계에서 스캔 적용을 직렬화.
+- Closing 이후 신규 IO 차단, 취소 요청과 실제 완료를 구분하고 drain 후 DB 해제.
+- Hidden에서 창/소리 노출 없이 정책 유지, 종료 차단 시 기존 복원 수단 보존.
+
+N04~N05/N09~N11의 조정자 범위 및 영향 저장·스캔·감상·생명주기 회귀를
+Windows Release 빌드와 함께 검증해. 오류 주입과 실제 NAS/RaiDrive 결과를 구분해.
+실제 장비가 없으면 미검증으로 남기고 통과로 쓰지 마.
+
+기존 ID·기록·진행·v1/v2 저널을 보존하고 원격 삭제/v2 복구를 활성화하지 마.
+삭제 결과·후보 정책·미디어 엔진·UNC/설정 UI 전체 연결은 후속 Task에 남겨.
+CURRENT_STATE.md/TASKS.md와 영향을 받은 계약·검증 문서를 갱신해 PR로 보고해.
+직접 병합하거나 T18A-3/T18 배포로 넘어가지 마.
 ```
 
 후속 시작 시에는 위 공통 절차와 해당 행의 선행/범위/완료/금지 항목 전체를 작업 계약으로 사용한다. 브랜치는 `task/t18a-2-scan-lifecycle`, `task/t18a-3-network-deletion`, `task/t18a-4-network-viewing`, `task/t18a-5-source-ui`, `task/t18a-6-integration`이다. 담당·선행이 바뀌면 구현 전에 이 표를 먼저 재검토한다.
 
 ### T18A-1 결과와 후속 기준
 
-`task/t18a-1-path-storage`에서 경로·바인딩/정책·v2 migration·v1/v2 저널 계약을 구현했다. PR #23의 검증 코드 `af4bd6e`는 N01~N03 및 Windows Release/영향 CI 5개가 모두 통과했다. 실제 NAS/RaiDrive는 미검증이다. 실제 API는 DATA_AND_RANDOM_POLICY T18A §7, 자동/실물 구분은 docs/T18A_1_PATH_STORAGE_VALIDATION.md를 따른다. v2 저널 실행/복구는 T18A-3까지 차단하며 자동 검사/UNC UI는 활성화하지 않는다. T18A-2는 이 PR의 main 통합 이후 별도 지시로만 착수한다.
+`task/t18a-1-path-storage`에서 경로·바인딩/정책·v2 migration·v1/v2 저널 계약을 구현했다. PR #23의 검증 코드 `af4bd6e`는 N01~N03 및 Windows Release/영향 CI 5개가 모두 통과했다. 실제 NAS/RaiDrive는 미검증이다. 실제 API는 DATA_AND_RANDOM_POLICY T18A §7, 자동/실물 구분은 docs/T18A_1_PATH_STORAGE_VALIDATION.md를 따른다. v2 저널 실행/복구는 T18A-3까지 차단하며 자동 검사/UNC UI는 활성화하지 않는다. PR #23은 `08adddc`로 main 통합 완료했다. 다음은 위 지시문의 T18A-2이며 T18A-3~6은 선행 통합을 기다린다.
