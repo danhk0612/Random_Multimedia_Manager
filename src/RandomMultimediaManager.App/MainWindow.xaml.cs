@@ -12,6 +12,8 @@ public partial class MainWindow : Window
     public Lifecycle.AppLifecycle? Lifecycle { get; set; }
     private readonly Data.LibraryDatabase database;
     private readonly Deletion.DeletionService deletions;
+    public Scanning.ScanCoordinator Scans { get; }
+    private bool enteringViewing;
     private bool exitRequested;
     private Task recovery = Task.CompletedTask;
 
@@ -22,8 +24,9 @@ public partial class MainWindow : Window
     public MainWindow(Data.LibraryDatabase database, Deletion.DeletionService deletions)
     {
         this.database = database; this.deletions = deletions;
+        Scans = new(database);
         InitializeComponent();
-        CategoryEditor.DataContext = new ViewModels.CategoryEditorViewModel(database);
+        CategoryEditor.DataContext = new ViewModels.CategoryEditorViewModel(database, Scans);
         LibraryBrowser.DataContext = new ViewModels.LibraryBrowserViewModel(database);
         LibraryBrowser.ManualOpenRequested += OpenManualItem;
     }
@@ -42,7 +45,7 @@ public partial class MainWindow : Window
 
     private void OpenComicViewer(object sender, RoutedEventArgs e)
     {
-        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true || Scans.IsClosing) return;
         TraceComicStartup("OpenComicViewer entered");
 
         if (comicViewer is not null)
@@ -81,43 +84,30 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenViewing(object sender, RoutedEventArgs e)
-    {
-        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
-        if (Viewing is not null) { Viewing.Activate(); return; }
-        if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel { IsScanning: true })
-        {
-            MessageBox.Show(this, "진행 중인 스캔이 끝난 뒤 감상을 시작하세요.", "랜덤 감상");
-            return;
-        }
-        // A modal owner keeps scan application after the final visit/checkpoint boundary.
-        // No scan can invalidate progress while the session is using that observed item.
-        Viewing = new(database, deletions) { Owner = this };
-        try { Viewing.ShowDialog(); }
-        finally { Viewing = null; }
-    }
+    private async void OpenViewing(object sender, RoutedEventArgs e) => await OpenViewingAsync(null);
+    private async void OpenManualItem(Guid itemId) => await OpenViewingAsync(itemId);
 
-    private async void OpenManualItem(Guid itemId)
+    private async Task OpenViewingAsync(Guid? itemId)
     {
-        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
-        if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel { IsScanning: true })
-        {
-            MessageBox.Show(this, "진행 중인 스캔이 끝난 뒤 감상을 시작하세요.", "라이브러리");
-            return;
-        }
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true || Scans.IsClosing || enteringViewing) return;
         if (Viewing is not null) { Viewing.Activate(); return; }
-
-        Viewing = new Viewing.ViewingWindow(database, deletions, itemId) { Owner = this };
-        try { Viewing.ShowDialog(); }
-        finally { Viewing = null; }
-        if (!exitRequested && Lifecycle?.State is not (RandomMultimediaManager.App.Lifecycle.LifecycleState.Closing
-            or RandomMultimediaManager.App.Lifecycle.LifecycleState.Exited))
-            await LibraryBrowser.RefreshAsync();
+        enteringViewing = true;
+        try
+        {
+            using var admission = await Scans.EnterExclusiveAsync();
+            if (admission is null || exitRequested || Lifecycle?.BlocksNewCommands == true) return;
+            Viewing = new Viewing.ViewingWindow(database, deletions, itemId) { Owner = this };
+            try { Viewing.ShowDialog(); }
+            finally { Viewing = null; }
+        }
+        catch (Exception ex) { ShowLifecycleError(ex.Message); }
+        finally { enteringViewing = false; }
+        if (!exitRequested && !Scans.IsClosing) await LibraryBrowser.RefreshAsync();
     }
 
     private void OpenVideoValidation(object sender, RoutedEventArgs e)
     {
-        if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
+        if (exitRequested || Lifecycle?.BlocksNewCommands == true || Scans.IsClosing) return;
         if (videoValidation is not null) { videoValidation.Activate(); return; }
         videoValidation = new Video.VideoValidationWindow { Owner = this };
         videoValidation.Closed += (_, _) => videoValidation = null;
@@ -127,6 +117,7 @@ public partial class MainWindow : Window
     public void SetExitRequested(bool value)
     {
         exitRequested = value;
+        if (value) _ = Scans.CloseAsync();
         MainContent.IsEnabled = !value;
         if (LibraryBrowser.DataContext is ViewModels.LibraryBrowserViewModel browser)
             browser.SetExitRequested(value);
@@ -136,6 +127,7 @@ public partial class MainWindow : Window
     }
     public async Task StopScanningAsync()
     {
+        await Scans.CloseAsync();
         if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel editor)
         {
             editor.CancelScan();
@@ -159,8 +151,9 @@ public partial class MainWindow : Window
         async Task Recover()
         {
             await System.Windows.Threading.Dispatcher.Yield();
-            if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
-            await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
+            if (exitRequested || Lifecycle?.BlocksNewCommands == true || Scans.IsClosing) return;
+            using var admission = await Scans.EnterExclusiveAsync();
+            if (admission is not null) await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
         }
         recovery = Recover();
         try { await recovery; }

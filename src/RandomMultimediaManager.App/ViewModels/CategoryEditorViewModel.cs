@@ -14,6 +14,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
 {
     private readonly LibraryDatabase database;
     private readonly LibraryScanner scanner;
+    public ScanCoordinator? Scans { get; }
     private CancellationTokenSource? scanCancellation;
     private Category? selectedCategory;
     private CategorySource? selectedSource;
@@ -29,9 +30,10 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
     private string scanProgressMessage = string.Empty;
     private bool isScanning;
 
-    public CategoryEditorViewModel(LibraryDatabase database)
+    public CategoryEditorViewModel(LibraryDatabase database, ScanCoordinator? scans = null)
     {
         this.database = database;
+        Scans = scans;
         scanner = new LibraryScanner(database);
         ReloadCategories();
     }
@@ -191,10 +193,12 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         var progress = new Progress<LibraryScanProgress>(x => ScanProgressMessage = x.Message);
         try
         {
-            LibraryScanResult result = await scanner.ScanCategoryAsync(category, progress, scanCancellation.Token);
+            LibraryScanResult result = Scans is null
+                ? await scanner.ScanCategoryAsync(category, progress, scanCancellation.Token)
+                : await Scans.ScanCategoryAsync(category.Id, progress, scanCancellation.Token);
             if (result.Status == LibraryScanStatus.Cancelled)
             {
-                ScanProgressMessage = "스캔을 취소했습니다. 이번 스캔 결과는 저장하지 않았습니다.";
+                ScanProgressMessage = "스캔을 취소했습니다. 이미 완료한 소스의 반영은 유지됩니다.";
                 return SetResult(false, ScanProgressMessage);
             }
 
@@ -215,6 +219,16 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
             scanCancellation = null;
             IsScanning = false;
         }
+    }
+
+    public async Task<EditorResult> EditAsync(Func<EditorResult> edit)
+    {
+        if (Scans is null) return edit();
+        using var admission = await Scans.EnterExclusiveAsync();
+        if (admission is null) return SetResult(false, "종료 중에는 편집할 수 없습니다.");
+        var result = edit();
+        if (result.Success) Scans.ConfigurationChanged();
+        return result;
     }
 
     public void CancelScan() => scanCancellation?.Cancel();

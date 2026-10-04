@@ -17,10 +17,10 @@ public partial class CategoryEditorView : UserControl
     }
 
     private void NewCategory_Click(object sender, RoutedEventArgs e) => ViewModel.BeginNewCategory();
-    private void SaveCategory_Click(object sender, RoutedEventArgs e) => ViewModel.SaveCategory();
+    private async void SaveCategory_Click(object sender, RoutedEventArgs e) => await ViewModel.EditAsync(ViewModel.SaveCategory);
     private void NewSource_Click(object sender, RoutedEventArgs e) => ViewModel.BeginNewSource();
-    private void SaveSource_Click(object sender, RoutedEventArgs e) => ViewModel.SaveSource();
-    private void RemoveSource_Click(object sender, RoutedEventArgs e) => ViewModel.RemoveSelectedSource();
+    private async void SaveSource_Click(object sender, RoutedEventArgs e) => await ViewModel.EditAsync(ViewModel.SaveSource);
+    private async void RemoveSource_Click(object sender, RoutedEventArgs e) => await ViewModel.EditAsync(ViewModel.RemoveSelectedSource);
     private async void ScanCategory_Click(object sender, RoutedEventArgs e) => await ViewModel.ScanSelectedCategoryAsync();
     private void CancelScan_Click(object sender, RoutedEventArgs e) => ViewModel.CancelScan();
 }

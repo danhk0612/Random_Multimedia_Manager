@@ -11,6 +11,9 @@ public enum LibraryScanStatus { Completed, Cancelled }
 public sealed record LibraryScanResult(LibraryScanStatus Status, int PresentCount, int MissingCount,
     int WarningCount, IReadOnlyList<string> Warnings);
 
+public sealed record SourceScanObservation(IReadOnlyList<MediaItem> Present,
+    IReadOnlyList<string> MissingKeys, IReadOnlyList<string> Warnings);
+
 public sealed class LibraryScanner
 {
     private static readonly HashSet<string> ComicExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -22,77 +25,66 @@ public sealed class LibraryScanner
 
     public LibraryScanner(LibraryDatabase database) => this.database = database;
 
-    public Task<LibraryScanResult> ScanCategoryAsync(Category category,
-        IProgress<LibraryScanProgress>? progress, CancellationToken cancellationToken) =>
-        Task.Run(() => ScanCategory(category, progress, cancellationToken), cancellationToken);
+    // Compatibility entry point for the scanner harness; production owns one coordinator.
+    public async Task<LibraryScanResult> ScanCategoryAsync(Category category,
+        IProgress<LibraryScanProgress>? progress, CancellationToken cancellationToken)
+    {
+        var coordinator = new ScanCoordinator(database);
+        try { return await coordinator.ScanCategoryAsync(category.Id, progress, cancellationToken); }
+        finally { await coordinator.CloseAsync(); }
+    }
 
-    private LibraryScanResult ScanCategory(Category category, IProgress<LibraryScanProgress>? progress,
-        CancellationToken cancellationToken)
+    public Task<SourceScanObservation> CollectAsync(Category category, CategorySource source,
+        bool local, IProgress<LibraryScanProgress>? progress, CancellationToken cancellationToken) =>
+        Task.Run(() => Collect(category, source, local, progress, cancellationToken), cancellationToken);
+
+    private SourceScanObservation Collect(Category category, CategorySource source, bool local,
+        IProgress<LibraryScanProgress>? progress, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var existing = database.GetItems(category.Id);
+        var present = new Dictionary<string, MediaItem>(StringComparer.Ordinal);
+        var warnings = new List<string>();
+        int visited = 0;
+        var report = ScanSource(category, source, existing.ToDictionary(x => x.PathKey), present,
+            warnings, ref visited, progress, cancellationToken, local);
+        var missing = new List<string>();
+        if (local)
+            foreach (var item in existing)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!present.ContainsKey(item.PathKey) && report.ConfirmsMissing(item)
+                    && ConfirmLocalAbsence(item.Path)) missing.Add(item.PathKey);
+            }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new(present.Values.ToArray(), missing, warnings);
+    }
+
+    // A successful remote directory listing is never authoritative absence evidence.
+    // Recheck local readiness, supported ancestors and the individual target before applying.
+    private static bool ConfirmLocalAbsence(string path)
     {
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var existing = database.GetItems(category.Id);
-            var existingByKey = existing.ToDictionary(x => x.PathKey, StringComparer.Ordinal);
-            var activeSources = database.GetSources(category.Id).Where(x => x.IsEnabled).ToArray();
-            if (activeSources.Length == 0)
-                return new LibraryScanResult(LibraryScanStatus.Completed, 0, 0, 0, Array.Empty<string>());
-
-            var present = new Dictionary<string, MediaItem>(StringComparer.Ordinal);
-            var reports = new List<SourceReport>();
-            var warnings = new List<string>();
-            int visited = 0;
-
-            foreach (var source in activeSources)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var report = ScanSource(category, source, existingByKey, present, warnings,
-                    ref visited, progress, cancellationToken);
-                reports.Add(report);
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            var confirmedMissingKeys = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var item in existing)
-            {
-                if (present.ContainsKey(item.PathKey)) continue;
-                if (reports.Any(report => report.ConfirmsMissing(item)))
-                    confirmedMissingKeys.Add(item.PathKey);
-            }
-
-            var allItemsByKey = database.GetCategories()
-                .SelectMany(x => database.GetItems(x.Id))
-                .GroupBy(x => x.PathKey, StringComparer.Ordinal)
-                .ToDictionary(x => x.Key, x => x.ToArray(), StringComparer.Ordinal);
-            var confirmedMissingIds = confirmedMissingKeys
-                .Where(allItemsByKey.ContainsKey)
-                .SelectMany(key => allItemsByKey[key])
-                .Select(x => x.Id)
-                .Distinct()
-                .ToArray();
-
-            cancellationToken.ThrowIfCancellationRequested();
-            database.ApplyObservedItems(present.Values.ToArray(), confirmedMissingIds);
-            progress?.Report(new LibraryScanProgress(
-                $"스캔 완료: {present.Count}개 반영, {confirmedMissingIds.Length}개 Missing", visited, present.Count));
-            return new LibraryScanResult(LibraryScanStatus.Completed, present.Count,
-                confirmedMissingIds.Length, warnings.Count, warnings);
+            if (!TryProbeSourceRoot(Path.GetDirectoryName(path)!, out bool missing, out _, true))
+                return missing;
+            _ = File.GetAttributes(path);
+            return false;
         }
-        catch (OperationCanceledException)
-        {
-            return new LibraryScanResult(LibraryScanStatus.Cancelled, 0, 0, 0, Array.Empty<string>());
-        }
+        catch (FileNotFoundException) { return true; }
+        catch (DirectoryNotFoundException) { return true; }
+        catch (Exception ex) when (IsObservationFailure(ex)) { return false; }
     }
 
     private static SourceReport ScanSource(Category category, CategorySource source,
         IReadOnlyDictionary<string, MediaItem> existingByKey, Dictionary<string, MediaItem> present,
         List<string> warnings, ref int visited, IProgress<LibraryScanProgress>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, bool local)
     {
         var report = new SourceReport(source);
         progress?.Report(new LibraryScanProgress($"소스 확인: {source.RootPath}", visited, present.Count));
 
-        if (!TryProbeSourceRoot(source.RootPath, out bool missing, out string? problem))
+        if (!TryProbeSourceRoot(source.RootPath, out bool missing, out string? problem, local))
         {
             if (missing)
             {
@@ -106,7 +98,7 @@ public sealed class LibraryScanner
 
         try
         {
-            ValidateDirectoryAndAncestors(source.RootPath);
+            ValidateDirectoryAndAncestors(source.RootPath, local);
         }
         catch (Exception ex) when (IsObservationFailure(ex))
         {
@@ -123,6 +115,7 @@ public sealed class LibraryScanner
             string directory = pending.Pop();
             string directoryKey = NormalizeDiscoveredPath(directory).PathKey;
             bool complete = true;
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             try
             {
                 foreach (var entry in new DirectoryInfo(directory).EnumerateFileSystemInfos())
@@ -131,6 +124,8 @@ public sealed class LibraryScanner
                     visited++;
                     progress?.Report(new LibraryScanProgress($"스캔 중: {entry.FullName}", visited, present.Count));
                     var normalized = NormalizeDiscoveredPath(entry.FullName);
+                    if (!names.Add(normalized.Path))
+                        throw new CaseCollisionException();
 
                     if (entry is DirectoryInfo childDirectory)
                     {
@@ -145,7 +140,7 @@ public sealed class LibraryScanner
                                 warnings.Add($"{normalized.Path}: reparse point 폴더는 스캔하지 않습니다.");
                                 continue;
                             }
-                            if (WindowsDirectoryRules.IsCaseSensitive(normalized.Path))
+                            if (WindowsDirectoryRules.IsCaseSensitive(normalized.Path, !local))
                             {
                                 report.BlockedPrefixes.Add(normalized.PathKey);
                                 warnings.Add($"{normalized.Path}: Windows 대소문자 구분 디렉터리는 지원하지 않습니다.");
@@ -185,6 +180,13 @@ public sealed class LibraryScanner
                     }
                 }
             }
+            catch (CaseCollisionException)
+            {
+                present.Clear();
+                report.BlockedPrefixes.Add(source.RootPathKey);
+                warnings.Add("대소문자 경로 충돌로 소스 전체 관찰을 폐기했습니다.");
+                return report;
+            }
             catch (DirectoryNotFoundException)
             {
                 complete = false;
@@ -221,75 +223,49 @@ public sealed class LibraryScanner
 
     private static (string Path, string PathKey) NormalizeDiscoveredPath(string path)
     {
-        string normalized = Path.GetFullPath(path).Replace('/', '\\');
-        string? root = Path.GetPathRoot(normalized);
-        if (root is null || root.Length != 3 || !char.IsAsciiLetter(root[0]) || root[1] != ':' || root[2] != '\\')
-            throw new ArgumentException("로컬 드라이브 절대 경로가 아닙니다.");
-        if (normalized.AsSpan(2).Contains(':')) throw new ArgumentException("대체 데이터 스트림 경로는 지원하지 않습니다.");
-        foreach (string component in normalized[root.Length..].Split('\\', StringSplitOptions.RemoveEmptyEntries))
-            if (component.EndsWith(' ') || component.EndsWith('.'))
-                throw new ArgumentException("경로 구성요소 끝 공백/마침표는 지원하지 않습니다.");
-        if (normalized.Length > root.Length) normalized = normalized.TrimEnd('\\');
-        return (normalized, normalized.ToUpperInvariant());
+        var normalized = WindowsPath.Normalize(path);
+        return (normalized.Path, normalized.PathKey);
     }
 
-    private static bool TryProbeSourceRoot(string path, out bool missing, out string? problem)
+    private static bool TryProbeSourceRoot(string path, out bool missing, out string? problem, bool local)
     {
-        missing = false;
-        problem = null;
+        missing = false; problem = null;
         try
         {
-            string root = Path.GetPathRoot(path)!;
-            var drive = new DriveInfo(root);
-            if (!drive.IsReady)
+            var normalized = WindowsPath.Normalize(path);
+            if (local && !new DriveInfo(normalized.Root).IsReady)
+            { problem = "드라이브가 준비되지 않아 상태를 변경하지 않습니다."; return false; }
+            // Stop at the UNC share, never query the server or an ancestor outside that share.
+            var ancestors = new Stack<string>();
+            string current = normalized.Path;
+            while (true)
             {
-                problem = "드라이브가 준비되지 않아 상태를 변경하지 않습니다.";
-                return false;
+                ancestors.Push(current);
+                if (WindowsPath.Normalize(current).PathKey == normalized.RootKey) break;
+                current = Path.GetDirectoryName(current)!;
             }
-            // Check existing ancestors from the drive down before a missing descendant
-            // can be evidence of absence. Unsupported ancestors must preserve stored state.
-            var ancestors = new Stack<DirectoryInfo>();
-            for (DirectoryInfo? directory = new(Path.GetFullPath(path)); directory is not null; directory = directory.Parent)
-                ancestors.Push(directory);
-            foreach (DirectoryInfo directory in ancestors)
+            foreach (string directory in ancestors)
             {
-                FileAttributes ancestorAttributes = File.GetAttributes(directory.FullName);
-                if ((ancestorAttributes & FileAttributes.ReparsePoint) != 0)
+                FileAttributes attributes = File.GetAttributes(directory);
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
                     throw new IOException("reparse point 경로는 지원하지 않습니다.");
-                if ((ancestorAttributes & FileAttributes.Directory) == 0)
+                if ((attributes & FileAttributes.Directory) == 0)
                     throw new IOException("소스 상위 경로가 폴더가 아닙니다.");
-                if (WindowsDirectoryRules.IsCaseSensitive(directory.FullName))
-                    throw new IOException("Windows 대소문자 구분 디렉터리는 지원하지 않습니다.");
-            }
-            FileAttributes attributes = File.GetAttributes(path);
-            if ((attributes & FileAttributes.Directory) == 0)
-            {
-                problem = "소스 경로가 폴더가 아닙니다.";
-                return false;
+                if (WindowsDirectoryRules.IsCaseSensitive(directory, !local))
+                    throw new IOException("대소문자 구분 디렉터리는 지원하지 않습니다.");
             }
             return true;
         }
-        catch (DirectoryNotFoundException) { missing = true; return false; }
-        catch (FileNotFoundException) { missing = true; return false; }
+        catch (Exception ex) when (ex is DirectoryNotFoundException or FileNotFoundException)
+        { missing = local; problem = "경로를 확인할 수 없습니다."; return false; }
         catch (Exception ex) when (IsObservationFailure(ex))
-        {
-            problem = Friendly(ex);
-            return false;
-        }
+        { problem = Friendly(ex); return false; }
     }
 
-    private static void ValidateDirectoryAndAncestors(string path)
+    private static void ValidateDirectoryAndAncestors(string path, bool local)
     {
-        DirectoryInfo? directory = new(Path.GetFullPath(path));
-        while (directory is not null)
-        {
-            FileAttributes attributes = directory.Attributes;
-            if ((attributes & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("reparse point 경로는 지원하지 않습니다.");
-            if (WindowsDirectoryRules.IsCaseSensitive(directory.FullName))
-                throw new IOException("Windows 대소문자 구분 디렉터리는 지원하지 않습니다.");
-            directory = directory.Parent;
-        }
+        if (!TryProbeSourceRoot(path, out _, out var problem, local))
+            throw new IOException(problem);
     }
 
     private static bool IsObservationFailure(Exception ex) =>
@@ -301,6 +277,8 @@ public sealed class LibraryScanner
         UnauthorizedAccessException => "접근이 거부되어 상태를 변경하지 않습니다.",
         _ => ex.Message
     };
+
+    private sealed class CaseCollisionException : Exception { }
 
     private sealed class SourceReport
     {
@@ -381,7 +359,7 @@ internal static class WindowsDirectoryRules
     private static extern bool GetFileInformationByHandleEx(SafeFileHandle hFile, int fileInformationClass,
         out FileCaseSensitiveInformation fileInformation, uint dwBufferSize);
 
-    public static bool IsCaseSensitive(string path)
+    public static bool IsCaseSensitive(string path, bool allowUnsupported = false)
     {
         if (!OperatingSystem.IsWindows()) return false;
         using SafeFileHandle handle = CreateFileW(path, 0, FileShareRead | FileShareWrite | FileShareDelete,
@@ -391,7 +369,7 @@ internal static class WindowsDirectoryRules
             (uint)Marshal.SizeOf<FileCaseSensitiveInformation>()))
         {
             int error = Marshal.GetLastWin32Error();
-            if (error == 87) return false;
+            if (error == 87 || (allowUnsupported && error is 1 or 50)) return false;
             throw new Win32Exception(error);
         }
         return (info.Flags & CaseSensitiveFlag) != 0;

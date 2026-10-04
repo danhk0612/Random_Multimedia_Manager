@@ -28,6 +28,7 @@ public partial class App : Application
                 () => keys?.HideRegistered == true, () => tray?.Dispose(), () => Shutdown());
             main.Lifecycle = Lifecycle;
             main.Show();
+            main.Scans.Start();
             var unavailable = new List<string>();
             // Independent attempts: tray construction failure must not skip key registration.
             try

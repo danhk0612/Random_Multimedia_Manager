@@ -13,6 +13,7 @@ if (args.Length != 1) throw new ArgumentException("Specify one scenario: basic, 
 
 switch (args[0].ToLowerInvariant())
 {
+    case "lifecycle": await T18A2Verification.Run(); break;
     case "basic": Run("basic filtering/dedupe/recursion", VerifyBasic); break;
     case "state": Run("Missing/move/reappearance/replacement", VerifyState); break;
     case "cancel": Run("cancellation", VerifyCancellation); break;
