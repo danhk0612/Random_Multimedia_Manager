@@ -14,7 +14,7 @@ T02 확정 계약과 T03 승인 보완. 저장 구현은 App/Data, 공통 모델
 
 ### Windows 경로 계약
 
-D13으로 네트워크 지원 목표가 추가됐으며 아래는 현재 T02/T05 구현의 경로 제한이다. UNC/매핑 정규화와 기존 데이터 호환성은 T18A 보완 계약으로 확정한 뒤 변경한다.
+D13으로 네트워크 지원 목표가 추가됐다. 아래는 T02/T05 런타임의 경로 제한이며 T18A-1 공통 정규화/저장 API는 UNC도 처리한다. 실제 UNC UI·스캔·삭제/감상 연결은 후속 Task다. T18A §7의 구현 계약을 함께 따른다.
 
 로컬 드라이브의 완전한 절대 경로만 최초 범위로 받는다. 드라이브 상대 경로(C:foo), 상대 경로, URL, UNC 네트워크 경로, 장치 경로는 등록 거부한다. 네트워크 지원 확장이 아니다.
 구분자를 역슬래시로 통일하고 Windows Path.GetFullPath로 . / ..를 해소한 뒤, 루트 외 끝 구분자를 제거한다. 구성요소 끝 공백/마침표와 대체 데이터 스트림(:) 경로는 모호성을 피하려고 거부한다. 드라이브 구분용 콜론은 허용한다.
@@ -290,9 +290,9 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 - AppliedDeletion 표식은 저널 파일 제거 후에도 보존한다. 저널 제거 직후 전원 단절에 따른 파일 재등장에도 기존 멱등 표식을 적용한다. 삭제 저널 파일 자체는 성공 정리 후 제거한다.
 - 구체적인 오류·재시작·사용자 확인 및 검증 범위는 docs/T12_DELETION_VALIDATION.md. T14 생명주기 문서의 최종 연결은 T12 통합 후 대조하며 트레이/빠른 종료를 구현하지 않았다.
 
-## T18A 변경 감지 설계 — 검토안, 구현 미착수
+## T18A 변경 감지 설계 — T18A-1 경로·저장 구현, 런타임 연결 대기
 
-기준 main `c8252a0`, PR #21 merge `7fb2ad4` 포함. D13은 로컬·매핑/RaiDrive·직접 UNC 지원 목표의 승인이다. 아래는 2026-10-04 사용자가 D10~D12/D14~D16을 승인한 구현 기준이다. 제품 구현/호환성 확인 완료는 아니다. 이전 PR #21의 전역 두 bool 및 10분 전체 검사는 이 절로 대체한다. 제품 정책 결정은 DECISIONS.md D10~D12/D14~D16, 구현 인계는 TASKS.md T18A-1~6을 따른다. §1~8의 현재 v1 구현 계약은 migration 전까지 유지한다.
+기준 main `c8252a0`, PR #21 merge `7fb2ad4` 포함. D13은 로컬·매핑/RaiDrive·직접 UNC 지원 목표의 승인이다. 아래는 2026-10-04 사용자가 D10~D12/D14~D16을 승인한 구현 기준이다. 제품 구현/호환성 확인 완료는 아니다. 이전 PR #21의 전역 두 bool 및 10분 전체 검사는 이 절로 대체한다. 제품 정책 결정은 DECISIONS.md D10~D12/D14~D16, 구현 인계는 TASKS.md T18A-1~6을 따른다. T18A-1은 DB v2와 저널 읽기 계약만 구현한다. 기존 식별/기록/진행 의미와 v1 저널 복구는 유지한다.
 
 ### 1. 코드 대조와 변경 책임
 
@@ -424,14 +424,14 @@ UI에서 remote Exists/GetAttributes/열거/연결 조회/open/dispose를 동기
 
 Closing과 감상 닫기가 서로 scan gate를 기다리는 순환을 만들지 않는다. 이미 감상 중이면 실행 스캔이 없어야 한다. Quick Hide는 기존 실제 복원 키+트레이 조건과 mute만 사용하며 Pending 확정이 아니다. ExitBlocked에서 Restore/SetExitRequested(false)만으로 감지를 재개하지 않는다. 실제 DB 생존·모든 IO 완료·감상 해제·삭제 복구 완료 및 명시적 정상 작업 복귀를 확인한 뒤 새 generation으로 재개한다. DB가 이미 닫혔으면 복원 UI만 유지한다.
 
-### 7. 최소 모델·migration 제안
+### 7. 모델·migration 및 T18A-1 구현 계약
 
-기존 v1 스키마는 이번에 수정하지 않는다. T18A-1에서 승인된 정책에 따라 v1→v2 순차 transaction을 구현한다. 신규 DB도 v1→v2 경로를 사용한다. 설정 두 bool만 추가하는 PR #21 안은 폐기한다.
+기존 SchemaV1.sql은 변경하지 않았다. T18A-1은 SchemaV2.sql과 같은 transaction 안의 루트 추출로 v1→v2를 적용한다. 신규 DB도 v1→v2 경로를 사용한다. 설정 두 bool만 추가하는 PR #21 안은 폐기한다.
 
-| 저장 위치 | 최소 필드/제약 제안 | 의미 |
+| 저장 위치 | 구현 필드/제약 | 의미 |
 |---|---|---|
 | SourceRefreshPolicy (새 표) | SourceId PK/FK, ScanOnStartup bool, RefreshMode enum, IntervalHours nullable(있으면 1~168), LastCompletedAtUtc nullable | 소스별 자동 범위. 소스 삭제 시 정책만 cascade, 항목/기록 보존 |
-| StorageBinding (새 표) | RootKey PK, Kind enum, ExpectedTarget nullable, EvidenceKind enum, Revision 정수≥0, RequiresConfirmation bool | 루트 재매핑 방지. 원격 비밀번호/token 저장 금지; 소스 제거에도 보존 |
+| StorageBinding (새 표) | RootKey PK, Kind enum, ExpectedTarget nullable, EvidenceKind enum, Revision 정수≥0, RequiresConfirmation bool, Provider/Device/Volume nullable | 루트 재매핑 방지. 원격 비밀번호/token 저장 금지; 소스 제거에도 보존 |
 | 기존 CategorySource/MediaItem 등 | 기존 ID·Path/PathKey·유일성·분류 관계 유지 | 바인딩은 루트로 조회, 항목-소스 관계 표/자동 상태 병합 없음 |
 | 삭제 저널 (파일 v2) | §5 target별 key/바인딩·격리 범위 | SQL user_version과 독립 버전, v1 읽기 호환 |
 
@@ -441,7 +441,20 @@ migration은 네트워크 IO를 수행하지 않는다. 기존 소스·과거 �
 
 migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 검증·외래키 검사를 유지한다. v2 DB를 v1 앱으로 열면 지원하지 않는 버전으로 거부하며 자동 downgrade 하지 않는다. 남은 저널을 복구하기 전에 스캔/감상 admission을 열지 않는다. 저널 v2 적용 코드가 준비되기 전 원격 삭제 UI는 활성화하지 않는다.
 
-### 8. 지원·검증 기준 (새 실행 결과 없음)
+#### T18A-1 공개 API와 인계 경계
+
+- Core `WindowsPath.Normalize`는 IO 없이 Windows 드라이브/UNC를 정규화하고 Path/PathKey/Root/RootKey를 반환한다. `IsSameOrDescendant`는 루트·구성요소 경계를 검사한다. `SourcePathRules.NormalizeFolder`는 같은 정규화를 제공한다. 기존 UI의 `NormalizeLocalFolder`는 이 함수를 사용하는 드라이브 전용 진입점이며 UNC UI는 T18A-5까지 연결하지 않는다. 기존 scanner의 관찰/조상 IO는 T18A-2가 변경한다.
+- `StorageObservation.Classify`는 수집된 매핑 조회 결과·드라이브 종류·장치/볼륨/provider 근거를 분류한다. 실패한 WNet 조회 또는 Fixed 보고만으로 Local이 되지 않는다. 실제 WNet/장치 조회 worker는 T18A-2 책임으로, 이 API가 네트워크를 호출하지 않는다. ExpectedTarget은 정규 UNC 대상 또는 로컬 장치 근거이며 비밀번호/token을 넣지 않는다. Provider/Device/Volume은 보조 근거이며 영구 물리 신원 증명이 아니다.
+- `GetStorageBinding(path)`는 소스 소속 여부와 무관하게 루트 바인딩을 조회한다. `ConfirmStorageBinding(path, expectedRevision, observation, userConfirmed)`는 revision을 비교하여 오래된 결과를 거부한다. 기존 ExpectedTarget/근거가 달라지면 BindingChanged 오류로 보존하고, 원격/불명 최초 채택에는 사용자 확인을 요구한다. 같은 경로의 새 대상을 수용하는 API는 없다. 성공 시 revision 증가와 미선택 소스의 기본 정책 삽입을 한 transaction으로 처리한다. 이미 저장된 정책은 덮어쓰지 않는다.
+- `BindingVerification`은 프로세스 내 확인 계약이다. 생성 시 Unconfirmed이고 `Invalidate()`로 generation을 증가시켜 끊김/설정 변경 전 결과를 버린다. `Observe(generation, observation, userConfirmed)`는 재매핑을 차단하며 `CanAccess(path, generation)`는 같은 루트의 과거 항목에도 적용한다. Unknown은 매 시작/관찰된 재연결 후 다시 확인한다. 이 객체의 호출/IO admission 연결은 T18A-2/4/5의 책임이며 현재 감상·스캔이 이 검사로 보호된다고 주장하지 않는다. 조정자는 같은 admission 안에서 generation 확인→DB 확인→새 verification 생성/후속 IO를 연결해야 한다.
+- `GetSourceRefreshPolicy(sourceId)`의 null은 미선택이다. `GetEffectiveSourceRefreshPolicy`는 미선택을 Manual/시작 끔으로 반환한다. `SaveSourceRefreshPolicy`는 기존 기간/Resume 설정과 독립 저장하며 Manual=null 주기, Events/Scheduled=1~168시간, Events=확인된 Local만 검증한다. LastCompletedAtUtc는 후속 조정자가 성공 완료 시 갱신할 값이다. 행 저장 자체는 스캔/타이머/watcher를 실행하지 않는다. 확인된 루트에 추가한 새 소스는 승인 기본값을 저장하며 중복 등록은 기존 정책을 보존한다. 기존 Events 정책을 원격/Unknown 루트로 옮기는 편집은 정책을 먼저 수정하기 전까지 rollback한다.
+- 모든 기존 ID/Path/PathKey/이력/진행/VisitCommit/AppliedDeletion/AppSettings는 migration에서 재작성하지 않는다. 기존 소스 및 소스 밖 항목의 루트를 Unknown/RequiresConfirmation으로 생성하고 정책 행은 만들지 않는다. 신규 소스/항목 저장도 루트 행을 보장한다. 소스 삭제는 정책만 cascade하고 바인딩과 항목/기록은 남긴다. 새 쓰기의 경로 쌍은 공통 정규화와 일치해야 하며 기존 행의 키는 정규화 명목으로 바꾸지 않는다.
+- `DeletionRecord` v2는 기존 공통 필드에 `Bindings: DeletionBinding[]`와 `QuarantineScope(Targets/RemoteAndUnknown)`를 추가한다. 각 binding은 `StorageBinding` snapshot과 `Generation≥0`, 각 target은 기존 ItemId/size/time과 `PathKey`를 가진다. 실행 경로와 모든 target의 루트 근거, 중복 ID/루트, enum/필수 필드를 검증한다. v1은 추가 필드 없이 읽고 쓸 수 있으며 읽기 과정에서 원본을 보강/덮어쓰지 않는다. SQL 버전과 저널 버전은 독립이다.
+- **단계적 안전 경계:** 현재 삭제 실행은 기존 v1이다. v2 읽기는 지원하지만 T18A-3의 target별 원자 정리/광역 격리 연결 전에는 v2 저널을 전역 차단하고 자동/사용자 확인 복구·OS 실행을 거부한다. 손상 v2는 실행 경로만 복구해 부분 격리하지 않는다. v1의 원격 가능성 판단·보수 광역 격리와 v2 실제 복구는 T18A-3가 연결한다. 따라서 v1/v2 혼재 읽기 통과를 원격 복구 완료로 해석하지 않는다.
+
+검증 근거와 실물 미검증은 `T18A_1_PATH_STORAGE_VALIDATION.md`를 따른다.
+
+### 8. 지원·검증 기준 (T18A-1 이외 런타임 검증 대기)
 
 | 환경 | 목표 지원 | 제약 / 반드시 실제 확인 |
 |---|---|---|

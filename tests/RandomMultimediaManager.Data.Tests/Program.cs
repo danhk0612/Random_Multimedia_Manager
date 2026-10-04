@@ -2,6 +2,12 @@ using Microsoft.Data.Sqlite;
 using RandomMultimediaManager.App.Data;
 using RandomMultimediaManager.Core;
 
+if (args.Contains("--t18a1"))
+{
+    await T18A1Verification.RunAsync();
+    return;
+}
+
 int passed = 0;
 void Check(bool condition, string message = "Assertion failed")
 {
@@ -55,7 +61,7 @@ Run("initialization, settings persistence, pragmas, foreign keys", path =>
     }
     using (var db = LibraryDatabase.Open(path)) Check(db.GetSettings() == new AppSettings(0, ResumeMode.FromStart));
     using var c = Connect(path);
-    Check(Number(c, "PRAGMA user_version") == 1);
+    Check(Number(c, "PRAGMA user_version") == 2);
     Check(Number(c, "SELECT count(*) FROM AppSettings") == 1);
     using var cmd = c.CreateCommand(); cmd.CommandText = "PRAGMA journal_mode";
     Check((string)cmd.ExecuteScalar()! == "wal");
@@ -219,7 +225,7 @@ Run("initial migration failure leaves empty database", path =>
 Run("higher version refuses writes", path =>
 {
     using (var db = LibraryDatabase.Open(path)) db.SaveSettings(new AppSettings(30));
-    using (var c = Connect(path)) Sql(c,"PRAGMA user_version=2;");
+    using (var c = Connect(path)) Sql(c,"PRAGMA user_version=3;");
     var before = File.ReadAllBytes(path);
     Reject(() => { using var db = LibraryDatabase.Open(path); });
     Check(before.AsSpan().SequenceEqual(File.ReadAllBytes(path)));
@@ -250,3 +256,5 @@ await T12Verification.RunAsync();
 await T15Verification.RunAsync();
 
 await T17Verification.RunAsync();
+
+await T18A1Verification.RunAsync();

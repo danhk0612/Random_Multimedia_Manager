@@ -307,27 +307,18 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
 
 public static class SourcePathRules
 {
+    public static (string Path, string PathKey) NormalizeFolder(string path)
+    {
+        var normalized = WindowsPath.Normalize(path);
+        return (normalized.Path, normalized.PathKey);
+    }
+
+    // T18A-5 connects UNC UI after scanning/deletion/viewing safety gates are integrated.
     public static (string Path, string PathKey) NormalizeLocalFolder(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || path != path.Trim())
-            throw new ArgumentException("소스 경로를 입력하세요.");
-        if (path.StartsWith("\\\\", StringComparison.Ordinal) || path.StartsWith("//", StringComparison.Ordinal))
-            throw new ArgumentException("UNC 또는 장치 경로는 지원하지 않습니다.");
-        if (!Path.IsPathFullyQualified(path))
-            throw new ArgumentException("로컬 드라이브의 절대 경로만 사용할 수 있습니다.");
-
-        string normalized = Path.GetFullPath(path).Replace('/', '\\');
-        string? root = Path.GetPathRoot(normalized);
-        if (root is null || root.Length != 3 || !char.IsAsciiLetter(root[0]) || root[1] != ':' || root[2] != '\\')
-            throw new ArgumentException("로컬 드라이브의 절대 경로만 사용할 수 있습니다.");
-        if (normalized.AsSpan(2).Contains(':'))
-            throw new ArgumentException("대체 데이터 스트림 경로는 사용할 수 없습니다.");
-
-        foreach (string component in normalized[root.Length..].Split('\\', StringSplitOptions.RemoveEmptyEntries))
-            if (component.EndsWith(' ') || component.EndsWith('.'))
-                throw new ArgumentException("경로 구성요소 끝의 공백이나 마침표는 사용할 수 없습니다.");
-
-        if (normalized.Length > root.Length) normalized = normalized.TrimEnd('\\');
-        return (normalized, normalized.ToUpperInvariant());
+        var normalized = WindowsPath.Normalize(path);
+        if (normalized.Root.StartsWith(@"\\", StringComparison.Ordinal))
+            throw new ArgumentException("UNC UI 연결은 T18A 후속 작업에서 지원합니다.");
+        return (normalized.Path, normalized.PathKey);
     }
 }
