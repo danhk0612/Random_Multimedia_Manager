@@ -192,6 +192,9 @@ internal static class T18A1Verification
             Check(service.GloballyBlocked && db.IsDeletionBlocked(@"C:\OTHER"), "v2 cannot enter legacy recovery");
             Check(!(await service.ConfirmAsync(service.Pending.Single(p => p.Record?.Version == 2), true)).Resolved, "no v2 partial cleanup");
             Check(osCalls == 0 && v1bytes.SequenceEqual(File.ReadAllBytes(journal.FileFor(v1))), "no OS replay or v1 rewrite");
+            File.WriteAllText(journal.FileFor(v1), File.ReadAllText(journal.FileFor(v1)).Replace("\"FileSize\": 1", "\"FileSize\": -1"));
+            var corruptV1 = journal.ReadAll().Single(r => r.File == journal.FileFor(v1));
+            Check(corruptV1.Record is null && corruptV1.PathKey == n.PathKey, "v1 readable key recovery preserved");
             Reject(() => journal.Write(v2 with { Targets = [new(item.Id, 1, 2)] }));
             Reject(() => journal.Write(v2 with { Bindings = [] }));
             string damaged = File.ReadAllText(journal.FileFor(v2)).Replace("RemoteAndUnknown", "CorruptScope");

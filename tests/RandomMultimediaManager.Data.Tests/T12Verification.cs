@@ -198,13 +198,13 @@ internal static class T12Verification
             await Done(f.C.ResolveDeletionAsync(Guid.NewGuid(),f.Service,f.Service.Pending.Single(),false));
             Check(f.C.View.Pending==visit && f.Preparer.Last is not null,"same visit after cleanup retry");
         });
-        await Scenario("corrupt target metadata with readable path isolates only that path", async f =>
+        await Scenario("unsupported journal version blocks all paths", async f =>
         {
             var record=await f.Service.PrepareAsync(f.A.PathKey,DeletionMode.Recycle);
             string file=f.Journal.FileFor(record);
             File.WriteAllText(file,File.ReadAllText(file).Replace("\"Version\": 1","\"Version\": 99"));
             await f.Restart();
-            Check(!f.Service.GloballyBlocked && f.Db.IsDeletionBlocked(f.A.PathKey) && !f.Db.IsDeletionBlocked(f.B.PathKey),"known corrupt path scoped quarantine");
+            Check(f.Service.GloballyBlocked && f.Db.IsDeletionBlocked(f.A.PathKey) && f.Db.IsDeletionBlocked(f.B.PathKey),"unknown version cannot establish target scope");
             await f.Service.ConfirmAsync(f.Service.Pending.Single(),false);
             Check(!f.Db.IsDeletionBlocked(f.A.PathKey),"explicit failure lifts scoped hold");
         });
