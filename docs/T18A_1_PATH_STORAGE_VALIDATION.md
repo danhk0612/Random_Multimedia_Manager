@@ -16,7 +16,17 @@
 
 Linux x64/.NET SDK 10.0.401: N01~N03 6개 시나리오 및 T04 3개 통과. 최초 전체 Data.Tests 실행은 기존 저장 13개·T06 10개까지 통과했으나 T12의 실제 임시 파일 fixture가 POSIX 경로를 생성하여 Windows 경로 계약에서 중단됐다. 이를 제품 Windows 회귀 성공으로 표기하지 않는다.
 
-Windows Release 및 영향을 받은 기존 자동 회귀: PR CI에서 실행하여 최종 결과를 기록한다.
+Windows Server 2025 10.0.26100 x64 / .NET SDK 10.0.401, 검증 코드 `af4bd6e26b5aa91bcc5f5acbbe90ebc4c8079063`: Release 빌드 경고 0·오류 0. N01~N03 6개 및 기존 저장·세션·삭제 복구·생명주기·브라우저 검사, WPF 시작/정상 종료 2회가 통과했다.
+
+| Windows 실행 | 결과 |
+|---|---|
+| [T03 저장 37184381582](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37184381582) | 성공: N01~N03, Core/Data 회귀, Release, 셸 시작/종료 |
+| [T05 스캔 37184381592](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37184381592) | 성공 |
+| [T06 세션 37184381585](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37184381585) | 성공: 저장/세션 및 Windows 스캔 회귀 |
+| [T09 영상 37184381580](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37184381580) | 성공 |
+| [T11 통합 37184381604](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37184381604) | 성공: 공통 감상·스캔·만화·영상·자막 및 기존 T12~T17 영향 회귀 |
+
+첫 Windows 실행 `a1310f6`은 미지원 저널 버전 99를 단일 경로 격리로 기대하던 기존 검사에서 실패했다. 미지원 버전은 대상 집합을 신뢰할 수 없으므로 전역 차단하는 v2 호환 계약에 맞춰 기대값을 수정하고, 실제 v1의 손상 메타데이터에서 읽을 수 있는 경로 키 복구를 별도로 추가했다. 정상 v1 복구·원본 보존과 수정 후 전체 회귀 통과를 확인했다. 이후 완료 반영은 문서만 변경한다.
 
 ## 미검증 및 후속 책임
 

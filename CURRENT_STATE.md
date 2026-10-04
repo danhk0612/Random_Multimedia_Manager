@@ -62,7 +62,7 @@
 
 ## 다음 작업과 차단
 
-T18A-1 경로·저장 기반 구현 및 자동 검증을 진행했다. 후속 런타임 연결/T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1은 PR #23에서 구현·검증한다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
+T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 미통합). 후속 런타임 연결/T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 main 통합 대기다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
 
 ## T03 저장 구현
 
@@ -257,8 +257,8 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 
 ## T18A-1 경로·바인딩·저장 기반
 
-- 기준 main `ae77b8b`, PR #22 통합과 D10~D12/D14~D16 승인을 확인했다. 브랜치 `task/t18a-1-path-storage`.
+- 기준 main `ae77b8b`, PR #22 통합과 D10~D12/D14~D16 승인을 확인했다. 브랜치 `task/t18a-1-path-storage`, [PR #23](https://github.com/danhk0612/Random_Multimedia_Manager/pull/23), 구현·Windows 자동 검증 완료/main 미통합.
 - IO 없는 로컬/매핑·UNC 정규화, 연결 근거 분류·revision/generation 확인 계약, 소스별 정책 API, v1→v2 migration, v1/v2 저널 읽기·검증을 구현했다. 기존 ID/키/기록/진행/저널 보존을 검사한다.
 - 자동 갱신/원격 삭제 활성화, UNC UI, 스캔·감상 IO admission 연결은 하지 않았다. v2 저널 복구는 T18A-3 연결 전 전역 차단한다. 실제 API/필드/후속 연결 경계는 DATA_AND_RANDOM_POLICY T18A §7.
-- 검증: Linux .NET 10.0.401에서 N01~N03 6개 시나리오와 T04 3개 통과. 전체 Linux 저장 회귀 중 Windows 임시 파일을 전제한 T12 fixture는 POSIX 경로 때문에 중단됐으며 Windows에서 재검증한다. Windows CI 결과는 검증 문서에 추가한다. 실제 NAS/RaiDrive·사용자 DB·Windows 수동 UI는 미검증.
+- 검증 코드 `af4bd6e`: Windows Server 2025 x64/.NET SDK 10.0.401 Release 빌드 경고 0·오류 0. N01~N03 6개와 T03/T05/T06/T09/T11(만화·자막 및 T12~T17 영향 회귀 포함) CI 5개 모두 성공. 실제 NAS/RaiDrive·사용자 DB·Windows 수동 UI는 미검증. Linux 부분 실행 및 최초 Windows 검사 기대값 보완은 검증 문서에 구분했다.
 - 상세: docs/T18A_1_PATH_STORAGE_VALIDATION.md. 직접 병합과 T18A-2/T18 착수는 하지 않는다.
