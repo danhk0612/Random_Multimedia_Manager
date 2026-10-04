@@ -16,7 +16,7 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
     public bool HasIncompleteSuccess => incompleteSuccess.Count != 0
         || Pending.Any(p => p.Record?.Phase == DeletionPhase.Succeeded);
     public IReadOnlyList<DeletionRecovery> Pending { get; private set; } = [];
-    public bool GloballyBlocked => Pending.Any(p => p.PathKey is null);
+    public bool GloballyBlocked => Pending.Any(p => p.PathKey is null || p.Record?.Version == 2);
     public async Task InitializeAsync()
     {
         Pending = await Task.Run(journal.ReadAll);
@@ -24,7 +24,7 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
         foreach (var entry in Pending)
             if (entry.PathKey is { } key) database.QuarantineDeletion(key);
         foreach (var entry in Pending.ToArray())
-            if (entry.Record is { Phase: DeletionPhase.Succeeded or DeletionPhase.Failed or DeletionPhase.Cancelled })
+            if (entry.Record is { Version: 1, Phase: DeletionPhase.Succeeded or DeletionPhase.Failed or DeletionPhase.Cancelled })
                 await CompleteAsync(entry.Record);
     }
     public async Task<DeletionRecord> PrepareAsync(string pathKey, DeletionMode mode)
@@ -47,9 +47,11 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
         Pending = Pending.Append(new(journal.FileFor(record), record, null)).ToArray();
         return record;
     }
-    public Task<FileDeletionResult> ExecuteAsync(DeletionRecord record) => deleteFile(record);
+    public Task<FileDeletionResult> ExecuteAsync(DeletionRecord record) => record.Version == 1
+        ? deleteFile(record) : throw new InvalidOperationException("v2 삭제 실행은 T18A-3 연결 전 차단됩니다.");
     public async Task<DeletionResult> RecordResultAsync(DeletionRecord record, FileDeletionResult result)
     {
+        if (record.Version != 1) return new(record, DeletionOutcome.Unknown, false, "v2 복구는 T18A-3 연결 전 차단됩니다.");
         if (result.Outcome == DeletionOutcome.Succeeded) incompleteSuccess.Add(record.OperationId);
         var updated = record with { Phase = result.Outcome switch {
             DeletionOutcome.Succeeded => DeletionPhase.Succeeded,
@@ -73,6 +75,7 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
     }
     public async Task<DeletionResult> CompleteAsync(DeletionRecord record)
     {
+        if (record.Version != 1) return new(record, DeletionOutcome.Unknown, false, "v2 복구는 T18A-3 연결 전 차단됩니다.");
         try
         {
             if (record.Phase == DeletionPhase.Succeeded)

@@ -8,9 +8,14 @@ namespace RandomMultimediaManager.App.Deletion;
 
 public enum DeletionMode { Recycle, Permanent }
 public enum DeletionPhase { Prepared, Succeeded, Failed, Cancelled, Unknown }
-public sealed record DeletionTarget(Guid ItemId, long FileSize, long LastWriteTimeUtc);
+public enum DeletionQuarantineScope { Targets, RemoteAndUnknown }
+public sealed record DeletionBinding(StorageBinding Binding, long Generation);
+public sealed record DeletionTarget(Guid ItemId, long FileSize, long LastWriteTimeUtc,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? PathKey = null);
 public sealed record DeletionRecord(int Version, Guid OperationId, string PathKey, string Path,
-    DeletionTarget[] Targets, DeletionMode Mode, long CreatedAtUtc, DeletionPhase Phase);
+    DeletionTarget[] Targets, DeletionMode Mode, long CreatedAtUtc, DeletionPhase Phase,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DeletionBinding[]? Bindings = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] DeletionQuarantineScope? QuarantineScope = null);
 public sealed record DeletionRecovery(string File, DeletionRecord? Record, string? Error, string? RecoveredPathKey = null)
 {
     public string? PathKey => Record?.PathKey ?? RecoveredPathKey;
@@ -62,7 +67,9 @@ public class DeletionJournal(string directory)
                     using var json = JsonDocument.Parse(File.ReadAllText(file));
                     string? path = json.RootElement.GetProperty("Path").GetString();
                     string? candidate = json.RootElement.GetProperty("PathKey").GetString();
-                    if (!string.IsNullOrWhiteSpace(path) && candidate == path.ToUpperInvariant()) key = candidate;
+                    // An unreadable v2 target set/scope must never fall back to single-path isolation.
+                    if (json.RootElement.GetProperty("Version").GetInt32() == 1
+                        && !string.IsNullOrWhiteSpace(path) && candidate == path.ToUpperInvariant()) key = candidate;
                 }
                 catch { /* No reliable path: hold the entire library. */ }
                 result.Add(new(file, null, ex.Message, key));
@@ -74,12 +81,39 @@ public class DeletionJournal(string directory)
     public string FileFor(DeletionRecord record) => System.IO.Path.Combine(directory, record.OperationId.ToString("D") + ".json");
     private static void Validate(DeletionRecord r)
     {
-        if (r.Version != 1 || r.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(r.Path)
+        if (r.Version is not (1 or 2) || r.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(r.Path)
             || r.PathKey != r.Path.ToUpperInvariant() || r.Targets is not { Length: > 0 }
             || r.Targets.Any(t => t is null || t.ItemId == Guid.Empty || t.FileSize < 0)
             || r.Targets.Select(t => t.ItemId).Distinct().Count() != r.Targets.Length
             || !Enum.IsDefined(r.Mode) || !Enum.IsDefined(r.Phase))
             throw new InvalidDataException("삭제 저널 계약을 확인할 수 없습니다. 기록을 보존합니다.");
+        if (r.Version == 1)
+        {
+            if (r.Bindings is not null || r.QuarantineScope is not null || r.Targets.Any(t => t.PathKey is not null))
+                throw new InvalidDataException("v1 저널에 v2 필드를 혼합할 수 없습니다.");
+            return;
+        }
+        try
+        {
+            if (WindowsPath.Normalize(r.Path).Path != r.Path || r.Bindings is not { Length: > 0 }
+                || r.QuarantineScope is null || !Enum.IsDefined(r.QuarantineScope.Value))
+                throw new ArgumentException("v2 경로/바인딩/격리 범위 누락");
+            var roots = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var evidence in r.Bindings)
+            {
+                if (evidence is null || evidence.Binding is null || evidence.Generation < 0)
+                    throw new ArgumentException("v2 바인딩 근거 오류");
+                evidence.Binding.Validate();
+                if (!roots.Add(evidence.Binding.RootKey)) throw new ArgumentException("중복 바인딩");
+            }
+            if (!roots.Contains(WindowsPath.Normalize(r.Path).RootKey)) throw new ArgumentException("실행 루트 근거 누락");
+            foreach (var target in r.Targets)
+                if (target.PathKey is null || WindowsPath.Normalize(target.PathKey) is not { } path
+                    || path.Path != target.PathKey || path.PathKey != target.PathKey || !roots.Contains(path.RootKey))
+                    throw new ArgumentException("대상별 경로 키/바인딩 누락");
+            if (!r.Targets.Any(t => t.PathKey == r.PathKey)) throw new ArgumentException("실행 경로 대상 누락");
+        }
+        catch (ArgumentException ex) { throw new InvalidDataException("v2 삭제 저널 계약 오류", ex); }
     }
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

@@ -95,10 +95,10 @@ T12와의 병렬 경계는 삭제 계약을 변경하지 않는다. T12 통합 �
 
 메인 라이브러리에서 연 항목과 ViewingWindow 안에서 연 항목 모두 기존 `Run`/`Navigate` 및 `SessionCoordinator.OpenManualAsync` 경계를 통과한다. 기존 same-ItemId no-op, Forward 보존, 정상 Leave 기록, 최근 감상·제외된 항목 수동 진입 정책을 그대로 따른다. 라이브러리 비동기 읽기는 창 닫기/빠른 종료에서 대기하고 닫힌 화면의 늦은 갱신을 막는다. 데이터 스키마·공통 모델/세션·저장/삭제/숨김/종료 계약은 변경하지 않는다. 자동/수동 검증 경계는 docs/T17_LIBRARY_BROWSER_VALIDATION.md를 따른다.
 
-## T18A 네트워크·변경 감지 설계 (구현 전)
+## T18A 네트워크·변경 감지 설계 (T18A-1 저장 기반 구현)
 
-상세 기준은 [DATA_AND_RANDOM_POLICY.md의 T18A 절](docs/DATA_AND_RANDOM_POLICY.md#t18a-변경-감지-설계--검토안-구현-미착수)이다. D13은 로컬·매핑/RaiDrive·UNC 지원 목표이며 현재 코드의 지원 완료를 뜻하지 않는다.
+상세 기준은 [DATA_AND_RANDOM_POLICY.md의 T18A 절](docs/DATA_AND_RANDOM_POLICY.md#t18a-변경-감지-설계--t18a-1-경로저장-구현-런타임-연결-대기)이다. D13은 로컬·매핑/RaiDrive·UNC 지원 목표이며 현재 코드의 지원 완료를 뜻하지 않는다.
 
 앱 소유 단일 조정자가 소스별 갱신 요청과 편집·감상·삭제·종료 admission을 연결한다. 경로 문자열 정규화, 연결 대상 바인딩, 일시 가용성, 항목 PathKey를 분리한다. 감상 창 전체 수명 동안 스캔 반영을 보류하며 지연 IO가 끝나기 전에 DB를 해제하지 않는다. 매핑/UNC는 별도 항목으로 유지하고 삭제 시 검증된 별칭만 캡처·정리한다. 불명 영향 범위는 보수 격리한다.
 
-전역 두 bool 대신 소스 정책과 루트 바인딩의 v2 migration, 별칭 target별 v2 저널을 제안했다. 현재 DB/제품 코드는 v1 그대로다. D10~D12/D14~D16 승인(2026-10-04)과 PR #22 통합 완료에 따라 T18A-1 계약/저장 → T18A-2 조정자 → T18A-3 삭제 → T18A-4 감상 → T18A-5 UI → T18A-6 통합 검증 순으로 진행한다. 공유 코드 충돌과 병렬 가능 범위는 TASKS.md를 따른다.
+T18A-1은 Core의 IO 없는 WindowsPath/StorageObservation/BindingVerification과 Data의 v2 migration·루트 바인딩·소스 정책 저장 API를 구현한다. v1 스키마/기존 항목 상태는 보존한다. 삭제 저널은 v1/v2 읽기 계약을 제공하되 v2 실행/복구는 T18A-3 연결 전 전역 차단한다. 상세 API와 단계 경계는 DATA_AND_RANDOM_POLICY T18A §7을 따른다. D10~D12/D14~D16 승인(2026-10-04)과 PR #22 통합 완료에 따라 T18A-1 계약/저장 → T18A-2 조정자 → T18A-3 삭제 → T18A-4 감상 → T18A-5 UI → T18A-6 통합 검증 순으로 진행한다. 공유 코드 충돌과 병렬 가능 범위는 TASKS.md를 따른다.

@@ -39,7 +39,7 @@ public sealed partial class LibraryDatabase : IDisposable
         Execute(null, "PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;");
         // Reject unknown versions before changing journal mode or schema.
         var version = (long)Scalar(null, "PRAGMA user_version;")!;
-        if (version is < 0 or > 1) throw new InvalidOperationException("지원하지 않는 DB 버전입니다.");
+        if (version is < 0 or > 2) throw new InvalidOperationException("지원하지 않는 DB 버전입니다.");
         if (version == 0 && (long)Scalar(null,
             "SELECT count(*) FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%';")! != 0)
             throw new InvalidOperationException("버전 없는 기존 DB는 초기화하지 않습니다.");
@@ -55,8 +55,9 @@ public sealed partial class LibraryDatabase : IDisposable
             using var stream = typeof(LibraryDatabase).Assembly.GetManifestResourceStream("SchemaV1.sql")!;
             using var reader = new StreamReader(stream);
             ApplyMigration(connection, transaction, reader.ReadToEnd(), 1);
+            version = 1;
         }
-        else if (version != 1) throw new InvalidOperationException("지원하지 않는 DB 버전입니다.");
+        else if (version is not (1 or 2)) throw new InvalidOperationException("지원하지 않는 DB 버전입니다.");
         // Reject a malformed v1 (including the old documentation-only schema); never silently rebuild it.
         Execute(transaction, "SELECT VisitId, MediaItemId, PayloadHash FROM VisitCommit LIMIT 0;");
         if ((long)Scalar(transaction, "SELECT count(*) FROM AppSettings WHERE Id=1;")! != 1)
@@ -64,6 +65,30 @@ public sealed partial class LibraryDatabase : IDisposable
         using (var check = Command(transaction, "PRAGMA foreign_key_check;"))
         using (var reader = check.ExecuteReader())
             if (reader.Read()) throw new InvalidOperationException("DB 외래키 검사가 실패했습니다.");
+        if (version == 1)
+        {
+            using var stream = typeof(LibraryDatabase).Assembly.GetManifestResourceStream("SchemaV2.sql")!;
+            using var reader = new StreamReader(stream);
+            ApplyMigration(connection, transaction, reader.ReadToEnd(), 2);
+            MigrateStorageRoots(transaction);
+        }
+        Execute(transaction, "SELECT Id,CategoryId,MediaType,Path,PathKey,FileSize,LastWriteTimeUtc,IsFavorite,IsRandomExcluded,IsMissing FROM MediaItem LIMIT 0;");
+        using (var settings = Command(transaction, "SELECT HistoryExclusionDays,ResumeMode FROM AppSettings WHERE Id=1;"))
+        using (var reader = settings.ExecuteReader())
+        {
+            reader.Read();
+            new AppSettings(reader.GetInt32(0), Enum.Parse<ResumeMode>(reader.GetString(1))).Validate();
+        }
+        Execute(transaction, """
+            SELECT VisitId,MediaItemId,ViewedAtUtc,Origin FROM ViewHistory LIMIT 0;
+            SELECT MediaItemId,MediaType,ComicPageIndex,ComicPageOffset,VideoPositionMs,UpdatedAtUtc FROM PlaybackProgress LIMIT 0;
+            SELECT OperationId FROM AppliedDeletion LIMIT 0;
+            """);
+        ValidateStorage(transaction);
+        using (var check = Command(transaction, "PRAGMA quick_check;"))
+        using (var reader = check.ExecuteReader())
+            if (!reader.Read() || reader.GetString(0) != "ok")
+                throw new InvalidOperationException("DB 무결성 검사가 실패했습니다.");
         transaction.Commit();
     }
 

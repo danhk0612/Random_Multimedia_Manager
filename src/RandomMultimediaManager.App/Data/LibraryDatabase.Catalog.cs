@@ -23,12 +23,19 @@ public sealed partial class LibraryDatabase
         ValidatePathPair(source.RootPath, source.RootPathKey);
         return Write(transaction =>
         {
-            Execute(transaction, """
+            EnsureStorageRoot(transaction, source.RootPath);
+            int inserted = Execute(transaction, """
                 INSERT INTO CategorySource VALUES($id,$category,$path,$key,$recursive,$enabled)
                 ON CONFLICT(CategoryId,RootPathKey) DO NOTHING;
                 """, ("$id", Id(source.Id)), ("$category", Id(source.CategoryId)),
                 ("$path", source.RootPath), ("$key", source.RootPathKey),
                 ("$recursive", source.IncludeSubdirectories), ("$enabled", source.IsEnabled));
+            if (inserted == 1)
+            {
+                var binding = RequireBinding(transaction, source.RootPath);
+                if (binding.Revision > 0)
+                    WritePolicy(transaction, source.Id, SourceRefreshPolicy.DefaultFor(binding), onlyIfAbsent: true);
+            }
             using var command = Command(transaction,
                 "SELECT * FROM CategorySource WHERE CategoryId=$category AND RootPathKey=$key;",
                 ("$category", Id(source.CategoryId)), ("$key", source.RootPathKey));
@@ -42,6 +49,12 @@ public sealed partial class LibraryDatabase
         ValidatePathPair(source.RootPath, source.RootPathKey);
         Write(transaction =>
         {
+            EnsureStorageRoot(transaction, source.RootPath);
+            using (var policyCommand = Command(transaction,
+                "SELECT ScanOnStartup,RefreshMode,IntervalHours,LastCompletedAtUtc FROM SourceRefreshPolicy WHERE SourceId=$id;",
+                ("$id", Id(source.Id))))
+            using (var reader = policyCommand.ExecuteReader())
+                if (reader.Read()) ReadPolicy(reader).Validate(RequireBinding(transaction, source.RootPath));
             RequireOne(Execute(transaction, """
                 UPDATE CategorySource SET RootPath=$path, RootPathKey=$key,
                 IncludeSubdirectories=$recursive, IsEnabled=$enabled WHERE Id=$id AND CategoryId=$category;
@@ -65,6 +78,7 @@ public sealed partial class LibraryDatabase
             foreach (var item in presentItems)
             {
                 RequireDeletionPathWritable(item.PathKey);
+                EnsureStorageRoot(transaction, item.Path);
                 Execute(transaction, """
                     DELETE FROM PlaybackProgress WHERE MediaItemId IN
                     (SELECT Id FROM MediaItem WHERE CategoryId=$category AND PathKey=$key
@@ -112,7 +126,8 @@ public sealed partial class LibraryDatabase
     // The complete Windows path/reparse validation belongs to T05. Storage requires canonical pairs.
     private static void ValidatePathPair(string path, string key)
     {
-        if (string.IsNullOrWhiteSpace(path) || key != path.ToUpperInvariant())
+        if (string.IsNullOrWhiteSpace(path) || key != path.ToUpperInvariant()
+            || WindowsPath.Normalize(path).Path != path)
             throw new ArgumentException("정규화된 경로와 PathKey가 필요합니다.");
     }
 }

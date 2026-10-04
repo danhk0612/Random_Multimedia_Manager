@@ -16,5 +16,6 @@
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="[3.0.23.1]" />
     <PackageReference Include="SkiaSharp" Version="[4.151.2]" />
     <EmbeddedResource Include="Data/SchemaV1.sql" LogicalName="SchemaV1.sql" />
+    <EmbeddedResource Include="Data/SchemaV2.sql" LogicalName="SchemaV2.sql" />
   </ItemGroup>
 </Project>
