@@ -21,10 +21,10 @@ public partial class MainWindow : Window
 
     public MainWindow() : this(((App)Application.Current).Database, ((App)Application.Current).Deletions) { }
 
-    public MainWindow(Data.LibraryDatabase database, Deletion.DeletionService deletions)
+    public MainWindow(Data.LibraryDatabase database, Deletion.DeletionService deletions, Scanning.ScanCoordinator? scans = null)
     {
         this.database = database; this.deletions = deletions;
-        Scans = new(database);
+        Scans = scans ?? new(database);
         InitializeComponent();
         CategoryEditor.DataContext = new ViewModels.CategoryEditorViewModel(database, Scans);
         LibraryBrowser.DataContext = new ViewModels.LibraryBrowserViewModel(database);
@@ -94,8 +94,9 @@ public partial class MainWindow : Window
         enteringViewing = true;
         try
         {
+            if (!Scans.Completion.IsCompleted) ShowLifecycleError("진행 중인 스캔 IO 완료를 기다리고 있습니다.");
             using var admission = await Scans.EnterExclusiveAsync();
-            if (admission is null || exitRequested || Lifecycle?.BlocksNewCommands == true) return;
+            if (admission is null || exitRequested || Scans.IsClosing || Lifecycle?.BlocksNewCommands == true) return;
             Viewing = new Viewing.ViewingWindow(database, deletions, itemId) { Owner = this };
             try { Viewing.ShowDialog(); }
             finally { Viewing = null; }
@@ -120,13 +121,15 @@ public partial class MainWindow : Window
         if (value) _ = Scans.CloseAsync();
         MainContent.IsEnabled = !value;
         if (LibraryBrowser.DataContext is ViewModels.LibraryBrowserViewModel browser)
-            browser.SetExitRequested(value);
+            browser.SetExitRequested(value || Scans.IsClosing);
+        CategoryEditor.IsEnabled = LibraryBrowser.IsEnabled = !value && !Scans.IsClosing;
         Viewing?.SetExitRequested(value);
         if (comicViewer is not null) comicViewer.IsEnabled = !value;
         if (videoValidation is not null) videoValidation.IsEnabled = !value;
     }
     public async Task StopScanningAsync()
     {
+        if (!Scans.Completion.IsCompleted) ShowLifecycleError("종료 준비: 진행 중인 IO의 실제 완료를 기다립니다. 복원 키/트레이를 사용할 수 있습니다.");
         await Scans.CloseAsync();
         if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel editor)
         {
@@ -151,9 +154,17 @@ public partial class MainWindow : Window
         async Task Recover()
         {
             await System.Windows.Threading.Dispatcher.Yield();
-            if (exitRequested || Lifecycle?.BlocksNewCommands == true || Scans.IsClosing) return;
-            using var admission = await Scans.EnterExclusiveAsync();
-            if (admission is not null) await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
+            if (exitRequested || Lifecycle?.BlocksNewCommands == true) return;
+            if (Scans.IsClosing)
+            {
+                await Scans.CloseAsync();
+                if (!database.IsDisposed) await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
+            }
+            else
+            {
+                using var admission = await Scans.EnterExclusiveAsync();
+                if (admission is not null) await Deletion.DeletionDialogs.RecoverAsync(deletions, this);
+            }
         }
         recovery = Recover();
         try { await recovery; }

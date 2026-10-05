@@ -31,7 +31,7 @@ public sealed class ScanCoordinator
         public CategorySource Source = source;
         public SourceRefreshPolicy Policy = policy;
         public long Dirty, Captured, Order;
-        public bool Startup, Discovery, Manual, Suppressed;
+        public bool Startup, Discovery, Baseline, Manual, Suppressed;
         public DateTimeOffset FirstSignal, LastSignal, RetryAt;
         public int Failures;
         public SourceAccessState Access;
@@ -215,9 +215,11 @@ public sealed class ScanCoordinator
             var expected = database.GetStorageBinding(state.Source.RootPath)!;
             long version = generation;
             cancellation = new();
-            work = running = Task.Run(async () =>
+            var token = cancellation.Token;
+            work = Task.Run(async () =>
             {
-                var evidence = await observe(state.Source.RootPath, cancellation.Token).ConfigureAwait(false);
+                token.ThrowIfCancellationRequested();
+                var evidence = await observe(state.Source.RootPath, token).ConfigureAwait(false);
                 lock (gate)
                 {
                     if (closing || version != generation) return;
@@ -229,6 +231,8 @@ public sealed class ScanCoordinator
                     Reload();
                 }
             });
+            running = work.ContinueWith(t => { _ = t.Exception; }, CancellationToken.None,
+                TaskContinuationOptions.None, TaskScheduler.Default);
         }
         try { await work.ConfigureAwait(false); }
         finally { lock (gate) { cancellation?.Dispose(); cancellation = null; } }
@@ -280,7 +284,7 @@ public sealed class ScanCoordinator
                 {
                     state.Watcher?.Dispose(); state.Watcher = null; state.Suppressed = false;
                     state.Discovery = true;
-                    state.Startup = policy.RefreshMode != SourceRefreshMode.Manual;
+                    state.Baseline = policy.RefreshMode != SourceRefreshMode.Manual;
                     state.Dirty++; state.FirstSignal = state.LastSignal = now();
                 }
             }
@@ -295,11 +299,12 @@ public sealed class ScanCoordinator
     {
         if (!state.Source.IsEnabled || Quarantined(state)) return false;
         if (state.Manual) return true;
-        if (!state.Category.IsEnabled || state.Suppressed) return false;
-        if (state.Discovery) return true;
+        if (timer is null || !state.Category.IsEnabled || state.Suppressed) return false;
+        if (state.Discovery || (state.Baseline && now() >= state.RetryAt)) return true;
         if (state.Startup && state.Policy.ScanOnStartup) return true;
-        if (state.Policy.RefreshMode == SourceRefreshMode.Manual || now() < state.RetryAt) return false;
-        if (state.Failures > 0) return true;
+        if (now() < state.RetryAt) return false;
+        if (state.Failures > 0 && (state.Policy.ScanOnStartup || state.Policy.RefreshMode != SourceRefreshMode.Manual)) return true;
+        if (state.Policy.RefreshMode == SourceRefreshMode.Manual) return false;
         if (state.Dirty != state.Captured && (now() - state.LastSignal >= TimeSpan.FromSeconds(2)
             || now() - state.FirstSignal >= TimeSpan.FromSeconds(30))) return true;
         return state.Policy.IntervalHours is { } hours && (state.Policy.LastCompletedAtUtc is not { } completed
@@ -308,6 +313,11 @@ public sealed class ScanCoordinator
     private void Pump()
     {
         if (closing || exclusions != 0 || !running.IsCompleted) return;
+        foreach (var queued in sources.Values.Where(s => s.Completion is not null && (!s.Source.IsEnabled || Quarantined(s))))
+        {
+            queued.Completion!.TrySetResult(Warning("소스 비활성 또는 삭제 격리로 스캔을 보류합니다."));
+            queued.Completion = null; queued.Manual = false;
+        }
         var state = sources.Values.Where(Eligible).OrderByDescending(s => s.Manual).ThenBy(s => s.Order).FirstOrDefault();
         if (state is null) return;
         state.Order = ++order;
@@ -357,6 +367,7 @@ public sealed class ScanCoordinator
         long version, long dirty, bool manual, bool startup, bool discovery, CancellationToken token)
     {
         StorageBinding expected;
+        token.ThrowIfCancellationRequested();
         lock (gate) expected = database.GetStorageBinding(source.RootPath)!;
         var evidence = await observe(source.RootPath, token).ConfigureAwait(false);
         BindingVerification verification;
@@ -381,11 +392,13 @@ public sealed class ScanCoordinator
             }
             state.Access = SourceAccessState.Available;
             state.Policy = database.GetEffectiveSourceRefreshPolicy(source.Id);
-            shouldScan = manual || (startup && state.Policy.ScanOnStartup)
-                || (!discovery && state.Policy.RefreshMode != SourceRefreshMode.Manual);
+            shouldScan = manual || state.Baseline || (startup && state.Policy.ScanOnStartup)
+                || (!discovery && (state.Policy.RefreshMode != SourceRefreshMode.Manual
+                    || (state.Failures > 0 && state.Policy.ScanOnStartup)));
         }
         bool local = evidence.Kind == StorageKind.Local;
         // Watcher construction may itself block: it belongs to this tracked worker.
+        token.ThrowIfCancellationRequested();
         if (local && state.Policy.RefreshMode == SourceRefreshMode.Events && state.Watcher is null)
         {
             FileSystemWatcher? watcher = null;
@@ -418,6 +431,11 @@ public sealed class ScanCoordinator
         var observation = await collect(category, source, local, state.Progress, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         var after = await observe(source.RootPath, token).ConfigureAwait(false);
+        if (local && observation.MissingKeys.Count != 0)
+        {
+            token.ThrowIfCancellationRequested();
+            observation = await LibraryScanner.RecheckLocalMissingAsync(observation, token).ConfigureAwait(false);
+        }
         lock (gate)
         {
             if (!Valid(state, source, category, version, token) || database.GetStorageBinding(source.RootPath) != expected
@@ -439,9 +457,14 @@ public sealed class ScanCoordinator
             {
                 state.Policy = state.Policy with { LastCompletedAtUtc = now().ToUnixTimeMilliseconds() };
                 database.SaveSourceRefreshPolicy(source.Id, state.Policy);
-                state.Captured = dirty; state.Failures = 0;
+                state.Captured = dirty; state.Failures = 0; state.Baseline = false;
             }
-            else { Backoff(state); verification.Invalidate(); }
+            else
+            {
+                state.Access = observation.AccessDenied ? SourceAccessState.AccessDenied : SourceAccessState.Unavailable;
+                if (observation.AccessDenied) state.Suppressed = true; else Backoff(state);
+                verification.Invalidate();
+            }
             return new(LibraryScanStatus.Completed, observation.Present.Count, ids.Length,
                 observation.Warnings.Count, observation.Warnings);
         }

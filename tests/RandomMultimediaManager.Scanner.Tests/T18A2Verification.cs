@@ -10,6 +10,8 @@ internal static class T18A2Verification
         await DrainAndViewing();
         await GenerationAndQuarantine();
         await PoliciesAndSignals();
+        await RemappingAndPartialFailure();
+        await ManualPriorityAndCancellation();
         await RealLocalWatcher();
         Console.WriteLine("PASS T18A-2 N04/N05/N09/N10/N11 coordinator; NAS/RaiDrive hardware NOT tested");
     }
@@ -164,6 +166,97 @@ internal static class T18A2Verification
         finally { await coordinator.CloseAsync(); }
         Console.WriteLine("PASS N04: startup/policy, catch-up coalescing, 30s/2m retry, manual off");
     }
+    private static async Task RemappingAndPartialFailure()
+    {
+        using var f = new Fixture(); var source = f.Add(@"Z:\media"); var item = f.Item(source);
+        StorageObservation proof = StorageObservation.Classify(source.RootPath, MappingLookup.Mapped, @"\\server\original");
+        var binding = f.Db.GetStorageBinding(source.RootPath)!;
+        f.Db.ConfirmStorageBinding(source.RootPath, binding.Revision, proof, true);
+        int mode = 0, calls = 0;
+        var coordinator = new ScanCoordinator(f.Db, (_, _) => Task.FromResult(proof),
+            (_, _, _, _, _) =>
+            {
+                calls++;
+                if (mode == 0) proof = StorageObservation.Classify(source.RootPath, MappingLookup.Mapped, @"\\server\replacement");
+                return Task.FromResult(new SourceScanObservation(new[] { item with { FileSize = 7 } },
+                    new[] { item.PathKey }, new[] { "injected partial result" }, AccessDenied: mode == 2));
+            });
+        try
+        {
+            await coordinator.ScanSourceAsync(source.Id);
+            Check(coordinator.GetAccess(source.Id) == SourceAccessState.BindingChanged
+                && f.Db.GetItems(f.Category.Id).Single().FileSize == 1, "mapping changed mid-enumeration discards all Present/Missing");
+            proof = StorageObservation.Classify(source.RootPath, MappingLookup.Mapped, @"\\server\original"); mode = 1;
+            await coordinator.ScanSourceAsync(source.Id);
+            Check(f.Db.GetItems(f.Category.Id).Single().FileSize == 7 && !f.Db.GetItems(f.Category.Id).Single().IsMissing,
+                "same binding partial success may update Present, never remote Missing");
+            Check(f.Db.GetEffectiveSourceRefreshPolicy(source.Id).LastCompletedAtUtc is null, "partial success is not full completion");
+            await coordinator.SavePolicyAsync(source.Id, new(true, SourceRefreshMode.Scheduled, 1));
+            mode = 2; await coordinator.ScanSourceAsync(source.Id);
+            Check(coordinator.GetAccess(source.Id) == SourceAccessState.AccessDenied, "permission failure records distinct access state");
+            coordinator.Start(); await coordinator.Completion;
+            int previous = calls; for (int i = 0; i < 100; i++) coordinator.Tick();
+            Check(calls == previous, "permission failure stops automatic retries");
+        }
+        finally { await coordinator.CloseAsync(); }
+        // Unknown providers must be confirmed in this process, and again after observed disconnection.
+        var unknown = f.Add(@"Y:\media"); bool offline = false; int reads = 0;
+        coordinator = new ScanCoordinator(f.Db,
+            (p, _) => Task.FromResult(StorageObservation.Classify(p, MappingLookup.Failed)),
+            (_, _, _, _, _) => { reads++; if (offline) throw new IOException("provider disconnected"); return Task.FromResult(Empty); });
+        try
+        {
+            await coordinator.ScanSourceAsync(unknown.Id); Check(reads == 0, "unknown unconfirmed provider is not enumerated");
+            await coordinator.ConfirmBindingAsync(unknown.Id); await coordinator.ScanSourceAsync(unknown.Id);
+            Check(reads == 1, "explicit same-target confirmation unlocks unknown provider this generation");
+            offline = true; await coordinator.ScanSourceAsync(unknown.Id); offline = false;
+            await coordinator.ScanSourceAsync(unknown.Id);
+            Check(reads == 2, "observed disconnect invalidates unknown confirmation before another enumeration");
+        }
+        finally { await coordinator.CloseAsync(); }
+        Console.WriteLine("PASS N03/N05: changed mapping discard, partial Present/timestamp, access denial, unknown reconnect confirmation");
+    }
+    private static async Task ManualPriorityAndCancellation()
+    {
+        using var f = new Fixture(); var first = f.Add(@"\\server\first"); var auto = f.Add(@"\\server\auto"); var manual = f.Add(@"\\server\manual");
+        foreach (var source in new[] { first, auto, manual }) f.Confirm(source);
+        f.Db.SaveSourceRefreshPolicy(first.Id, new(true, SourceRefreshMode.Scheduled, 1));
+        f.Db.SaveSourceRefreshPolicy(auto.Id, new(true, SourceRefreshMode.Scheduled, 1));
+        var entered = NewSignal(); var release = NewSignal(); var sequence = new List<Guid>();
+        var coordinator = new ScanCoordinator(f.Db, (p, _) => Task.FromResult(Evidence(p)),
+            async (_, source, _, _, _) =>
+            {
+                lock (sequence) sequence.Add(source.Id);
+                if (source.Id == first.Id) { entered.TrySetResult(); await release.Task; }
+                return Empty;
+            });
+        try
+        {
+            var firstTask = coordinator.ScanSourceAsync(first.Id); await entered.Task;
+            coordinator.Start();
+            var priority = coordinator.ScanSourceAsync(manual.Id);
+            release.SetResult(); await firstTask; await priority;
+            lock (sequence) Check(sequence[1] == manual.Id, "queued manual source has priority over auto requests");
+        }
+        finally { await coordinator.CloseAsync(); }
+        entered = NewSignal(); release = NewSignal(); int calls = 0;
+        coordinator = new ScanCoordinator(f.Db, (p, _) => Task.FromResult(Evidence(p)),
+            async (_, _, _, _, _) => { calls++; entered.TrySetResult(); await release.Task; return Empty; });
+        try
+        {
+            using var cancel = new CancellationTokenSource();
+            var scan = coordinator.ScanSourceAsync(first.Id, cancel.Token); await entered.Task; cancel.Cancel();
+            Check(!scan.IsCompleted, "manual cancellation still waits for actual active IO");
+            release.SetResult(); Check((await scan).Status == LibraryScanStatus.Cancelled, "cancelled scan is not applied");
+            coordinator.Start(); await coordinator.Completion;
+            Check(calls <= 2, "cancelled source is suppressed, other source may run once");
+            Check(f.Db.GetEffectiveSourceRefreshPolicy(first.Id).LastCompletedAtUtc is not null,
+                "cancellation preserves previously completed timestamp");
+        }
+        finally { await coordinator.CloseAsync(); }
+        Console.WriteLine("PASS N04/N09: manual priority, cancel retains real IO ownership and no immediate automatic restart");
+    }
+
     private static async Task RealLocalWatcher()
     {
         using var f = new Fixture(); string media = Path.Combine(f.DirectoryPath, "media"); Directory.CreateDirectory(media);

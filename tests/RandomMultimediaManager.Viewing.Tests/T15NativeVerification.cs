@@ -52,6 +52,32 @@ internal static class T15NativeVerification
             Check(f.Main.IsVisible && f.Db.GetHistory(f.Item.Id).Single().VisitId == id, "viewing X leaves visit, main stays open");
             Check(await f.Lifecycle.ExitAsync(), "exit after viewing X");
         });
+        await Scenario("T18A-2 full viewing lifetime excludes scans", async f =>
+        {
+            f.Main.Scans.Start();
+            var source = f.Db.GetSources(f.Item.CategoryId).Single();
+            await Wait(() => f.Db.GetEffectiveSourceRefreshPolicy(source.Id).LastCompletedAtUtc is not null);
+            var view = await f.OpenViewing();
+            async Task NoScan(string phase)
+            {
+                f.Main.Scans.Signal(source.Id); f.Main.Scans.Tick();
+                Check((await f.Main.Scans.ScanSourceAsync(source.Id)).Status == RandomMultimediaManager.App.Scanning.LibraryScanStatus.Cancelled,
+                    "T18A-2 " + phase + " scan admission blocked by actual window lifetime");
+            }
+            await NoScan("Empty");
+            await view.Coordinator.OpenManualAsync(Guid.NewGuid(), f.Item.Id);
+            await NoScan("Active/checkpoint");
+            f.Lifecycle.HideAll(); await NoScan("Hidden"); f.Lifecycle.Restore();
+            f.Sql("CREATE TRIGGER t18a2_fail BEFORE INSERT ON VisitCommit BEGIN SELECT RAISE(ABORT, 'injected'); END;");
+            Check(!await view.RequestCloseAsync(), "T18A-2 failed close keeps viewing lifetime");
+            await NoScan("SaveFailed");
+            f.Sql("DROP TRIGGER t18a2_fail;");
+            ((Button)view.FindName("RetryButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            await Wait(() => f.Main.Viewing is null);
+            Check((await f.Main.Scans.ScanSourceAsync(source.Id)).Status == RandomMultimediaManager.App.Scanning.LibraryScanStatus.Completed,
+                "T18A-2 successful Leave releases scan admission");
+            Check(await f.Lifecycle.ExitAsync(), "T18A-2 close after full viewing lifetime");
+        });
         await Scenario("active tray exit", async f =>
         {
             var view = await f.OpenViewing();
@@ -75,6 +101,9 @@ internal static class T15NativeVerification
             f.Lifecycle.Restore();
             Check(((Button)view.FindName("RetryButton")).IsEnabled && ((Button)view.FindName("ResumeButton")).IsEnabled,
                 "existing retry/resume controls accessible");
+            Check(!((FrameworkElement)view.FindName("SessionControls")).IsEnabled
+                && !((Button)view.FindName("DeleteButton")).IsEnabled && f.Main.Scans.IsClosing,
+                "T18A-2 ExitBlocked retains recovery but cannot resume new IO");
             f.Sql("DROP TRIGGER t15_fail;");
             await view.Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid());
             Check(await f.Lifecycle.ExitAsync(), "resolved save failure can exit");
@@ -560,6 +589,7 @@ internal static class T15NativeVerification
         }
         public void Dispose()
         {
+            Main.Scans.CloseAsync().GetAwaiter().GetResult();
             Icon?.Dispose(); Lifecycle.DisposePrivacy(); Keys?.Dispose(); Main.Lifecycle = null; Main.Close(); Db.Dispose();
             Directory.Delete(root, true);
         }

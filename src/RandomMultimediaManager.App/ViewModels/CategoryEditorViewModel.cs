@@ -225,7 +225,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
     {
         if (Scans is null) return edit();
         using var admission = await Scans.EnterExclusiveAsync();
-        if (admission is null) return SetResult(false, "종료 중에는 편집할 수 없습니다.");
+        if (admission is null || Scans.IsClosing || database.IsDisposed) return SetResult(false, "종료 중에는 편집할 수 없습니다.");
         var result = edit();
         if (result.Success) Scans.ConfigurationChanged();
         return result;

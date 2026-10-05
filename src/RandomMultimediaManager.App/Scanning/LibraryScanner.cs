@@ -12,7 +12,7 @@ public sealed record LibraryScanResult(LibraryScanStatus Status, int PresentCoun
     int WarningCount, IReadOnlyList<string> Warnings);
 
 public sealed record SourceScanObservation(IReadOnlyList<MediaItem> Present,
-    IReadOnlyList<string> MissingKeys, IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> MissingKeys, IReadOnlyList<string> Warnings, bool AccessDenied = false);
 
 public sealed class LibraryScanner
 {
@@ -57,8 +57,20 @@ public sealed class LibraryScanner
                     && ConfirmLocalAbsence(item.Path)) missing.Add(item.PathKey);
             }
         cancellationToken.ThrowIfCancellationRequested();
-        return new(present.Values.ToArray(), missing, warnings);
+        return new(present.Values.ToArray(), missing, warnings, report.AccessDenied);
     }
+
+    internal static Task<SourceScanObservation> RecheckLocalMissingAsync(SourceScanObservation observation,
+        CancellationToken cancellationToken) => Task.Run(() =>
+        {
+            var confirmed = new List<string>();
+            foreach (string key in observation.MissingKeys)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (ConfirmLocalAbsence(key)) confirmed.Add(key);
+            }
+            return observation with { MissingKeys = confirmed };
+        }, cancellationToken);
 
     // A successful remote directory listing is never authoritative absence evidence.
     // Recheck local readiness, supported ancestors and the individual target before applying.
@@ -66,7 +78,7 @@ public sealed class LibraryScanner
     {
         try
         {
-            if (!TryProbeSourceRoot(Path.GetDirectoryName(path)!, out bool missing, out _, true))
+            if (!TryProbeSourceRoot(Path.GetDirectoryName(path)!, out bool missing, out _, true, out _))
                 return missing;
             _ = File.GetAttributes(path);
             return false;
@@ -84,13 +96,14 @@ public sealed class LibraryScanner
         var report = new SourceReport(source);
         progress?.Report(new LibraryScanProgress($"소스 확인: {source.RootPath}", visited, present.Count));
 
-        if (!TryProbeSourceRoot(source.RootPath, out bool missing, out string? problem, local))
+        if (!TryProbeSourceRoot(source.RootPath, out bool missing, out string? problem, local, out bool accessDenied))
         {
             if (missing)
             {
                 report.RootMissingConfirmed = true;
                 return report;
             }
+            report.AccessDenied |= accessDenied;
             warnings.Add($"{source.RootPath}: {problem}");
             report.BlockedPrefixes.Add(source.RootPathKey);
             return report;
@@ -102,6 +115,7 @@ public sealed class LibraryScanner
         }
         catch (Exception ex) when (IsObservationFailure(ex))
         {
+            report.AccessDenied |= IsAccessDenied(ex);
             warnings.Add($"{source.RootPath}: {Friendly(ex)}");
             report.BlockedPrefixes.Add(source.RootPathKey);
             return report;
@@ -150,6 +164,7 @@ public sealed class LibraryScanner
                         }
                         catch (Exception ex) when (IsObservationFailure(ex))
                         {
+                            report.AccessDenied |= IsAccessDenied(ex);
                             report.BlockedPrefixes.Add(normalized.PathKey);
                             warnings.Add($"{normalized.Path}: {Friendly(ex)}");
                         }
@@ -176,6 +191,7 @@ public sealed class LibraryScanner
                     }
                     catch (Exception ex) when (IsObservationFailure(ex))
                     {
+                        report.AccessDenied |= IsAccessDenied(ex);
                         warnings.Add($"{normalized.Path}: 메타데이터를 읽지 못해 기존 상태를 보존합니다. {Friendly(ex)}");
                     }
                 }
@@ -191,15 +207,18 @@ public sealed class LibraryScanner
             {
                 complete = false;
                 report.ConfirmedMissingPrefixes.Add(directoryKey);
+                warnings.Add($"{directory}: 열거 중 경로가 사라져 부재를 재확인합니다.");
             }
             catch (FileNotFoundException)
             {
                 complete = false;
                 report.ConfirmedMissingPrefixes.Add(directoryKey);
+                warnings.Add($"{directory}: 열거 중 경로가 사라져 부재를 재확인합니다.");
             }
             catch (Exception ex) when (IsObservationFailure(ex))
             {
                 complete = false;
+                report.AccessDenied |= IsAccessDenied(ex);
                 report.BlockedPrefixes.Add(directoryKey);
                 warnings.Add($"{directory}: 일부를 관찰하지 못해 해당 범위의 기존 상태를 보존합니다. {Friendly(ex)}");
             }
@@ -227,9 +246,9 @@ public sealed class LibraryScanner
         return (normalized.Path, normalized.PathKey);
     }
 
-    private static bool TryProbeSourceRoot(string path, out bool missing, out string? problem, bool local)
+    private static bool TryProbeSourceRoot(string path, out bool missing, out string? problem, bool local, out bool accessDenied)
     {
-        missing = false; problem = null;
+        missing = false; problem = null; accessDenied = false;
         try
         {
             var normalized = WindowsPath.Normalize(path);
@@ -259,18 +278,21 @@ public sealed class LibraryScanner
         catch (Exception ex) when (ex is DirectoryNotFoundException or FileNotFoundException)
         { missing = local; problem = "경로를 확인할 수 없습니다."; return false; }
         catch (Exception ex) when (IsObservationFailure(ex))
-        { problem = Friendly(ex); return false; }
+        { accessDenied = IsAccessDenied(ex); problem = Friendly(ex); return false; }
     }
 
     private static void ValidateDirectoryAndAncestors(string path, bool local)
     {
-        if (!TryProbeSourceRoot(path, out _, out var problem, local))
+        if (!TryProbeSourceRoot(path, out _, out var problem, local, out _))
             throw new IOException(problem);
     }
 
     private static bool IsObservationFailure(Exception ex) =>
         ex is UnauthorizedAccessException or IOException or Security.SecurityException or ArgumentException
         or Win32Exception;
+
+    private static bool IsAccessDenied(Exception ex) => ex is UnauthorizedAccessException
+        or Security.SecurityException or Win32Exception { NativeErrorCode: 5 };
 
     private static string Friendly(Exception ex) => ex switch
     {
@@ -284,6 +306,7 @@ public sealed class LibraryScanner
     {
         public SourceReport(CategorySource source) => Source = source;
         public CategorySource Source { get; }
+        public bool AccessDenied { get; set; }
         public bool RootMissingConfirmed { get; set; }
         public HashSet<string> ObservedFiles { get; } = new(StringComparer.Ordinal);
         public HashSet<string> ObservedDirectories { get; } = new(StringComparer.Ordinal);
