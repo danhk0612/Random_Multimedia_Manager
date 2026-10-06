@@ -254,6 +254,18 @@ internal static class T18A2Verification
                 "cancellation preserves previously completed timestamp");
         }
         finally { await coordinator.CloseAsync(); }
+        f.Db.SaveSourceRefreshPolicy(auto.Id, new());
+        entered = NewSignal(); release = NewSignal(); calls = 0;
+        coordinator = new ScanCoordinator(f.Db, (p, _) => Task.FromResult(Evidence(p)),
+            async (_, _, _, _, _) => { calls++; entered.TrySetResult(); await release.Task; return Empty; });
+        try
+        {
+            coordinator.Start(); await entered.Task;
+            var shared = coordinator.ScanSourceAsync(first.Id);
+            release.SetResult(); await shared; await coordinator.Completion;
+            Check(calls == 1, "manual request joins same source automatic enumeration already in progress");
+        }
+        finally { await coordinator.CloseAsync(); }
         Console.WriteLine("PASS N04/N09: manual priority, cancel retains real IO ownership and no immediate automatic restart");
     }
 

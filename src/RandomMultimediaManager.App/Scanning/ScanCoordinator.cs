@@ -31,7 +31,7 @@ public sealed class ScanCoordinator
         public CategorySource Source = source;
         public SourceRefreshPolicy Policy = policy;
         public long Dirty, Captured, Order;
-        public bool Startup, Discovery, Baseline, Manual, Suppressed;
+        public bool Startup, Discovery, Baseline, Manual, Suppressed, WatcherFailed, Collecting;
         public DateTimeOffset FirstSignal, LastSignal, RetryAt;
         public int Failures;
         public SourceAccessState Access;
@@ -127,7 +127,10 @@ public sealed class ScanCoordinator
     {
         if (Quarantined(state)) return Task.FromResult(Warning("삭제 격리 분류는 스캔할 수 없습니다."));
         if (state.Completion is not null) return state.Completion.Task;
-        state.Suppressed = false; state.Manual = true; state.Progress = progress;
+        state.Suppressed = false;
+        state.Manual = !ReferenceEquals(state, runningSource) || !state.Collecting
+            || cancellation?.IsCancellationRequested == true;
+        state.Progress = progress;
         state.Completion ??= new(TaskCreationOptions.RunContinuationsAsynchronously);
         return state.Completion.Task;
     }
@@ -351,11 +354,12 @@ public sealed class ScanCoordinator
             }
             lock (gate)
             {
-                completion?.TrySetResult(result);
-                if (ReferenceEquals(completion, state.Completion)) state.Completion = null;
+                var waiter = completion ?? (!state.Manual ? state.Completion : null);
+                waiter?.TrySetResult(result);
+                if (ReferenceEquals(waiter, state.Completion)) state.Completion = null;
                 if (result.Status == LibraryScanStatus.Cancelled && !closing && !state.Suppressed)
                 { state.Discovery |= discovery; state.Startup |= startup; }
-                cancellation?.Dispose(); cancellation = null; runningSource = null;
+                cancellation?.Dispose(); cancellation = null; state.Collecting = false; runningSource = null;
             }
         });
         // Only scheduling continuation; running is the actual worker, never a timeout proxy.
@@ -395,8 +399,16 @@ public sealed class ScanCoordinator
             shouldScan = manual || state.Baseline || (startup && state.Policy.ScanOnStartup)
                 || (!discovery && (state.Policy.RefreshMode != SourceRefreshMode.Manual
                     || (state.Failures > 0 && state.Policy.ScanOnStartup)));
+            state.Collecting = shouldScan;
         }
         bool local = evidence.Kind == StorageKind.Local;
+        FileSystemWatcher? failedWatcher = null;
+        lock (gate)
+            if (state.WatcherFailed)
+            {
+                failedWatcher = state.Watcher; state.Watcher = null; state.WatcherFailed = false;
+            }
+        failedWatcher?.Dispose();
         // Watcher construction may itself block: it belongs to this tracked worker.
         token.ThrowIfCancellationRequested();
         if (local && state.Policy.RefreshMode == SourceRefreshMode.Events && state.Watcher is null)
@@ -415,7 +427,12 @@ public sealed class ScanCoordinator
                 }
                 watcher.Changed += (_, _) => Dirty(); watcher.Created += (_, _) => Dirty();
                 watcher.Deleted += (_, _) => Dirty(); watcher.Renamed += (_, _) => Dirty();
-                watcher.Error += (_, _) => Dirty();
+                watcher.Error += (_, _) =>
+                {
+                    lock (gate)
+                        if (!closing && ReferenceEquals(state.Watcher, attached))
+                        { state.WatcherFailed = true; Dirty(); }
+                };
                 watcher.EnableRaisingEvents = true;
                 lock (gate)
                 {

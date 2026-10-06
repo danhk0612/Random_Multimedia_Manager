@@ -616,10 +616,14 @@ public partial class ViewingWindow : Window
         VideoControls.Visibility = Current?.Video is null || !visible ? Visibility.Collapsed : Visibility.Visible;
         Current?.SetFullscreenControlsVisible(visible);
     }
+    public void BeginApplicationClosing()
+    {
+        applicationClosing = true;
+        SetExitRequested(true);
+    }
     public void SetExitRequested(bool value)
     {
         exitRequested = value;
-        applicationClosing |= value;
         libraryBrowser?.SetExitRequested(value);
         if (value && libraryDialog is { IsVisible: true })
             libraryDialog.Close();

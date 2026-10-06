@@ -123,9 +123,10 @@ public partial class MainWindow : Window
         if (LibraryBrowser.DataContext is ViewModels.LibraryBrowserViewModel browser)
             browser.SetExitRequested(value || Scans.IsClosing);
         CategoryEditor.IsEnabled = LibraryBrowser.IsEnabled = !value && !Scans.IsClosing;
-        Viewing?.SetExitRequested(value);
-        if (comicViewer is not null) comicViewer.IsEnabled = !value;
-        if (videoValidation is not null) videoValidation.IsEnabled = !value;
+        if (value) Viewing?.BeginApplicationClosing();
+        else Viewing?.SetExitRequested(false);
+        if (comicViewer is not null) comicViewer.IsEnabled = !value && !Scans.IsClosing;
+        if (videoValidation is not null) videoValidation.IsEnabled = !value && !Scans.IsClosing;
     }
     public async Task StopScanningAsync()
     {
