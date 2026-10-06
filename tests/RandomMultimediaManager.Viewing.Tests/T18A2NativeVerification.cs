@@ -21,7 +21,8 @@ internal static class T18A2NativeVerification
         string root = Path.Combine(Path.GetTempPath(), "rmm-t18a2-wpf-" + Guid.NewGuid()); Directory.CreateDirectory(root);
         using var db = LibraryDatabase.Open(Path.Combine(root, "library.db"));
         var category = new Category(Guid.NewGuid(), "remote", MediaType.Video); db.SaveCategory(category);
-        var source = db.AddSource(new(Guid.NewGuid(), category.Id, @"\\server\share", @"\\SERVER\SHARE"));
+        var path = WindowsPath.Normalize(@"\\server\share");
+        var source = db.AddSource(new(Guid.NewGuid(), category.Id, path.Path, path.PathKey));
         var evidence = StorageObservation.Classify(source.RootPath, MappingLookup.Failed);
         db.ConfirmStorageBinding(source.RootPath, 0, evidence, true);
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -58,7 +59,7 @@ internal static class T18A2NativeVerification
         finally
         {
             release.TrySetResult(); await scans.CloseAsync(); keys.Dispose(); lifecycle.DisposePrivacy();
-            main.Lifecycle = null; main.Close();
+            main.Lifecycle = null; main.Close(); db.Dispose();
             Directory.Delete(root, true);
         }
     }
