@@ -16,7 +16,7 @@
 | SQLite·모델·설정·방문 저장·삭제 DB 정리 | T03 구현·Windows 자동 검증 완료 (main 통합 완료) |
 | 실제 파일 삭제·저널 복구 | T12 완료 (PR #16 main 통합 완료, 잔여 수동 검증은 기본 완성 후 실사용으로 이관) |
 | 분류/소스 폴더 UI | T04 구현·자동 검증·사용자 Windows UI 수동 검증 완료 (PR #9 main 통합 완료) |
-| 라이브러리 최초/수동 스캔 | T05 main 통합. T18A-2 소스별 스캔/생명주기 조정자 PR #24 구현·Windows 자동 검증 완료, 병합 대기 |
+| 라이브러리 최초/수동 스캔 | T05 main 통합. T18A-2 PR #24 병합 전 보완·Windows 자동 재검증 완료, 재검토 대기 |
 | 랜덤 후보·Pending 방문 핵심 | T06 구현·Windows 자동 검증 완료, PR #13 main 통합 완료; T11 완료, 기본 동작 사용자 확인·어려운 수동 검사 생략, PR #14 main 통합 완료 |
 | 만화 ZIP/CBZ 페이지 읽기 기반 | T07 구현·Windows 자동 검증 완료 (PR #6 main 통합 완료) |
 | 만화 표시·조작 | T08 구현·Windows 자동 검증 및 사용자 Windows 수동 검증 완료 (PR #10 main 통합 완료) |
@@ -62,7 +62,7 @@
 
 ## 다음 작업과 차단
 
-T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현·Windows 자동 검증을 완료했으며 병합 대기다. T18A-3~6/T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 현재 결과는 T18A-2 PR #24다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
+T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 재검토 대기다. T18A-3~6/T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 현재 결과는 T18A-2 PR #24다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
 
 ## T03 저장 구현
 
@@ -271,8 +271,11 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 - 검증 코드 `af4bd6e`: Windows Server 2025 x64/.NET SDK 10.0.401 Release 빌드 경고 0·오류 0. N01~N03 6개와 T03/T05/T06/T09/T11(만화·자막 및 T12~T17 영향 회귀 포함) CI 5개 모두 성공. 실제 NAS/RaiDrive·사용자 DB·Windows 수동 UI는 미검증. Linux 부분 실행 및 최초 Windows 검사 기대값 보완은 검증 문서에 구분했다.
 - PR #23은 `08adddc`로 main 통합 완료했다. 검증 이후 최종 헤드 `06a89f4`까지의 차이는 문서 3개뿐임을 확인했다. 상세 검증은 docs/T18A_1_PATH_STORAGE_VALIDATION.md. 다음 작업은 T18A-2(소스별 스캔 조정·IO/종료 연결)이며 TASKS.md의 새 작업 지시문을 따른다. T18A 전체 완료나 실제 네트워크 호환성 통과를 뜻하지 않는다.
 
-## T18A-2 PR #24 병합 검토 — 보완 필요
+## T18A-2 PR #24 수정 전 병합 검토 (`f8942e1`)
 
 - 검토 헤드 `f8942e1`; 제품/테스트 코드 `093a3fc`의 Windows T03/T05/T06/T09/T11 CI 5개 성공 및 이후 문서 6개만 변경됨을 확인했다. 실제 NAS/RaiDrive·사용자 수동 검증은 미실시다.
-- PR 리뷰 3건을 실제 App.xaml.cs/ScanCoordinator.cs/AppLifecycle.cs와 대조했다. (1) SessionEnding/직접 Shutdown이 scan drain을 우회하고 OnExit에서 DB를 해제함, (2) 자동 probe 중 수동 요청이 동일 소스 수집을 중복 실행함, (3) 완료된 수동 Progress가 남아 후속 자동 검사에서 이전 UI에 전달됨을 코드 경로에서 확인했다. 이번 검토에서 Windows 재현 테스트를 실행하지는 않았다.
-- PR #24는 미병합으로 유지한다. 다음은 TASKS.md의 T18A-2 병합 전 보완 지시이며 T18A-3는 차단한다. 기존 CI 성공은 이 세 경계의 수정·재검증을 대체하지 않는다.
+- PR 리뷰 3건을 실제 App.xaml.cs/ScanCoordinator.cs/AppLifecycle.cs와 대조했다. (1) SessionEnding/직접 Shutdown이 scan drain을 우회하고 OnExit에서 DB를 해제함, (2) 자동 probe 중 수동 요청이 동일 소스 수집을 중복 실행함, (3) 완료된 수동 Progress가 남아 후속 자동 검사에서 이전 UI에 전달됨을 코드 경로에서 확인했다. 수정 전 검토 당시 Windows 재현 테스트를 실행하지는 않았다.
+- 위 내용은 수정 전 검토 근거다. main `5e82e9d`의 지시를 기존 구현/검증 문서와 함께 작업 브랜치에 통합했다.
+- 2026-10-08 보완 완료: `d563e0a`에서 App RequestShutdownAsync/모의 SessionEnding의 공통 종료 drain, probe 중 수동 수집 공유와 discovery 수집 1회, 완료/취소/늦은 Progress 및 새 요청 소유권을 수정·검증했다. 수정 전 재현 실패와 수정 후 통과는 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md에 구분했다.
+- Windows x64/.NET SDK 10.0.401 Release 빌드 경고 0·오류 0. T03/T05/T06/T09/T11 영향 CI 5개 모두 성공(37666842460/37666842380/37666842424/37666842476/37666842437). 실제 로그오프/강제 OS 종료/NAS/RaiDrive는 미검증이다. main 통합 커밋 `3f5cff6`과 검증 코드의 tree는 동일하며 이후 변경은 문서뿐이다.
+- PR #24는 미병합·재검토 대기다. 다음 작업은 이 PR의 재검토이며 T18A-3·배포는 착수하지 않는다.

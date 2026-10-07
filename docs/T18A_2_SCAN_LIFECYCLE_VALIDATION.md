@@ -1,6 +1,6 @@
 # T18A-2 스캔·생명주기 검증
 
-기준 main `7b90722` (T18A-1 PR #23 통합), 작업 브랜치 `task/t18a-2-scan-lifecycle`, PR #24. 정책은 DATA_AND_RANDOM_POLICY의 T18A와 D10~D12/D14~D16을 따른다. 이 문서는 오류 주입, Windows 로컬 실파일, 실제 NAS/RaiDrive를 구분한다.
+최초 기준 main `7b90722` (T18A-1 PR #23 통합), 병합 전 보완 기준 main `5e82e9d`, 작업 브랜치 `task/t18a-2-scan-lifecycle`, PR #24. 정책은 DATA_AND_RANDOM_POLICY의 T18A와 D10~D12/D14~D16을 따른다. 이 문서는 오류 주입, Windows 로컬 실파일, 실제 NAS/RaiDrive를 구분한다.
 
 ## 구현 경계
 
@@ -46,8 +46,40 @@ dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release
 
 실제 WPF 검사에서 Empty/Active/checkpoint/Hidden/SaveFailed 동안 스캔 차단, 정상 Leave 후 허용, 지연 worker 동안 DB 유지, 중복 종료 공유, Closing/Restore 후 신규 스캔 0, 실제 IO 완료 후 DB 해제 및 해제 후 재개 차단을 확인했다. 연결 실패/재매핑/원격 캐시는 대역 오류 주입이며 실제 NAS/RaiDrive 결과가 아니다. 이전 실패는 임시 창 닫기와 앱 Closing 차단의 분리 및 새 UNC fixture의 공통 정규화 적용으로 수정한 뒤 재검증했다. 러너의 native 영상 장치/thumbnail 진단 및 기존 임시 fixture 정리 메시지는 사용자 화면/청취·실장비 호환성 검증을 대신하지 않는다.
 
+## PR #24 병합 전 보완과 재현 검사
+
+main `5e82e9d`의 검토 지시와 기존 구현/검증 내용을 함께 보존했다. 최신 main은 작업 브랜치에만 통합하며 PR #24를 main에 병합하지 않는다.
+
+- App의 제어 가능한 직접 종료 요청은 `RequestShutdownAsync`로 연결한다. Scans 시작 뒤 SessionEnding은 Cancel을 동기 설정하고 기존 AppLifecycle의 비동기 종료를 시작한다. OnExit async void/Dispatcher 동기 대기는 없다. 감상 저장·삭제 복구·ExitBlocked·복원 조건은 기존 계약을 따른다.
+- 같은 source/설정 generation의 수동 요청은 automatic probe부터 현재 worker에 합류한다. discovery-only에도 필요한 collection을 한 번 연결하며, 수집하지 않는 discovery의 종료 결정 후 도착한 새 요청은 별도 대기한다. 취소된 probe/worker와 다른 source는 공유하지 않는다.
+- active 요청과 다음 요청의 완료/Progress 소유권을 구분한다. 완료/취소/제거/Closing 때 해당 콜백만 해제하고 새 요청은 보존한다. 이전 collector의 늦은 Report는 worker token으로 차단하며 이미 UI에 게시된 Progress<T>는 UI 요청 소유권을 전달 시 확인한다.
+
+수정 전 제품 코드를 그대로 둔 재현 헤드 `b513565`의 [T05 37666349091](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37666349091)에서 automatic probe 중 수동 요청이 collection을 2회 실행하고 완료된 Progress가 후속 자동/늦은 Report에 전달됨을 확인했다. discovery-only는 이미 1회였으며 수정 후에도 유지한다. 최초 WPF 재현 fixture의 비공개 이벤트 인자 생성 방식은 테스트 컴파일 오류로 수정했으며 제품 문제 재현으로 계산하지 않는다. SessionEnding 재현은 fixture 수정 헤드 `785aed3`의 [T11 37666726205](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37666726205) 재실행에서 Cancel 미설정 검사 실패로 확인했다. 첫 실행은 기존 T16 native dialog 복원 검사에서 먼저 실패했으므로 해당 종료 재현 근거로 쓰지 않으며 제품 수정 없이 같은 job을 재실행했다.
+
+| 보완 검사 | 구분 | 결과 |
+|---|---|---|
+| Logoff/Shutdown 모의 SessionEnding과 앱 내부 종료 요청, 중복 종료 Task 공유 | 실제 WPF App override + 지연/취소 무시 worker 오류 주입 | 통과 |
+| 종료 중 DB 생존·신규 IO 0·실제 worker 완료 후 DB 해제 | 실제 SQLite/WPF + 오류 주입 | 통과 |
+| automatic probe 수동 합류·discovery 수집 1회 | probe 대기 오류 주입 | 통과 |
+| 취소된 probe 뒤 새 요청·다른 SourceId 결과 분리 | 오류 주입 | 통과 |
+| 완료 후 자동 검사/늦은 Report·취소 후 새 요청 콜백 보존 | collector 오류 주입 | 통과 |
+| 완료/취소 후 이미 게시된 Progress<T>의 늦은 UI 전달 | 전달 순서를 제어한 SynchronizationContext 대역 + 실제 ViewModel | 통과 |
+
+검증 코드 `d563e0ae6e1c630de62b1e79d138b6a642664627`. Windows Server 2025 x64(OS 10.0.26100), .NET SDK 10.0.401. 2026-10-08 확인: Release 빌드 경고 0·오류 0, 영향 CI 5개 모두 성공. 이후 main 통합 커밋 `3f5cff6`은 `d563e0a`와 tree가 동일하다. 기존 자동 검증 근거는 위 표에 보존한다.
+
+| 보완 Windows workflow | 결과 |
+|---|---|
+| [T03 저장/셸 37666842460](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37666842460) | 통과 |
+| [T05 스캔/새 재현·회귀 37666842380](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37666842380) | 통과 |
+| [T06 세션 37666842424](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37666842424) | 통과 |
+| [T09 영상 37666842476](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37666842476) | 통과 |
+| [T11 감상/모의 SessionEnding·만화/영상/자막 37666842437](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37666842437) | 통과 |
+
+SessionEnding 이벤트 인자의 비공개 생성자는 재현 fixture에서만 reflection으로 호출한다. [WPF 공식 소스](https://source.dot.net/presentationframework/System/Windows/SessionEndingCancelEventArgs.cs.html)와 [SessionEnding 공식 문서](https://learn.microsoft.com/en-us/dotnet/api/system.windows.application.sessionending?view=windowsdesktop-10.0)는 2026-10-08 접근 확인했다. 모의 호출은 실제 WM_QUERYENDSESSION/사용자 로그오프를 검증하지 않는다. Cancel=true는 OS 요청을 거부할 수 있으므로 앱 종료 뒤 사용자가 OS 종료/로그오프를 다시 요청해야 할 수 있다. 강제 OS 종료·전원 차단·프로세스 제거까지 정상 저장/실제 IO drain을 보장하지 않는다.
+
 ## 실제 환경 미검증
 
+- 실제 Windows 로그오프/시스템 종료/강제 종료는 미실시이며 위 결과는 모의 SessionEnding이다.
 - NAS/SMB 서버와 실제 매핑 해제·재연결·다른 로그온 세션, 인증/권한 변경은 장비 미제공으로 미검증.
 - RaiDrive backend/version별 캐시·메타데이터 전송·seek·재연결은 미검증. 오류 주입 성공을 provider 호환성 성공으로 바꾸지 않는다.
 - 사용자 실제 Windows 조작, Explorer UI/UNC 등록 UI, 원격 휴지통/v2 실행·복구, 감상 엔진 지연 IO는 각각 후속 T18A-3~6 범위다. 기존 수동 미검증·승인 생략·AVI 무음 조사 보류를 유지한다.

@@ -185,3 +185,5 @@ D04의 키 기본값 위임에 따라 다음을 확정한다. 전역 등록은 �
 네트워크 보완: 취소 요청/timeout은 IO 완료가 아니다. T18A 설계의 소유 Task drain과 원격 삭제 격리를 완료하기 전 DB/복원 키를 해제하지 않는다. 살아 있는 IO를 둔 ExitBlocked에서 복원만으로 신규 작업을 재개하지 않는다. 실제 원격 종료 시간 상한은 보장하지 않으며 강제 종료는 추가하지 않는다. 상세 상태표는 DATA_AND_RANDOM_POLICY.md T18A §6, 구현은 T18A-2/4/6이다.
 
 T18A-2의 Closing 차단은 임시 감상 창 닫기 요청과 분리한다. ExitBlocked에서 기존 Retry/복구/복원/종료 재시도는 유지하지만 새 감상·새 삭제·소스 편집·스캔을 열지 않는다. Restore만으로 조정자를 재시작하지 않는다. 취소를 무시하는 worker 완료 전에는 DB를 해제하지 않으며 오류 주입 검증과 실제 NAS/RaiDrive 미검증은 `T18A_2_SCAN_LIFECYCLE_VALIDATION.md`에 기록한다.
+
+PR #24 종료 보완: App의 시작 오류 등 직접 종료 요청은 `RequestShutdownAsync`로, Scans 시작 뒤 WPF SessionEnding은 동기 Cancel 설정 후 같은 AppLifecycle 종료로 연결한다. 중복 OS/앱 종료 요청은 기존 작업을 공유하고 ExitBlocked·저장 재시도·복원을 유지한다. OS 로그오프/종료가 취소될 수 있으며 앱 종료 후 사용자가 다시 요청해야 할 수 있다. 강제 OS 종료·프로세스 제거까지 정상 저장을 보장하지 않는다. OnExit는 완료 후 해제만 담당하며 비동기 대기나 Dispatcher 동기 차단을 추가하지 않는다.

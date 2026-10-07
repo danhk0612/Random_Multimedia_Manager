@@ -458,11 +458,11 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 
 #### T18A-2 조정자 API와 인계 경계
 
-- 앱은 `MainWindow.Scans` 하나를 사용하고 시작 복구 뒤 `Start()`한다. `ScanSourceAsync`/`ScanCategoryAsync`는 SourceId 요청을 합치며 실행 중 같은 소스 수동 요청도 한 관찰로 합친다. `CancelManual`은 실제 worker 소유권을 유지한 채 취소를 요청한다. 기존 `LibraryScanner.ScanCategoryAsync`는 독립 테스트 호환용 transient 조정자다.
+- 앱은 `MainWindow.Scans` 하나를 사용하고 시작 복구 뒤 `Start()`한다. `ScanSourceAsync`/`ScanCategoryAsync`는 SourceId 요청을 합치며 실행 중 같은 소스·설정 generation의 수동 요청은 probe 대기부터 같은 관찰/수집 결과를 공유한다. 관찰만 하던 discovery에 합류하면 필요한 수집을 한 번 연결하며, 취소된 worker·다른 소스·이전 generation에는 합류하지 않는다. `CancelManual`은 실제 worker 소유권을 유지한 채 취소를 요청한다. 완료/취소된 요청의 Progress는 소유권에 따라 해제하며, 이전 worker의 정리가 새 요청의 대기자/콜백을 지우지 않는다. collector가 늦게 Report하거나 Progress<T>가 UI에 늦게 전달해도 worker/token 및 UI 요청 소유권을 확인한다. 기존 `LibraryScanner.ScanCategoryAsync`는 독립 테스트 호환용 transient 조정자다.
 - `WindowsStorageProbe`는 WNet 매핑, 실제 장치 종류/볼륨 근거를 worker에서 수집한다. `CollectAsync`는 한 소스의 메타데이터만 반환한다. 관찰 전후 DB 바인딩 revision과 프로세스 generation을 검사한다. 원격 Missing은 반영하지 않고 로컬 Missing도 조상/개별 경로를 재확인한다. 부분 실패는 완료 시각을 갱신하지 않는다.
 - `SavePolicyAsync`와 `ConfirmBindingAsync`는 배타 lease를 사용하며 확인은 실제 근거를 재관찰한다. Unknown은 명시적 확인을 요구한다. 미연결 UI를 대신해 원격을 암묵 승인하지 않는다. 로컬 근거가 입증된 기존 미설정 소스에만 D10 기본값을 저장하며 사용자 정책은 보존한다.
 - `EnterExclusiveAsync`는 신규 scan admission 차단 → 취소 요청 → 실제 worker 완료 순서로 lease를 반환한다. 감상 창 전체 수명, 소스 편집, 기존 삭제 복구를 보호한다. `ConfigurationChanged`는 성공한 편집의 lease 안에서 호출하여 이전 관찰을 무효화한다. 삭제 격리 분류는 자동/수동 검사 모두 보류한다.
-- `CloseAsync`는 sticky Closing, timer/watcher 폐기, queued 요청 취소와 실제 worker drain을 제공한다. Restore는 이를 해제하지 않는다. 기존 MainWindow/AppLifecycle의 저장·복구·목록 읽기 drain 다음 DB를 해제한다. 숨김은 Closing이 아니며 유휴 자동 검사가 UI를 노출하지 않는다.
+- `CloseAsync`는 sticky Closing, timer/watcher 폐기, queued 요청 취소와 실제 worker drain을 제공한다. Restore는 이를 해제하지 않는다. 기존 MainWindow/AppLifecycle의 저장·복구·목록 읽기 drain 다음 DB를 해제한다. 숨김은 Closing이 아니며 유휴 자동 검사가 UI를 노출하지 않는다. `App.RequestShutdownAsync`는 시작 실패를 포함한 앱 내부 종료 요청을 같은 AppLifecycle 종료 작업으로 연결한다. Scans 시작 뒤 WPF SessionEnding은 Cancel을 동기 설정한 후 이 비동기 경계로 들어간다. OnExit에서 async 대기하거나 Dispatcher를 막지 않는다. OS 요청은 거부될 수 있어 앱 종료 후 사용자가 로그오프/시스템 종료를 다시 요청해야 할 수 있으며 강제 OS 종료/프로세스 제거는 정상 저장·drain을 보장하지 않는다.
 - 실제 원격 삭제/v2 복구, 별칭 정리, 감상 후보/엔진 IO, UNC·정책 UI는 T18A-3~5에 남긴다. 검증 범위와 실물 미검증은 `T18A_2_SCAN_LIFECYCLE_VALIDATION.md`를 따른다.
 
 ### 8. 지원·검증 기준 (T18A-1~2 자동 검증, 실물/후속 검증 대기)
