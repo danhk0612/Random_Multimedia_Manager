@@ -248,7 +248,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18A — 변경 감지와 경로 상태 갱신
 
 - 목적: 외부 파일 변경과 라이브러리 정합성 유지.
-- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 통합 완료); T18A-2~6 미착수.
+- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 통합 완료); T18A-2 PR #24 구현·Windows 자동 검증 완료/병합 대기; T18A-3~6 미착수.
 - 선행: T05/T12; T02 식별 계약.
 - 범위/수정 영역: 변경 감지·스캔·경로 추가/Missing 갱신(이동 상태 승계 없음).
 - 완료 조건/검증: 추가/삭제/이름변경·이벤트 중복/누락 뒤 재스캔, 잘못된 기록 병합 방지, 시작 검증 옵션 확인.
@@ -272,7 +272,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 완료 조건/검증: 공식 SDK/GPU/드라이버 조건, 현재 출력 결합 가능성·성능/복사비용·색/HDR·일반 재생 복귀 검증; 통합 여부와 별도 구현 Task 제안.
 - 수정하지 말아야 할 영역: 초기 엔진 선제 교체·검증 없이 VSR 지원 표기.
 
-## T18A 구현 인계 — T18A-1 main 통합 완료, 다음 T18A-2
+## T18A 구현 인계 — T18A-2 PR #24, 병합 대기
 
 모든 작업은 최신 main의 AI_WORKFLOW 및 DATA_AND_RANDOM_POLICY T18A 전체와 해당 절을 읽는다. D10~D12/D14~D16이 결정되고 이 보완 설계 PR이 main에 통합되었는지 먼저 확인한다. 미충족이면 코드 변경 없이 차단을 보고한다. 아래 순서에 따라 **지정된 하나의 Task만** 진행하고 문서/검증 결과·PR까지 제출하며 직접 병합/다음 Task 착수는 하지 않는다. 완료 문서는 CURRENT_STATE/TASKS의 실제 영향 범위만 갱신한다.
 
@@ -333,6 +333,10 @@ CURRENT_STATE.md/TASKS.md 및 영향 계약·검증 문서와 PR #24를 갱신�
 ```
 
 후속 시작 시에는 위 공통 절차와 해당 행의 선행/범위/완료/금지 항목 전체를 작업 계약으로 사용한다. 브랜치는 `task/t18a-2-scan-lifecycle`, `task/t18a-3-network-deletion`, `task/t18a-4-network-viewing`, `task/t18a-5-source-ui`, `task/t18a-6-integration`이다. 담당·선행이 바뀌면 구현 전에 이 표를 먼저 재검토한다.
+
+### T18A-2 결과와 후속 기준
+
+검증 코드 `093a3fc`의 Windows Release 및 T03/T05/T06/T09/T11 영향 CI 5개가 통과했다. PR #24는 실제 연결 근거, 소스별 스캔/로컬 watcher/예약, revision·generation 반영 검증, 감상 창 전체 수명 및 편집/복구 배타 제어, Closing 실제 IO drain을 구현한다. API는 DATA_AND_RANDOM_POLICY §7, 오류 주입·실파일·실제 NAS/RaiDrive 미검증은 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md를 따른다. 원격 삭제/v2 복구(T18A-3), 감상 후보/지연 IO(T18A-4), UNC·정책 UI(T18A-5), 실물 통합(T18A-6)은 미착수다. 직접 병합하지 않으며 후속 Task는 PR #24 병합 후 최신 main과 별도 지시를 기준으로 한다.
 
 ### T18A-1 결과와 후속 기준
 

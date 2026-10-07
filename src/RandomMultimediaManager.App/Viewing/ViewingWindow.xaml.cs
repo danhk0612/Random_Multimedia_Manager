@@ -31,6 +31,7 @@ public partial class ViewingWindow : Window
     private Task command = Task.CompletedTask;
     private Task<bool>? closeTask;
     private bool exitRequested, closeAfterRetry;
+    private bool applicationClosing;
     private Window? libraryDialog;
     private LibraryBrowserViewModel? libraryBrowser;
     public string? CloseError { get; private set; }
@@ -99,20 +100,20 @@ public partial class ViewingWindow : Window
     }
     private void Controls()
     {
-        DeleteButton.IsEnabled = !busy && !closing && !exitRequested && Current is not null && deletions is not null
+        DeleteButton.IsEnabled = !applicationClosing && !busy && !closing && !exitRequested && Current is not null && deletions is not null
             && !database.IsDeletionBlocked(Current.Item.PathKey);
         RecoveryButton.IsEnabled = !busy && !closing && !exitRequested && deletions?.Pending.Count > 0;
         bool failed = Coordinator.View.Phase == SessionPhase.SaveFailed;
-        SessionControls.IsEnabled = SettingsControls.IsEnabled = !busy && !closing && !exitRequested && !failed;
-        VideoControls.IsEnabled = !busy && !closing && !exitRequested && !failed;
-        if (Current?.ComicContent is { } comic) comic.IsEnabled = !busy && !closing && !exitRequested && !failed;
+        SessionControls.IsEnabled = SettingsControls.IsEnabled = !applicationClosing && !busy && !closing && !exitRequested && !failed;
+        VideoControls.IsEnabled = !applicationClosing && !busy && !closing && !exitRequested && !failed;
+        if (Current?.ComicContent is { } comic) comic.IsEnabled = !applicationClosing && !busy && !closing && !exitRequested && !failed;
         RetryButton.IsEnabled = ResumeButton.IsEnabled = !busy && !closing && !exitRequested && failed;
     }
     // Admission is synchronous; navigation never queues behind another command. A checkpoint
     // already admitted finishes before any transition can capture/commit a later position.
-    private async Task Run(Func<Task> action, bool whileHidden = false)
+    private async Task Run(Func<Task> action, bool whileHidden = false, bool recovery = false)
     {
-        if (busy || closing || exitRequested || (!whileHidden && PreparedVideo.PrivacyMuted)) return;
+        if (busy || closing || exitRequested || (applicationClosing && !recovery) || (!whileHidden && PreparedVideo.PrivacyMuted)) return;
         busy = true; Controls();
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         command = completion.Task; // Publish before a modal dialog can pump tray messages.
@@ -124,13 +125,13 @@ public partial class ViewingWindow : Window
         }
         await Execute();
     }
-    private async Task Navigate(Func<Task<SessionResult>> action)
+    private async Task Navigate(Func<Task<SessionResult>> action, bool recovery = false)
     {
         var before = Current;
         Status.Text = "감상 전환 준비 중… 준비 중에는 ‘준비 취소’를 사용할 수 있습니다.";
         // Let WPF render the pending state before entering native preparation calls.
         await System.Windows.Threading.Dispatcher.Yield(DispatcherPriority.Background);
-        if (closing || exitRequested) return;
+        if (closing || exitRequested || (applicationClosing && !recovery)) return;
         if (PreparedVideo.PrivacyMuted)
         {
             Status.Text = "숨김 중에는 감상을 열 수 없습니다.";
@@ -154,7 +155,7 @@ public partial class ViewingWindow : Window
             var item = (await Task.Run(() => database.GetItems(current.Item.CategoryId))).Single(i => i.Id == current.Item.Id);
             Favorite.IsChecked = item.IsFavorite; Excluded.IsChecked = item.IsRandomExcluded;
             Suppressed.IsChecked = Coordinator.View.Pending?.SuppressHistory == true;
-            if (!ReferenceEquals(before, current) && current.Video is not null)
+            if (!applicationClosing && !ReferenceEquals(before, current) && current.Video is not null)
             {
                 Status.Text += "\n" + current.Video.Notice;
                 if (current.Video.RestoredCompleted) Status.Text += "재생 완료 위치입니다. 재생을 누르면 처음부터 시작합니다.";
@@ -200,7 +201,7 @@ public partial class ViewingWindow : Window
         finally { modalInputDepth--; }
         Status.Text = deletions.Pending.Count == 0 ? "삭제 복구 처리를 완료했습니다." : "미해결 삭제 경로의 격리를 유지합니다.";
         Suppressed.IsChecked = Coordinator.View.Pending?.SuppressHistory == true;
-    });
+    }, recovery: true);
     private async void Start(object s, RoutedEventArgs e) => await Run(() => Navigate(() => Coordinator.StartRandomAsync(Guid.NewGuid(), Categories.SelectedItems.Cast<Category>().Select(c => c.Id))));
     private async void BrowseLibrary(object s, RoutedEventArgs e) => await Run(async () =>
     {
@@ -263,16 +264,16 @@ public partial class ViewingWindow : Window
     { if (Coordinator.PreparingToken is { } t) Coordinator.CancelOpening(t.SessionId, t.OperationId); }
     private async void Retry(object s, RoutedEventArgs e)
     {
-        await Run(() => Navigate(() => Coordinator.RetryAsync(Guid.NewGuid())));
+        await Run(() => Navigate(() => Coordinator.RetryAsync(Guid.NewGuid()), recovery: true), recovery: true);
         if (closeAfterRetry && !busy && !closing && !exitRequested
             && Coordinator.View.Phase != SessionPhase.SaveFailed && Coordinator.ReleaseError is null)
             await RequestCloseAsync();
     }
     private async void ResumeFailed(object s, RoutedEventArgs e) => await Run(async () =>
     {
-        await Navigate(() => Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid()));
+        await Navigate(() => Coordinator.ResumeAfterSaveFailureAsync(Guid.NewGuid()), recovery: true);
         if (Coordinator.View.Phase == SessionPhase.Active) { closing = false; closeAfterRetry = false; }
-    });
+    }, recovery: true);
     private async void SuppressedChanged(object s, RoutedEventArgs e) => await Run(async () =>
     {
         if (Current?.Token is { } t) await Navigate(() => Coordinator.SetSuppressedAsync(Guid.NewGuid(), t, Suppressed.IsChecked == true));
@@ -319,7 +320,7 @@ public partial class ViewingWindow : Window
     }
     private async Task Tick()
     {
-        if (busy || closing || exitRequested || Coordinator.View.Phase != SessionPhase.Active) return;
+        if (applicationClosing || busy || closing || exitRequested || Coordinator.View.Phase != SessionPhase.Active) return;
         try
         {
             if (Current?.Video is { } video)
@@ -614,6 +615,11 @@ public partial class ViewingWindow : Window
         TopChrome.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         VideoControls.Visibility = Current?.Video is null || !visible ? Visibility.Collapsed : Visibility.Visible;
         Current?.SetFullscreenControlsVisible(visible);
+    }
+    public void BeginApplicationClosing()
+    {
+        applicationClosing = true;
+        SetExitRequested(true);
     }
     public void SetExitRequested(bool value)
     {

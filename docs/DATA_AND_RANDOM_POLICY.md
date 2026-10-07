@@ -14,7 +14,7 @@ T02 확정 계약과 T03 승인 보완. 저장 구현은 App/Data, 공통 모델
 
 ### Windows 경로 계약
 
-D13으로 네트워크 지원 목표가 추가됐다. 아래는 T02/T05 런타임의 경로 제한이며 T18A-1 공통 정규화/저장 API는 UNC도 처리한다. 실제 UNC UI·스캔·삭제/감상 연결은 후속 Task다. T18A §7의 구현 계약을 함께 따른다.
+D13으로 네트워크 지원 목표가 추가됐다. 아래는 T02/T05 런타임의 경로 제한이며 T18A-1 공통 정규화/저장 API는 UNC도 처리한다. T18A-2는 스캔 조정자를 연결하며 UNC UI·원격 삭제/감상 연결은 후속 Task다. T18A §7의 구현 계약을 함께 따른다.
 
 로컬 드라이브의 완전한 절대 경로만 최초 범위로 받는다. 드라이브 상대 경로(C:foo), 상대 경로, URL, UNC 네트워크 경로, 장치 경로는 등록 거부한다. 네트워크 지원 확장이 아니다.
 구분자를 역슬래시로 통일하고 Windows Path.GetFullPath로 . / ..를 해소한 뒤, 루트 외 끝 구분자를 제거한다. 구성요소 끝 공백/마침표와 대체 데이터 스트림(:) 경로는 모호성을 피하려고 거부한다. 드라이브 구분용 콜론은 허용한다.
@@ -290,11 +290,13 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 - AppliedDeletion 표식은 저널 파일 제거 후에도 보존한다. 저널 제거 직후 전원 단절에 따른 파일 재등장에도 기존 멱등 표식을 적용한다. 삭제 저널 파일 자체는 성공 정리 후 제거한다.
 - 구체적인 오류·재시작·사용자 확인 및 검증 범위는 docs/T12_DELETION_VALIDATION.md. T14 생명주기 문서의 최종 연결은 T12 통합 후 대조하며 트레이/빠른 종료를 구현하지 않았다.
 
-## T18A 변경 감지 설계 — T18A-1 경로·저장 구현, 런타임 연결 대기
+## T18A 변경 감지 설계 — T18A-1~2 구현, 후속 연결 대기
 
 기준 main `c8252a0`, PR #21 merge `7fb2ad4` 포함. D13은 로컬·매핑/RaiDrive·직접 UNC 지원 목표의 승인이다. 아래는 2026-10-04 사용자가 D10~D12/D14~D16을 승인한 구현 기준이다. 제품 구현/호환성 확인 완료는 아니다. 이전 PR #21의 전역 두 bool 및 10분 전체 검사는 이 절로 대체한다. 제품 정책 결정은 DECISIONS.md D10~D12/D14~D16, 구현 인계는 TASKS.md T18A-1~6을 따른다. T18A-1은 DB v2와 저널 읽기 계약만 구현한다. 기존 식별/기록/진행 의미와 v1 저널 복구는 유지한다.
 
-### 1. 코드 대조와 변경 책임
+T18A-2의 소스별 스캔·생명주기 조정자는 PR #24에서 구현·Windows 자동 검증을 완료했다. 감상 엔진·원격 삭제·UI 연결은 후속 Task다. 아래 §1 표는 설계 시점 코드 대조이며 현재 API와 인계 경계는 §7을 따른다.
+
+### 1. 설계 시점 코드 대조와 변경 책임
 
 아래 경로는 `src/RandomMultimediaManager.App/` 기준이다. 문서의 “로컬 전용”과 달리 드라이브 문자 형식 검사는 매핑 드라이브도 통과할 수 있다. 이것은 의도된 네트워크 지원이나 검증 완료의 근거가 아니다.
 
@@ -408,7 +410,7 @@ UI에서 remote Exists/GetAttributes/열거/연결 조회/open/dispose를 동기
 | 상태 | 허용/차단 및 순서 |
 |---|---|
 | DB/저널 초기 복구 | 네트워크 스캔보다 우선; 격리 확보 후 목록 표시. 복구 UI가 해결 전 OS 호출을 만들지 않음 |
-| 유휴 | Dispatcher admission에서 검사+등록을 await 없이 수행. 앱 전체 스캔 하나, 소스별 요청 병합 |
+| 유휴 | 단일 admission에서 검사+등록을 await 없이 수행(T18A-2 조정자 lock). 앱 전체 스캔 하나, 소스별 요청 병합 |
 | 열거 중 | 편집/감상/복구는 취소 요청 후 실제 Task drain; 반환되지 않으면 대기 상태 유지. 새로운 worker로 재시도 금지 |
 | Apply 진입 이후 | 취소로 성공을 무효화하지 않고 transaction 결과까지 기다림. DB lock 안에서 IO/Dispatcher 대기 금지 |
 | 감상 창 존재(Empty/Opening/Active/SaveFailed 포함) | 스캔 반영·재바인딩 보류, dirty만 유지. pause/숨김/Busy=false로 예외 허용 안 함 |
@@ -443,10 +445,10 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 
 #### T18A-1 공개 API와 인계 경계
 
-- Core `WindowsPath.Normalize`는 IO 없이 Windows 드라이브/UNC를 정규화하고 Path/PathKey/Root/RootKey를 반환한다. `IsSameOrDescendant`는 루트·구성요소 경계를 검사한다. `SourcePathRules.NormalizeFolder`는 같은 정규화를 제공한다. 기존 UI의 `NormalizeLocalFolder`는 이 함수를 사용하는 드라이브 전용 진입점이며 UNC UI는 T18A-5까지 연결하지 않는다. 기존 scanner의 관찰/조상 IO는 T18A-2가 변경한다.
-- `StorageObservation.Classify`는 수집된 매핑 조회 결과·드라이브 종류·장치/볼륨/provider 근거를 분류한다. 실패한 WNet 조회 또는 Fixed 보고만으로 Local이 되지 않는다. 실제 WNet/장치 조회 worker는 T18A-2 책임으로, 이 API가 네트워크를 호출하지 않는다. ExpectedTarget은 정규 UNC 대상 또는 로컬 장치 근거이며 비밀번호/token을 넣지 않는다. Provider/Device/Volume은 보조 근거이며 영구 물리 신원 증명이 아니다.
+- Core `WindowsPath.Normalize`는 IO 없이 Windows 드라이브/UNC를 정규화하고 Path/PathKey/Root/RootKey를 반환한다. `IsSameOrDescendant`는 루트·구성요소 경계를 검사한다. `SourcePathRules.NormalizeFolder`는 같은 정규화를 제공한다. 기존 UI의 `NormalizeLocalFolder`는 이 함수를 사용하는 드라이브 전용 진입점이며 UNC UI는 T18A-5까지 연결하지 않는다. scanner의 관찰/조상 IO는 T18A-2에서 소스 범위로 변경했다.
+- `StorageObservation.Classify`는 수집된 매핑 조회 결과·드라이브 종류·장치/볼륨/provider 근거를 분류한다. 실패한 WNet 조회 또는 Fixed 보고만으로 Local이 되지 않는다. 실제 WNet/장치 조회 worker는 T18A-2의 WindowsStorageProbe가 담당하며, 이 API가 네트워크를 호출하지 않는다. ExpectedTarget은 정규 UNC 대상 또는 로컬 장치 근거이며 비밀번호/token을 넣지 않는다. Provider/Device/Volume은 보조 근거이며 영구 물리 신원 증명이 아니다.
 - `GetStorageBinding(path)`는 소스 소속 여부와 무관하게 루트 바인딩을 조회한다. `ConfirmStorageBinding(path, expectedRevision, observation, userConfirmed)`는 revision을 비교하여 오래된 결과를 거부한다. 기존 ExpectedTarget/근거가 달라지면 BindingChanged 오류로 보존하고, 원격/불명 최초 채택에는 사용자 확인을 요구한다. 같은 경로의 새 대상을 수용하는 API는 없다. 성공 시 revision 증가와 미선택 소스의 기본 정책 삽입을 한 transaction으로 처리한다. 이미 저장된 정책은 덮어쓰지 않는다.
-- `BindingVerification`은 프로세스 내 확인 계약이다. 생성 시 Unconfirmed이고 `Invalidate()`로 generation을 증가시켜 끊김/설정 변경 전 결과를 버린다. `Observe(generation, observation, userConfirmed)`는 재매핑을 차단하며 `CanAccess(path, generation)`는 같은 루트의 과거 항목에도 적용한다. Unknown은 매 시작/관찰된 재연결 후 다시 확인한다. 이 객체의 호출/IO admission 연결은 T18A-2/4/5의 책임이며 현재 감상·스캔이 이 검사로 보호된다고 주장하지 않는다. 조정자는 같은 admission 안에서 generation 확인→DB 확인→새 verification 생성/후속 IO를 연결해야 한다.
+- `BindingVerification`은 프로세스 내 확인 계약이다. 생성 시 Unconfirmed이고 `Invalidate()`로 generation을 증가시켜 끊김/설정 변경 전 결과를 버린다. `Observe(generation, observation, userConfirmed)`는 재매핑을 차단하며 `CanAccess(path, generation)`는 같은 루트의 과거 항목에도 적용한다. Unknown은 매 시작/관찰된 재연결 후 다시 확인한다. 이 객체의 호출/IO admission 연결은 T18A-2/4/5의 책임이며 T18A-2 스캔은 이 검사를 연결했지만 감상 IO 연결은 T18A-4에 남긴다. 조정자는 같은 admission 안에서 generation 확인→DB 확인→새 verification 생성/후속 IO를 연결해야 한다.
 - `GetSourceRefreshPolicy(sourceId)`의 null은 미선택이다. `GetEffectiveSourceRefreshPolicy`는 미선택을 Manual/시작 끔으로 반환한다. `SaveSourceRefreshPolicy`는 기존 기간/Resume 설정과 독립 저장하며 Manual=null 주기, Events/Scheduled=1~168시간, Events=확인된 Local만 검증한다. LastCompletedAtUtc는 후속 조정자가 성공 완료 시 갱신할 값이다. 행 저장 자체는 스캔/타이머/watcher를 실행하지 않는다. 확인된 루트에 추가한 새 소스는 승인 기본값을 저장하며 중복 등록은 기존 정책을 보존한다. 기존 Events 정책을 원격/Unknown 루트로 옮기는 편집은 정책을 먼저 수정하기 전까지 rollback한다.
 - 모든 기존 ID/Path/PathKey/이력/진행/VisitCommit/AppliedDeletion/AppSettings는 migration에서 재작성하지 않는다. 기존 소스 및 소스 밖 항목의 루트를 Unknown/RequiresConfirmation으로 생성하고 정책 행은 만들지 않는다. 신규 소스/항목 저장도 루트 행을 보장한다. 소스 삭제는 정책만 cascade하고 바인딩과 항목/기록은 남긴다. 새 쓰기의 경로 쌍은 공통 정규화와 일치해야 하며 기존 행의 키는 정규화 명목으로 바꾸지 않는다.
 - `DeletionRecord` v2는 기존 공통 필드에 `Bindings: DeletionBinding[]`와 `QuarantineScope(Targets/RemoteAndUnknown)`를 추가한다. 각 binding은 `StorageBinding` snapshot과 `Generation≥0`, 각 target은 기존 ItemId/size/time과 `PathKey`를 가진다. 실행 경로와 모든 target의 루트 근거, 중복 ID/루트, enum/필수 필드를 검증한다. v1은 추가 필드 없이 읽고 쓸 수 있으며 읽기 과정에서 원본을 보강/덮어쓰지 않는다. SQL 버전과 저널 버전은 독립이다.
@@ -454,7 +456,16 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 
 검증 근거와 실물 미검증은 `T18A_1_PATH_STORAGE_VALIDATION.md`를 따른다.
 
-### 8. 지원·검증 기준 (T18A-1 이외 런타임 검증 대기)
+#### T18A-2 조정자 API와 인계 경계
+
+- 앱은 `MainWindow.Scans` 하나를 사용하고 시작 복구 뒤 `Start()`한다. `ScanSourceAsync`/`ScanCategoryAsync`는 SourceId 요청을 합치며 실행 중 같은 소스 수동 요청도 한 관찰로 합친다. `CancelManual`은 실제 worker 소유권을 유지한 채 취소를 요청한다. 기존 `LibraryScanner.ScanCategoryAsync`는 독립 테스트 호환용 transient 조정자다.
+- `WindowsStorageProbe`는 WNet 매핑, 실제 장치 종류/볼륨 근거를 worker에서 수집한다. `CollectAsync`는 한 소스의 메타데이터만 반환한다. 관찰 전후 DB 바인딩 revision과 프로세스 generation을 검사한다. 원격 Missing은 반영하지 않고 로컬 Missing도 조상/개별 경로를 재확인한다. 부분 실패는 완료 시각을 갱신하지 않는다.
+- `SavePolicyAsync`와 `ConfirmBindingAsync`는 배타 lease를 사용하며 확인은 실제 근거를 재관찰한다. Unknown은 명시적 확인을 요구한다. 미연결 UI를 대신해 원격을 암묵 승인하지 않는다. 로컬 근거가 입증된 기존 미설정 소스에만 D10 기본값을 저장하며 사용자 정책은 보존한다.
+- `EnterExclusiveAsync`는 신규 scan admission 차단 → 취소 요청 → 실제 worker 완료 순서로 lease를 반환한다. 감상 창 전체 수명, 소스 편집, 기존 삭제 복구를 보호한다. `ConfigurationChanged`는 성공한 편집의 lease 안에서 호출하여 이전 관찰을 무효화한다. 삭제 격리 분류는 자동/수동 검사 모두 보류한다.
+- `CloseAsync`는 sticky Closing, timer/watcher 폐기, queued 요청 취소와 실제 worker drain을 제공한다. Restore는 이를 해제하지 않는다. 기존 MainWindow/AppLifecycle의 저장·복구·목록 읽기 drain 다음 DB를 해제한다. 숨김은 Closing이 아니며 유휴 자동 검사가 UI를 노출하지 않는다.
+- 실제 원격 삭제/v2 복구, 별칭 정리, 감상 후보/엔진 IO, UNC·정책 UI는 T18A-3~5에 남긴다. 검증 범위와 실물 미검증은 `T18A_2_SCAN_LIFECYCLE_VALIDATION.md`를 따른다.
+
+### 8. 지원·검증 기준 (T18A-1~2 자동 검증, 실물/후속 검증 대기)
 
 | 환경 | 목표 지원 | 제약 / 반드시 실제 확인 |
 |---|---|---|

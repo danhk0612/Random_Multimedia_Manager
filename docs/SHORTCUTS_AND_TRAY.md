@@ -178,8 +178,10 @@ D04의 키 기본값 위임에 따라 다음을 확정한다. 전역 등록은 �
 - 전체화면에서는 공통/만화/영상 컨트롤을 함께 감추며, 3초 입력 유휴 후 자동 숨김 및 마우스/키 활동에 따른 재표시를 적용한다. F11/Esc 전환과 T16 PrivacyWindows 숨김·복원은 전체화면 이전 상태를 보존한다.
 - Windows 자동 검증 결과 및 남은 사용자 수동 확인 항목은 docs/T13_VIEWING_SHORTCUTS_VALIDATION.md를 따른다. PR #20은 main에 통합했으며 단축키 표와 정책은 변경하지 않았다.
 
-## T18A 감지와 생명주기 연결 — 설계 검토안
+## T18A 감지와 생명주기 연결 — T18A-2 조정자 구현
 
-상세 상태표와 종료 drain/ExitBlocked 재개 조건은 DATA_AND_RANDOM_POLICY.md의 T18A 절을 따른다. 감지 정지는 Closing admission에서 시작하고 DB 해제 전에 콜백·스캔·목록 읽기를 정리하는 안이다. Hidden은 종료가 아니며 자동 오류/완료로 창을 노출하거나 앱 mute를 바꾸지 않는다. Hidden 유휴 검사 정책은 DECISIONS.md D12 사용자 승인 완료(2026-10-04)다. 기존 T16 복원 키/트레이 조건, 단일 정상 종료, Pending/삭제 실패 보존은 변경하지 않는다. 제품 구현은 아직 없다.
+상세 상태표와 종료 drain/ExitBlocked 재개 조건은 DATA_AND_RANDOM_POLICY.md의 T18A 절을 따른다. 감지 정지는 Closing admission에서 시작하고 DB 해제 전에 콜백·스캔·목록 읽기를 정리하는 안이다. Hidden은 종료가 아니며 자동 오류/완료로 창을 노출하거나 앱 mute를 바꾸지 않는다. Hidden 유휴 검사 정책은 DECISIONS.md D12 사용자 승인 완료(2026-10-04)다. 기존 T16 복원 키/트레이 조건, 단일 정상 종료, Pending/삭제 실패 보존은 변경하지 않는다. T18A-2에서 스캔 admission/drain과 감상 창 전체 수명 lease를 연결했다. 원격 삭제와 감상 엔진 지연 IO 연결은 후속 Task다.
 
 네트워크 보완: 취소 요청/timeout은 IO 완료가 아니다. T18A 설계의 소유 Task drain과 원격 삭제 격리를 완료하기 전 DB/복원 키를 해제하지 않는다. 살아 있는 IO를 둔 ExitBlocked에서 복원만으로 신규 작업을 재개하지 않는다. 실제 원격 종료 시간 상한은 보장하지 않으며 강제 종료는 추가하지 않는다. 상세 상태표는 DATA_AND_RANDOM_POLICY.md T18A §6, 구현은 T18A-2/4/6이다.
+
+T18A-2의 Closing 차단은 임시 감상 창 닫기 요청과 분리한다. ExitBlocked에서 기존 Retry/복구/복원/종료 재시도는 유지하지만 새 감상·새 삭제·소스 편집·스캔을 열지 않는다. Restore만으로 조정자를 재시작하지 않는다. 취소를 무시하는 worker 완료 전에는 DB를 해제하지 않으며 오류 주입 검증과 실제 NAS/RaiDrive 미검증은 `T18A_2_SCAN_LIFECYCLE_VALIDATION.md`에 기록한다.
