@@ -1,5 +1,6 @@
 using RandomMultimediaManager.App.Data;
 using RandomMultimediaManager.App.Scanning;
+using RandomMultimediaManager.App.ViewModels;
 using RandomMultimediaManager.Core;
 
 internal static class T18A2Verification
@@ -7,6 +8,8 @@ internal static class T18A2Verification
     public static async Task Run()
     {
         await ReviewRegressions();
+        await PostedProgressOwnership();
+        await CancelledProbeAndOtherSource();
         await RemoteScopeAndEvidence();
         await DrainAndViewing();
         await GenerationAndQuarantine();
@@ -120,6 +123,91 @@ internal static class T18A2Verification
             cancelledProgress?.Report(new("late old worker", 0, 0));
             Check(oldCalls == before, "cancelled callback never leaks into new request");
             Console.WriteLine("PASS progress ownership: completed/automatic/late/cancelled/new request");
+        }
+        finally { release.TrySetResult(); await coordinator.CloseAsync(); }
+    }
+
+    private sealed class HeldContext : SynchronizationContext
+    {
+        private readonly List<(SendOrPostCallback Callback, object? State)> posts = new();
+        public override void Post(SendOrPostCallback callback, object? state)
+        { lock (posts) posts.Add((callback, state)); }
+        public int Count { get { lock (posts) return posts.Count; } }
+        public void RunLast()
+        {
+            (SendOrPostCallback Callback, object? State) item;
+            lock (posts) { item = posts[^1]; posts.RemoveAt(posts.Count - 1); }
+            item.Callback(item.State);
+        }
+    }
+    private static async Task PostedProgressOwnership()
+    {
+        using var f = new Fixture(); var source = f.Add(@"\\server\posted"); f.Confirm(source);
+        var entered = NewSignal(); var release = NewSignal(); int calls = 0;
+        var coordinator = new ScanCoordinator(f.Db, (p, _) => Task.FromResult(Evidence(p)),
+            async (_, _, _, progress, _) =>
+            { progress?.Report(new("queued progress " + Interlocked.Increment(ref calls), 0, 0)); entered.TrySetResult(); await release.Task; return Empty; });
+        var editor = new CategoryEditorViewModel(f.Db, coordinator) { SelectedCategory = f.Category };
+        var context = new HeldContext();
+        Task<EditorResult> Begin()
+        {
+            var previous = SynchronizationContext.Current;
+            SynchronizationContext.SetSynchronizationContext(context);
+            try { return editor.ScanSelectedCategoryAsync(); }
+            finally { SynchronizationContext.SetSynchronizationContext(previous); }
+        }
+        try
+        {
+            var first = Begin(); await entered.Task; release.SetResult();
+            await Until(() => context.Count >= 2);
+            // Deliver completion before the older Progress<T> dispatcher post.
+            context.RunLast(); await first; string complete = editor.ScanProgressMessage;
+            context.RunLast();
+            Check(editor.ScanProgressMessage == complete, "already-posted progress cannot overwrite completed UI");
+            entered = NewSignal(); release = NewSignal();
+            var cancelled = Begin(); await entered.Task; editor.CancelScan(); release.SetResult();
+            await Until(() => context.Count >= 2); context.RunLast(); await cancelled;
+            string cancelMessage = editor.ScanProgressMessage;
+            entered = NewSignal(); release = NewSignal();
+            var next = Begin(); await entered.Task;
+            context.RunLast(); // Deliver the new request's valid progress.
+            string nextMessage = editor.ScanProgressMessage;
+            context.RunLast(); // Deliver the old cancelled request's queued progress.
+            Check(editor.ScanProgressMessage == nextMessage && nextMessage != cancelMessage,
+                "late cancelled post does not overwrite new request; new callback is preserved");
+            release.SetResult(); await Until(() => context.Count != 0); context.RunLast(); await next;
+            Console.WriteLine("PASS posted Progress<T>: complete/cancel/new UI request ownership");
+        }
+        finally { release.TrySetResult(); await coordinator.CloseAsync(); }
+    }
+
+    private static async Task CancelledProbeAndOtherSource()
+    {
+        using var f = new Fixture(); var first = f.Add(@"\\server\cancelled-probe");
+        var other = f.Add(@"\\server\other"); f.Confirm(first); f.Confirm(other);
+        var entered = NewSignal(); var release = NewSignal(); int probes = 0;
+        var collected = new List<Guid>();
+        var coordinator = new ScanCoordinator(f.Db, async (p, _) =>
+        {
+            if (Interlocked.Increment(ref probes) == 1) { entered.SetResult(); await release.Task; }
+            return Evidence(p);
+        }, (_, source, _, _, _) => { lock (collected) collected.Add(source.Id); return Task.FromResult(Empty); });
+        try
+        {
+            using var cancel = new CancellationTokenSource();
+            var old = coordinator.ScanSourceAsync(first.Id, cancel.Token); await entered.Task; cancel.Cancel();
+            var next = coordinator.ScanSourceAsync(first.Id);
+            var separate = coordinator.ScanSourceAsync(other.Id);
+            Check(!old.IsCompleted && !next.IsCompleted && !separate.IsCompleted,
+                "cancelled probe and new/different source requests retain actual worker ownership");
+            release.SetResult();
+            Check((await old).Status == LibraryScanStatus.Cancelled, "cancelled probe result cannot satisfy new request");
+            Check((await next).Status == LibraryScanStatus.Completed && (await separate).Status == LibraryScanStatus.Completed,
+                "new same-source and distinct source requests each complete independently");
+            await coordinator.Completion;
+            lock (collected) Check(collected.Count == 2 && collected.Distinct().Count() == 2,
+                "cancelled probe performs no collection and different sources never share results");
+            Console.WriteLine("PASS cancelled probe/new request/different source separation");
         }
         finally { release.TrySetResult(); await coordinator.CloseAsync(); }
     }

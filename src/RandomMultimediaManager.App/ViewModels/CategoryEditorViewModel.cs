@@ -190,7 +190,13 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         scanCancellation = new CancellationTokenSource();
         Category category = SelectedCategory;
         ScanProgressMessage = "저장된 활성 소스 폴더를 확인하고 있습니다.";
-        var progress = new Progress<LibraryScanProgress>(x => ScanProgressMessage = x.Message);
+        var owner = scanCancellation;
+        var progress = new Progress<LibraryScanProgress>(x =>
+        {
+            // Progress<T> posts to the dispatcher; ownership must also be checked on delivery.
+            if (IsScanning && ReferenceEquals(scanCancellation, owner) && !owner.IsCancellationRequested)
+                ScanProgressMessage = x.Message;
+        });
         try
         {
             LibraryScanResult result = Scans is null
