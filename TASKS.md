@@ -334,6 +334,10 @@ CURRENT_STATE.md/TASKS.md 및 영향 계약·검증 문서와 PR #24를 갱신�
 
 후속 시작 시에는 위 공통 절차와 해당 행의 선행/범위/완료/금지 항목 전체를 작업 계약으로 사용한다. 브랜치는 `task/t18a-2-scan-lifecycle`, `task/t18a-3-network-deletion`, `task/t18a-4-network-viewing`, `task/t18a-5-source-ui`, `task/t18a-6-integration`이다. 담당·선행이 바뀌면 구현 전에 이 표를 먼저 재검토한다.
 
+### T18A-2 결과와 후속 기준
+
+검증 코드 `093a3fc`의 Windows Release 및 T03/T05/T06/T09/T11 영향 CI 5개가 통과했다. PR #24는 실제 연결 근거, 소스별 스캔/로컬 watcher/예약, revision·generation 반영 검증, 감상 창 전체 수명 및 편집/복구 배타 제어, Closing 실제 IO drain을 구현한다. API는 DATA_AND_RANDOM_POLICY §7, 오류 주입·실파일·실제 NAS/RaiDrive 미검증은 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md를 따른다. 원격 삭제/v2 복구(T18A-3), 감상 후보/지연 IO(T18A-4), UNC·정책 UI(T18A-5), 실물 통합(T18A-6)은 미착수다. 직접 병합하지 않으며 후속 Task는 PR #24 병합 후 최신 main과 별도 지시를 기준으로 한다.
+
 ### T18A-1 결과와 후속 기준
 
 `task/t18a-1-path-storage`에서 경로·바인딩/정책·v2 migration·v1/v2 저널 계약을 구현했다. PR #23의 검증 코드 `af4bd6e`는 N01~N03 및 Windows Release/영향 CI 5개가 모두 통과했다. 실제 NAS/RaiDrive는 미검증이다. 실제 API는 DATA_AND_RANDOM_POLICY T18A §7, 자동/실물 구분은 docs/T18A_1_PATH_STORAGE_VALIDATION.md를 따른다. v2 저널 실행/복구는 T18A-3까지 차단하며 자동 검사/UNC UI는 활성화하지 않는다. PR #23은 `08adddc`로 main 통합 완료했다. 다음은 위 지시문의 T18A-2 PR #24 보완이며 T18A-3~6은 선행 통합을 기다린다.
@@ -344,6 +348,3 @@ CURRENT_STATE.md/TASKS.md 및 영향 계약·검증 문서와 PR #24를 갱신�
 - PR 리뷰 3건을 실제 App.xaml.cs/ScanCoordinator.cs/AppLifecycle.cs와 대조했다. (1) SessionEnding/직접 Shutdown이 scan drain을 우회하고 OnExit에서 DB를 해제함, (2) 자동 probe 중 수동 요청이 동일 소스 수집을 중복 실행함, (3) 완료된 수동 Progress가 남아 후속 자동 검사에서 이전 UI에 전달됨을 코드 경로에서 확인했다. 이번 검토에서 Windows 재현 테스트를 실행하지는 않았다.
 - PR #24는 미병합으로 유지한다. 다음은 TASKS.md의 T18A-2 병합 전 보완 지시이며 T18A-3는 차단한다. 기존 CI 성공은 이 세 경계의 수정·재검증을 대체하지 않는다.
 
-### T18A-2 결과와 후속 기준
-
-검증 코드 `093a3fc`의 Windows Release 및 T03/T05/T06/T09/T11 영향 CI 5개가 통과했다. PR #24는 실제 연결 근거, 소스별 스캔/로컬 watcher/예약, revision·generation 반영 검증, 감상 창 전체 수명 및 편집/복구 배타 제어, Closing 실제 IO drain을 구현한다. API는 DATA_AND_RANDOM_POLICY §7, 오류 주입·실파일·실제 NAS/RaiDrive 미검증은 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md를 따른다. 원격 삭제/v2 복구(T18A-3), 감상 후보/지연 IO(T18A-4), UNC·정책 UI(T18A-5), 실물 통합(T18A-6)은 미착수다. 직접 병합하지 않으며 후속 Task는 PR #24 병합 후 최신 main과 별도 지시를 기준으로 한다.

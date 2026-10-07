@@ -255,6 +255,14 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 - 검증: 문서/코드 대조, 문서 링크·범위·공백 검사. 제품 코드·SQL/DB·패키지·workflow 변경 없음. Windows 빌드/오류 주입/NAS/RaiDrive 실행은 하지 않았다. N01~N12는 후속 검증 조건이다.
 - 이전 Task의 수동 미검증/승인 생략 및 AVI 무음 조사 보류를 유지한다. 설계 PR #22를 `2959391`로 main에 통합했다. T18A-1 저장 기반은 아래 PR #23에 구현하며 후속 런타임 연결·T18 배포는 미착수다.
 
+## T18A-2 소스별 스캔·생명주기 연결 (PR #24)
+
+- 기준 main `7b90722`, 브랜치 `task/t18a-2-scan-lifecycle`. `MainWindow.Scans`가 실제 Windows 연결 근거와 바인딩 revision/generation을 검증하고 SourceId별 관찰·watcher·시작/예약을 조정한다. 원격 Manual 자동 열거는 하지 않으며 원격/불확실한 부재로 기존 항목을 Missing 처리하지 않는다.
+- 감상 창 생성 전부터 ShowDialog 반환까지 스캔 배타 lease를 유지한다. 소스 편집/삭제 복구와 반영을 직렬화한다. Closing은 신규 스캔/감상/편집/삭제를 차단하며 취소를 무시하는 실제 worker도 완료한 다음 기존 종료 drain과 DB 해제를 진행한다. ExitBlocked의 기존 저장 재시도·복구·복원은 유지하고 스캔을 자동 재개하지 않는다.
+- 검증 코드 `093a3fc`의 Windows x64/.NET 10 Release 빌드(경고 0·오류 0) 및 T03/T05/T06/T09/T11 CI 5개가 통과했다. N04~N05/N09~N11 조정자 오류 주입과 실제 로컬 watcher/WPF 검증, 실제 NAS·RaiDrive 미검증을 [검증 기록](docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md)에 구분한다. 이후 완료 반영은 문서만 변경한다.
+- PR #24 병합 대기. 원격 삭제/v2 복구, 후보 정책, 감상 엔진 지연 IO, UNC·설정 UI는 후속 T18A-3~6에 남긴다. T18 배포와 직접 병합은 수행하지 않았다.
+
+
 ## T18A-1 경로·바인딩·저장 기반
 
 - 기준 main `ae77b8b`, PR #22 통합과 D10~D12/D14~D16 승인을 확인했다. 브랜치 `task/t18a-1-path-storage`, [PR #23](https://github.com/danhk0612/Random_Multimedia_Manager/pull/23), 구현·Windows 자동 검증 완료/main 통합 완료.
@@ -262,13 +270,6 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 - 자동 갱신/원격 삭제 활성화, UNC UI, 스캔·감상 IO admission 연결은 하지 않았다. v2 저널 복구는 T18A-3 연결 전 전역 차단한다. 실제 API/필드/후속 연결 경계는 DATA_AND_RANDOM_POLICY T18A §7.
 - 검증 코드 `af4bd6e`: Windows Server 2025 x64/.NET SDK 10.0.401 Release 빌드 경고 0·오류 0. N01~N03 6개와 T03/T05/T06/T09/T11(만화·자막 및 T12~T17 영향 회귀 포함) CI 5개 모두 성공. 실제 NAS/RaiDrive·사용자 DB·Windows 수동 UI는 미검증. Linux 부분 실행 및 최초 Windows 검사 기대값 보완은 검증 문서에 구분했다.
 - PR #23은 `08adddc`로 main 통합 완료했다. 검증 이후 최종 헤드 `06a89f4`까지의 차이는 문서 3개뿐임을 확인했다. 상세 검증은 docs/T18A_1_PATH_STORAGE_VALIDATION.md. 다음 작업은 T18A-2(소스별 스캔 조정·IO/종료 연결)이며 TASKS.md의 새 작업 지시문을 따른다. T18A 전체 완료나 실제 네트워크 호환성 통과를 뜻하지 않는다.
-
-## T18A-2 소스별 스캔·생명주기 연결 (PR #24)
-
-- 기준 main `7b90722`, 브랜치 `task/t18a-2-scan-lifecycle`. `MainWindow.Scans`가 실제 Windows 연결 근거와 바인딩 revision/generation을 검증하고 SourceId별 관찰·watcher·시작/예약을 조정한다. 원격 Manual 자동 열거는 하지 않으며 원격/불확실한 부재로 기존 항목을 Missing 처리하지 않는다.
-- 감상 창 생성 전부터 ShowDialog 반환까지 스캔 배타 lease를 유지한다. 소스 편집/삭제 복구와 반영을 직렬화한다. Closing은 신규 스캔/감상/편집/삭제를 차단하며 취소를 무시하는 실제 worker도 완료한 다음 기존 종료 drain과 DB 해제를 진행한다. ExitBlocked의 기존 저장 재시도·복구·복원은 유지하고 스캔을 자동 재개하지 않는다.
-- 검증 코드 `093a3fc`의 Windows x64/.NET 10 Release 빌드(경고 0·오류 0) 및 T03/T05/T06/T09/T11 CI 5개가 통과했다. N04~N05/N09~N11 조정자 오류 주입과 실제 로컬 watcher/WPF 검증, 실제 NAS·RaiDrive 미검증을 [검증 기록](docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md)에 구분한다. 이후 완료 반영은 문서만 변경한다.
-- PR #24 병합 대기. 원격 삭제/v2 복구, 후보 정책, 감상 엔진 지연 IO, UNC·설정 UI는 후속 T18A-3~6에 남긴다. T18 배포와 직접 병합은 수행하지 않았다.
 
 ## T18A-2 PR #24 병합 검토 — 보완 필요
 
