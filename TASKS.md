@@ -347,4 +347,3 @@ CURRENT_STATE.md/TASKS.md 및 영향 계약·검증 문서와 PR #24를 갱신�
 - 검토 헤드 `f8942e1`; 제품/테스트 코드 `093a3fc`의 Windows T03/T05/T06/T09/T11 CI 5개 성공 및 이후 문서 6개만 변경됨을 확인했다. 실제 NAS/RaiDrive·사용자 수동 검증은 미실시다.
 - PR 리뷰 3건을 실제 App.xaml.cs/ScanCoordinator.cs/AppLifecycle.cs와 대조했다. (1) SessionEnding/직접 Shutdown이 scan drain을 우회하고 OnExit에서 DB를 해제함, (2) 자동 probe 중 수동 요청이 동일 소스 수집을 중복 실행함, (3) 완료된 수동 Progress가 남아 후속 자동 검사에서 이전 UI에 전달됨을 코드 경로에서 확인했다. 이번 검토에서 Windows 재현 테스트를 실행하지는 않았다.
 - PR #24는 미병합으로 유지한다. 다음은 TASKS.md의 T18A-2 병합 전 보완 지시이며 T18A-3는 차단한다. 기존 CI 성공은 이 세 경계의 수정·재검증을 대체하지 않는다.
-
