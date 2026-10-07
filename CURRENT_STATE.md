@@ -263,8 +263,14 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 - 검증 코드 `af4bd6e`: Windows Server 2025 x64/.NET SDK 10.0.401 Release 빌드 경고 0·오류 0. N01~N03 6개와 T03/T05/T06/T09/T11(만화·자막 및 T12~T17 영향 회귀 포함) CI 5개 모두 성공. 실제 NAS/RaiDrive·사용자 DB·Windows 수동 UI는 미검증. Linux 부분 실행 및 최초 Windows 검사 기대값 보완은 검증 문서에 구분했다.
 - PR #23은 `08adddc`로 main 통합 완료했다. 검증 이후 최종 헤드 `06a89f4`까지의 차이는 문서 3개뿐임을 확인했다. 상세 검증은 docs/T18A_1_PATH_STORAGE_VALIDATION.md. 다음 작업은 T18A-2(소스별 스캔 조정·IO/종료 연결)이며 TASKS.md의 새 작업 지시문을 따른다. T18A 전체 완료나 실제 네트워크 호환성 통과를 뜻하지 않는다.
 
-## T18A-2 PR #24 병합 검토 — 보완 필요
+## T18A-2 PR #24 최초 병합 검토 — 아래 재검토로 갱신됨
 
 - 검토 헤드 `f8942e1`; 제품/테스트 코드 `093a3fc`의 Windows T03/T05/T06/T09/T11 CI 5개 성공 및 이후 문서 6개만 변경됨을 확인했다. 실제 NAS/RaiDrive·사용자 수동 검증은 미실시다.
 - PR 리뷰 3건을 실제 App.xaml.cs/ScanCoordinator.cs/AppLifecycle.cs와 대조했다. (1) SessionEnding/직접 Shutdown이 scan drain을 우회하고 OnExit에서 DB를 해제함, (2) 자동 probe 중 수동 요청이 동일 소스 수집을 중복 실행함, (3) 완료된 수동 Progress가 남아 후속 자동 검사에서 이전 UI에 전달됨을 코드 경로에서 확인했다. 이번 검토에서 Windows 재현 테스트를 실행하지는 않았다.
 - PR #24는 미병합으로 유지한다. 다음은 TASKS.md의 T18A-2 병합 전 보완 지시이며 T18A-3는 차단한다. 기존 CI 성공은 이 세 경계의 수정·재검증을 대체하지 않는다.
+
+## T18A-2 PR #24 재검토 — 추가 보완 필요 (2026-10-08)
+
+- 헤드 `22b61e1`에서 이전 세 문제의 코드 수정과 재현/회귀 검사를 확인했다. 검증 코드 `d563e0a`의 Windows T03/T05/T06/T09/T11 CI 5개 성공, 이후 변경은 문서 5개임을 확인했다. 이전 세 지적은 해결된 것으로 판단한다.
+- 추가 차단: ScanCoordinator의 요청별 토큰이 전역 CancelManual을 호출하여 다른 소스/공유 요청까지 취소한다. watcher 생성 실패는 Signal만 남기고 정상 부재 관찰이 Failures를 초기화하여 짧은 주기 반복을 만들 수 있다. PR 추가 리뷰와 실제 코드를 대조한 결과이며 이번 검토에서 Windows 재현을 실행하지 않았다.
+- PR #24는 미병합이다. 다음은 TASKS.md 새 작업 시작 지시문의 두 추가 보완이다. 기존 구현·이전 보완·CI 결과를 보존하고 수정 전 재현 및 수정 후 Windows 검증을 제출한다. T18A-3와 배포는 선행 병합까지 차단한다. 실제 로그오프/NAS/RaiDrive 미검증은 유지한다.
