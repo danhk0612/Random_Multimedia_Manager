@@ -47,7 +47,8 @@ internal static class T18A2NativeVerification
             var scan = scans.ScanSourceAsync(source.Id); await entered.Task;
             var app = (VerificationApp)Application.Current;
             typeof(App).GetProperty(nameof(App.Lifecycle))!.SetValue(app, lifecycle);
-            var ending = new SessionEndingCancelEventArgs(ReasonSessionEnding.Logoff);
+            var ending = (SessionEndingCancelEventArgs)Activator.CreateInstance(typeof(SessionEndingCancelEventArgs),
+                BindingFlags.Instance | BindingFlags.NonPublic, null, new object[] { ReasonSessionEnding.Logoff }, null)!;
             app.RaiseSessionEnding(ending);
             Check(ending.Cancel, "SessionEnding is synchronously deferred before shutdown");
             var exit = lifecycle.ExitAsync();
