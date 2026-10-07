@@ -32,7 +32,19 @@ dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release
 | N10 | 전체 감상 lease, Empty/Active/checkpoint/Hidden/SaveFailed와 정상 닫기 뒤 해제 | 조정자 오류 주입 및 실제 WPF/만화/저장 실패 trigger |
 | 영향 회귀 | T03 저장/migration/저널, T05 스캔, T06 세션, T11 감상/T12~17, 만화·영상·자막 | 기존 Windows workflow |
 
-최종 실행 결과는 검증 완료 후 아래에 기록한다.
+### 실행 결과
+
+검증 코드 `093a3fc1082c726b5114a09cfb38f0e0881f30c9`, 2026-10-06 Windows x64 러너(OS 10.0.26100), .NET SDK 10.0.401. Release 빌드 경고 0·오류 0. 2026-10-07 최종 결과를 확인했다. 이후 완료 문서 반영은 제품/테스트 코드를 변경하지 않는다.
+
+| Windows workflow | 결과 |
+|---|---|
+| [T03 저장/셸](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37394119744) | 통과 |
+| [T05 스캔/N04~N05/N09~N11 조정자](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37394119813) | 통과 |
+| [T06 세션/스캔 회귀](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37394119906) | 통과 |
+| [T09 영상](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37394120169) | 통과 |
+| [T11 감상/T12~17·만화·영상·자막 회귀](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37394119964) | 통과 |
+
+실제 WPF 검사에서 Empty/Active/checkpoint/Hidden/SaveFailed 동안 스캔 차단, 정상 Leave 후 허용, 지연 worker 동안 DB 유지, 중복 종료 공유, Closing/Restore 후 신규 스캔 0, 실제 IO 완료 후 DB 해제 및 해제 후 재개 차단을 확인했다. 연결 실패/재매핑/원격 캐시는 대역 오류 주입이며 실제 NAS/RaiDrive 결과가 아니다. 이전 실패는 임시 창 닫기와 앱 Closing 차단의 분리 및 새 UNC fixture의 공통 정규화 적용으로 수정한 뒤 재검증했다. 러너의 native 영상 장치/thumbnail 진단 및 기존 임시 fixture 정리 메시지는 사용자 화면/청취·실장비 호환성 검증을 대신하지 않는다.
 
 ## 실제 환경 미검증
 
