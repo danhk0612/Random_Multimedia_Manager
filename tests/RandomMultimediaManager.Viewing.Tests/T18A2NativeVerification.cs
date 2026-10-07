@@ -45,6 +45,11 @@ internal static class T18A2NativeVerification
         {
             main.Show(); await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             var scan = scans.ScanSourceAsync(source.Id); await entered.Task;
+            var app = (VerificationApp)Application.Current;
+            typeof(App).GetProperty(nameof(App.Lifecycle))!.SetValue(app, lifecycle);
+            var ending = new SessionEndingCancelEventArgs(ReasonSessionEnding.Logoff);
+            app.RaiseSessionEnding(ending);
+            Check(ending.Cancel, "SessionEnding is synchronously deferred before shutdown");
             var exit = lifecycle.ExitAsync();
             await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
             Check(!exit.IsCompleted && !db.IsDisposed && main.IsVisible, "stalled scan keeps DB alive and fallback window visible");
@@ -59,6 +64,7 @@ internal static class T18A2NativeVerification
         finally
         {
             release.TrySetResult(); await scans.CloseAsync(); keys.Dispose(); lifecycle.DisposePrivacy();
+            typeof(App).GetProperty(nameof(App.Lifecycle))!.SetValue(Application.Current, null);
             main.Lifecycle = null; main.Close(); db.Dispose();
             Directory.Delete(root, true);
         }

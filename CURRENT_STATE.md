@@ -269,3 +269,9 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 - 감상 창 생성 전부터 ShowDialog 반환까지 스캔 배타 lease를 유지한다. 소스 편집/삭제 복구와 반영을 직렬화한다. Closing은 신규 스캔/감상/편집/삭제를 차단하며 취소를 무시하는 실제 worker도 완료한 다음 기존 종료 drain과 DB 해제를 진행한다. ExitBlocked의 기존 저장 재시도·복구·복원은 유지하고 스캔을 자동 재개하지 않는다.
 - 검증 코드 `093a3fc`의 Windows x64/.NET 10 Release 빌드(경고 0·오류 0) 및 T03/T05/T06/T09/T11 CI 5개가 통과했다. N04~N05/N09~N11 조정자 오류 주입과 실제 로컬 watcher/WPF 검증, 실제 NAS·RaiDrive 미검증을 [검증 기록](docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md)에 구분한다. 이후 완료 반영은 문서만 변경한다.
 - PR #24 병합 대기. 원격 삭제/v2 복구, 후보 정책, 감상 엔진 지연 IO, UNC·설정 UI는 후속 T18A-3~6에 남긴다. T18 배포와 직접 병합은 수행하지 않았다.
+
+## T18A-2 PR #24 병합 검토 — 보완 필요
+
+- 검토 헤드 `f8942e1`; 제품/테스트 코드 `093a3fc`의 Windows T03/T05/T06/T09/T11 CI 5개 성공 및 이후 문서 6개만 변경됨을 확인했다. 실제 NAS/RaiDrive·사용자 수동 검증은 미실시다.
+- PR 리뷰 3건을 실제 App.xaml.cs/ScanCoordinator.cs/AppLifecycle.cs와 대조했다. (1) SessionEnding/직접 Shutdown이 scan drain을 우회하고 OnExit에서 DB를 해제함, (2) 자동 probe 중 수동 요청이 동일 소스 수집을 중복 실행함, (3) 완료된 수동 Progress가 남아 후속 자동 검사에서 이전 UI에 전달됨을 코드 경로에서 확인했다. 이번 검토에서 Windows 재현 테스트를 실행하지는 않았다.
+- PR #24는 미병합으로 유지한다. 다음은 TASKS.md의 T18A-2 병합 전 보완 지시이며 T18A-3는 차단한다. 기존 CI 성공은 이 세 경계의 수정·재검증을 대체하지 않는다.

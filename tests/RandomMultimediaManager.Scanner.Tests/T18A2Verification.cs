@@ -6,6 +6,7 @@ internal static class T18A2Verification
 {
     public static async Task Run()
     {
+        await ReviewRegressions();
         await RemoteScopeAndEvidence();
         await DrainAndViewing();
         await GenerationAndQuarantine();
@@ -46,6 +47,83 @@ internal static class T18A2Verification
         }
         public void Dispose() { Db.Dispose(); try { Directory.Delete(DirectoryPath, true); } catch { } }
     }
+    private sealed class CallbackProgress(Action<LibraryScanProgress> callback) : IProgress<LibraryScanProgress>
+    { public void Report(LibraryScanProgress value) => callback(value); }
+    private static async Task ReviewRegressions()
+    {
+        var errors = new List<Exception>();
+        foreach (bool discoveryOnly in new[] { false, true })
+        {
+            try { await ProbeJoin(discoveryOnly); }
+            catch (Exception ex) { Console.WriteLine("FAIL probe join: " + ex.Message); errors.Add(ex); }
+        }
+        try { await ProgressOwnership(); }
+        catch (Exception ex) { Console.WriteLine("FAIL progress ownership: " + ex.Message); errors.Add(ex); }
+        if (errors.Count != 0) throw new AggregateException(errors);
+    }
+    private static async Task ProbeJoin(bool discoveryOnly)
+    {
+        using var f = new Fixture(); var source = f.Add(@"\\server\probe"); f.Confirm(source);
+        f.Db.SaveSourceRefreshPolicy(source.Id, new(!discoveryOnly, SourceRefreshMode.Manual));
+        var entered = NewSignal(); var release = NewSignal(); int probes = 0, collects = 0;
+        var coordinator = new ScanCoordinator(f.Db, async (p, _) =>
+        {
+            if (Interlocked.Increment(ref probes) == 1) { entered.SetResult(); await release.Task; }
+            return Evidence(p);
+        }, (_, _, _, _, _) => { Interlocked.Increment(ref collects); return Task.FromResult(Empty); });
+        try
+        {
+            coordinator.Start(); await entered.Task;
+            var worker = coordinator.Completion;
+            var manual = coordinator.ScanSourceAsync(source.Id);
+            release.SetResult(); await worker; await manual; await coordinator.Completion;
+            Check(collects == 1, $"probe-time manual request collects once (discoveryOnly={discoveryOnly}, actual={collects})");
+            Console.WriteLine("PASS probe-time manual joins same collection; discoveryOnly=" + discoveryOnly);
+        }
+        finally { release.TrySetResult(); await coordinator.CloseAsync(); }
+    }
+    private static async Task ProgressOwnership()
+    {
+        using var f = new Fixture(); var source = f.Add(@"\\server\progress"); f.Confirm(source);
+        var clock = DateTimeOffset.UtcNow;
+        f.Db.SaveSourceRefreshPolicy(source.Id, new(false, SourceRefreshMode.Scheduled, 1, clock.ToUnixTimeMilliseconds()));
+        IProgress<LibraryScanProgress>? stale = null;
+        int oldCalls = 0, newCalls = 0, collects = 0;
+        var entered = NewSignal(); var release = NewSignal(); bool block = false;
+        var coordinator = new ScanCoordinator(f.Db, (p, _) => Task.FromResult(Evidence(p)),
+            async (_, _, _, progress, _) =>
+            {
+                Interlocked.Increment(ref collects); stale = progress;
+                progress?.Report(new("during collection", 0, 0));
+                if (block) { entered.TrySetResult(); await release.Task; }
+                return Empty;
+            }, () => clock);
+        try
+        {
+            await coordinator.ScanCategoryAsync(f.Category.Id, new CallbackProgress(_ => oldCalls++));
+            Check(oldCalls == 1, "active manual progress delivered");
+            stale?.Report(new("late after completion", 0, 0));
+            coordinator.Start(); await coordinator.Completion;
+            clock += TimeSpan.FromHours(2); coordinator.Tick(); await Until(() => collects == 2); await coordinator.Completion;
+            Check(oldCalls == 1, "completed progress cannot receive late reports or subsequent automatic scan");
+            block = true;
+            using var cancel = new CancellationTokenSource();
+            var cancelled = coordinator.ScanCategoryAsync(f.Category.Id, new CallbackProgress(_ => oldCalls++), cancel.Token);
+            await entered.Task; cancel.Cancel(); var cancelledProgress = stale;
+            int before = oldCalls;
+            cancelledProgress?.Report(new("after cancel", 0, 0));
+            var next = coordinator.ScanCategoryAsync(f.Category.Id, new CallbackProgress(_ => newCalls++));
+            Check(!next.IsCompleted, "new request must wait for cancelled worker drain");
+            release.SetResult();
+            Check((await cancelled).Status == LibraryScanStatus.Cancelled, "old request remains cancelled");
+            Check((await next).Status == LibraryScanStatus.Completed && newCalls == 1, "new request and callback survive old worker cleanup");
+            cancelledProgress?.Report(new("late old worker", 0, 0));
+            Check(oldCalls == before, "cancelled callback never leaks into new request");
+            Console.WriteLine("PASS progress ownership: completed/automatic/late/cancelled/new request");
+        }
+        finally { release.TrySetResult(); await coordinator.CloseAsync(); }
+    }
+
     private static async Task RemoteScopeAndEvidence()
     {
         using var f = new Fixture();

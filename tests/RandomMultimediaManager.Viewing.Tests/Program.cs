@@ -15,7 +15,7 @@ internal static class Program
     [STAThread]
     private static int Main()
     {
-        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        var app = new VerificationApp { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var surface = new Grid();
         var window = new Window { Content = surface, Width = 900, Height = 650 };
         window.Loaded += async (_, _) =>
@@ -318,4 +318,11 @@ internal static class Program
         host.SetExitRequested(false);
         await Wait(() => ((FrameworkElement)host.FindName("SessionControls")).IsEnabled);
     }
+}
+
+// Exercise App's real SessionEnding routing without starting the user's production database.
+internal sealed class VerificationApp : RandomMultimediaManager.App.App
+{
+    protected override void OnStartup(StartupEventArgs e) { }
+    public void RaiseSessionEnding(SessionEndingCancelEventArgs e) => base.OnSessionEnding(e);
 }
