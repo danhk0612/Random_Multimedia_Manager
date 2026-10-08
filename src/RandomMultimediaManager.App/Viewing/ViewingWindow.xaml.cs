@@ -32,6 +32,7 @@ public partial class ViewingWindow : Window
     private Task<bool>? closeTask;
     private bool exitRequested, closeAfterRetry;
     private bool applicationClosing;
+    private readonly ViewingAccess? viewingAccess;
     private Window? libraryDialog;
     private LibraryBrowserViewModel? libraryBrowser;
     public string? CloseError { get; private set; }
@@ -43,13 +44,14 @@ public partial class ViewingWindow : Window
     private SessionToken? savedToken;
     private WindowState previousState;
 
-    public ViewingWindow(LibraryDatabase database, DeletionService? deletions = null, Guid? initialManualItemId = null)
+    public ViewingWindow(LibraryDatabase database, DeletionService? deletions = null, Guid? initialManualItemId = null, ViewingAccess? access = null)
     {
         this.database = database;
+        viewingAccess = access;
         this.deletions = deletions;
         this.initialManualItemId = initialManualItemId;
         InitializeComponent();
-        Coordinator = new(database, new ViewingMediaPreparer(VideoSurface, OnMediaActivated, Released));
+        Coordinator = new(database, new ViewingMediaPreparer(VideoSurface, OnMediaActivated, Released), access: access);
         fullscreenControlsTimer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher)
         { Interval = TimeSpan.FromSeconds(3) };
         fullscreenControlsTimer.Tick += (_, _) => HideFullscreenControls();
@@ -162,6 +164,7 @@ public partial class ViewingWindow : Window
                 try
                 {
                     var candidates = await Task.Run(() => ExternalSubtitleService.Discover(current.Item.Path));
+                    if (applicationClosing || closing || exitRequested || Current != current) return;
                     refreshing = true;
                     ExternalSubtitles.ItemsSource = candidates;
                     refreshing = false;
@@ -348,8 +351,8 @@ public partial class ViewingWindow : Window
     private async void Play(object s, RoutedEventArgs e) => await VideoAction((v,t) => { v.Play(t); v.SetVolume(t,(int)Volume.Value); v.SetMuted(t,Muted.IsChecked == true); });
     private async void Pause(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.SetPaused(t,true), true);
     private async void Stop(object s, RoutedEventArgs e) => await VideoCommand((v,t) => v.StopAsync(t), true);
-    private async void SeekBack(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.Seek(t,v.CaptureProgress(t).VideoPositionMs!.Value-10000));
-    private async void SeekForward(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.Seek(t,v.CaptureProgress(t).VideoPositionMs!.Value+10000));
+    private async void SeekBack(object s, RoutedEventArgs e) => await VideoCommand(async (v,t) => { await v.SeekAsync(t,v.CaptureProgress(t).VideoPositionMs!.Value-10000); });
+    private async void SeekForward(object s, RoutedEventArgs e) => await VideoCommand(async (v,t) => { await v.SeekAsync(t,v.CaptureProgress(t).VideoPositionMs!.Value+10000); });
     private async void VolumeChanged(object s, RoutedPropertyChangedEventArgs<double> e) { if (Coordinator is not null) await VideoAction((v,t) => v.SetVolume(t,(int)e.NewValue)); }
     private async void Mute(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.SetMuted(t,Muted.IsChecked == true));
     private async void RateChanged(object s, SelectionChangedEventArgs e) { if (Coordinator is not null) await VideoAction((v,t) => v.SetRate(t,new float[]{.5f,1,1.5f,2}[Rate.SelectedIndex])); }
@@ -365,7 +368,13 @@ public partial class ViewingWindow : Window
     private async Task Subtitle(string path)
     {
         if (Current?.Video is not { } video) return;
-        var result = await video.LoadExternalSubtitleAsync(Current.VideoVisit,path);
+        var current = Current;
+        if (applicationClosing || closing || exitRequested) return;
+        var ticket = viewingAccess is null ? null : await viewingAccess.CheckAsync(current.Item.Path, CancellationToken.None);
+        if (applicationClosing || closing || exitRequested || Current != current) return;
+        var result = await video.LoadExternalSubtitleAsync(current.VideoVisit,path);
+        if (applicationClosing || closing || exitRequested || Current != current
+            || (ticket is not null && !viewingAccess!.IsCurrent(ticket))) return;
         Status.Text += result.Success ? "\n자막: " + Path.GetFileName(path) : "\n자막 실패 (영상 유지): " + result.Error;
         RefreshTracks(this,new RoutedEventArgs());
     }
@@ -381,7 +390,7 @@ public partial class ViewingWindow : Window
     });
     private async void DisableSubtitles(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.DisableSubtitles(t));
     private void BeginSeek(object s, MouseButtonEventArgs e) => seeking = true;
-    private async void EndSeek(object s, MouseButtonEventArgs e) { await VideoAction((v,t) => v.Seek(t,(long)Position.Value)); seeking = false; }
+    private async void EndSeek(object s, MouseButtonEventArgs e) { await VideoCommand(async (v,t) => { await v.SeekAsync(t,(long)Position.Value); }); seeking = false; }
     private void Fullscreen(object s, RoutedEventArgs e)
     {
         if (!CanAcceptSessionInput) return;
@@ -476,8 +485,8 @@ public partial class ViewingWindow : Window
                     if (CanAcceptVideoInput)
                     {
                         long delta = key == Key.Left ? -5000 : 5000;
-                        _ = VideoAction((video, visit) =>
-                            video.Seek(visit, video.CaptureProgress(visit).VideoPositionMs!.Value + delta));
+                        _ = VideoCommand(async (video, visit) =>
+                            { await video.SeekAsync(visit, video.CaptureProgress(visit).VideoPositionMs!.Value + delta); });
                     }
                     return true;
                 case Key.Up:

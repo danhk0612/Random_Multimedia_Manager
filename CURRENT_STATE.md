@@ -293,3 +293,7 @@ T18A-2 통합 당시 다음은 고성능 Work의 T18A-3(원격 삭제·별칭/�
 최종 코드·테스트 `f4f3b29dc86313fb3612d54b4acb0e8910be1569`(제품 코드 `6836bc4`)의 Windows Release 경고 0·오류 0, N07~N09 12개 및 T03/T05/T06/T09/T11 영향 CI 5개가 모두 통과했다. 100/10,000항목·48소스에서 격리 스냅샷 3회·DeletionPaths 2회·Pump 3회·분류 수동 요청 59회·랜덤 명령 18회로 SQL 수가 동일함을 확인했다. 이력/진행 없는 격리 조회와 Local/매핑/UNC/Unknown·과거 항목·겹친 pending·해제/경계/변경의 의미를 검증했다. 새 fixture 소스 범위 오류로 인한 최초 실패와 수정은 [T18A-3 검증 기록](docs/T18A_3_NETWORK_DELETION_VALIDATION.md)에 남겼다.
 
 PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까지 문서 4개만 변경됐음을 확인했다. 다음은 TASKS.md 지시문의 T18A-4다. 실제 NAS/RaiDrive·로그오프 미검증, T11 파일 선택창 복원 1회 재실행 이력과 기존 수동 미검증/승인 생략은 유지한다. T18A-4·UNC UI·배포는 시작하지 않았다.
+
+## T18A-4 감상 연결 (구현·Windows 검증 진행 중)
+
+`task/t18a-4-network-viewing`에서 연결/바인딩 일시 후보 제외, 세션 실패 집합, 열기 전후 바인딩 확인과 live 삭제 격리, ZIP/영상/자막 실제 IO drain을 구현했다. 기존 Pending/기록/삭제/숨김·복원 의미를 보존한다. Windows Release/영향 CI는 제출 후 검증 중이며 실제 NAS/RaiDrive는 미검증이다. 상세 검사와 제한은 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. PR 병합 전이며 T18A-5/6·배포는 미착수다.

@@ -30,7 +30,30 @@ internal static class T08Checks
         ProgressAndReadingDirection(root);
         PreparationCancellationDoesNotReplaceActive(root);
         BoundedCacheEvictsOldPages(root);
+        DelayedPageDrain(root).GetAwaiter().GetResult();
         Console.WriteLine("PASS T08 prepared comic checks");
+    }
+
+    private static async Task DelayedPageDrain(string root)
+    {
+        string path = Path.Combine(root, "t18a4-drain.cbz");
+        CreateImageArchive(path, 4);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        int reads = 0;
+        var result = await PreparedComic.PrepareAsync(path, null, CancellationToken.None,
+            async (index, _) => { if (index == 1) { reads++; entered.TrySetResult(); await release.Task; } });
+        var comic = result.Comic!;
+        var page = comic.EnsurePageAsync(1);
+        await entered.Task;
+        True(ReferenceEquals(page, comic.EnsurePageAsync(1)) && reads == 1, "T18A-4 duplicate page read shares one owner");
+        var disposal = comic.DisposeAsync().AsTask();
+        True(!disposal.IsCompleted && !CanOpenExclusive(path), "T18A-4 stalled page keeps archive owned during async release");
+        True(!await comic.EnsurePageAsync(2), "T18A-4 closing admits no new page IO");
+        release.SetResult();
+        try { await page; } catch (OperationCanceledException) { }
+        await disposal;
+        True(CanOpenExclusive(path), "T18A-4 actual page completion precedes archive release");
     }
 
     private static void PrepareReadyRequiresDecodedStartPage(string root)

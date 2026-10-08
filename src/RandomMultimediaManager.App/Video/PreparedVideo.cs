@@ -46,6 +46,13 @@ public sealed class PreparedVideo : IAsyncDisposable
     private bool retiring;
     private int failed;
     private Task? disposal;
+    private readonly HashSet<Task> ownedIo = [];
+    private long lastValidPosition;
+    // Deterministic delay injection via reflection in the Windows verification host only.
+    private Func<string, Task>? BeforeIo { get; set; }
+    private async Task<T> NativeAsync<T>(string stage, Func<T> action)
+    { if (BeforeIo is { } before) await before(stage); return await Task.Run(action); }
+    public Task WhenIdleAsync() => Task.WhenAll(ownedIo.ToArray());
     private long? completedPosition;
     private int desiredVolume;
     private bool desiredMuted = true;
@@ -127,8 +134,9 @@ public sealed class PreparedVideo : IAsyncDisposable
             progress?.Validate();
             if (progress is not null && progress.MediaType != MediaType.Video)
                 throw new ArgumentException("영상 진행 위치가 필요합니다.");
-            if (!System.IO.Path.IsPathFullyQualified(path) || !File.Exists(path))
-                throw new FileNotFoundException("로컬 영상 파일을 찾을 수 없습니다.", path);
+            if (!System.IO.Path.IsPathFullyQualified(path))
+                throw new ArgumentException("영상 경로는 절대 경로여야 합니다.", nameof(path));
+            await Task.Run(() => { cancellation.ThrowIfCancellationRequested(); _ = File.GetAttributes(path); }, cancellation);
 
             // Separate instances prevent a candidate's volume/configuration from changing current.
             // The selected output starts muted before its first buffer; do not rely on pre-Play Mute.
@@ -143,7 +151,7 @@ public sealed class PreparedVideo : IAsyncDisposable
             owned.view.MediaPlayer = owned.player;
             if (owned.player.Hwnd == IntPtr.Zero)
                 throw new InvalidOperationException("숨김 WPF 영상 HWND 생성 실패: T02 준비 계약 검증 필요.");
-            if (!owned.player.Play()) throw new InvalidOperationException("엔진이 재생 시작을 거부했습니다.");
+            if (!await Task.Run(() => owned.player.Play())) throw new InvalidOperationException("엔진이 재생 시작을 거부했습니다.");
             owned.preparationStage = "video/audio decode and output";
             await owned.WaitForDecodedAsync(cancellation);
             owned.player.Mute = true;
@@ -164,6 +172,7 @@ public sealed class PreparedVideo : IAsyncDisposable
             owned.CheckFailure();
             owned.PreparedVideoBlocks = owned.media.Statistics.DecodedVideo;
             owned.PreparedAudioBlocks = owned.media.Statistics.DecodedAudio;
+            owned.lastValidPosition = owned.completedPosition ?? Math.Max(0, owned.player.Time);
             owned.ready = true;
             return new(VideoPreparationStatus.Ready, owned, null);
         }
@@ -245,7 +254,7 @@ public sealed class PreparedVideo : IAsyncDisposable
                 target = 0;
             }
             var before = media.Statistics.DecodedVideo;
-            player.Time = target;
+            await Task.Run(() => player.Time = target);
             await WaitAsync(() => media.Statistics.DecodedVideo > before &&
                 Math.Abs((double)player.Time - target) <= 1000, cancellation);
         }
@@ -261,7 +270,7 @@ public sealed class PreparedVideo : IAsyncDisposable
             player.Mute = true;
             player.Volume = 0;
             int beforeRestart = media.Statistics.DecodedVideo;
-            if (!player.Play()) throw new InvalidOperationException("처음부터 준비 재시작 실패.");
+            if (!await Task.Run(() => player.Play())) throw new InvalidOperationException("처음부터 준비 재시작 실패.");
             await WaitAsync(() => media.Statistics.DecodedVideo != beforeRestart, cancellation);
             await WaitForDecodedAsync(cancellation);
             // The ordinary preparation still requires decode/output and Paused before Ready.
@@ -325,7 +334,9 @@ public sealed class PreparedVideo : IAsyncDisposable
     public VideoSnapshot Snapshot(VideoVisit token)
     {
         RequireVisit(token);
-        return new(token, PlaybackProgress.Video(completedPosition ?? Math.Max(0, player.Time)), Math.Max(0, player.Length),
+        if (Volatile.Read(ref failed) == 0 && player.State != VLCState.Error && player.Time >= 0)
+            lastValidPosition = player.Time;
+        return new(token, PlaybackProgress.Video(completedPosition ?? lastValidPosition), Math.Max(0, player.Length),
             RestoredCompleted ? VLCState.Ended : player.State, RestoredCompleted || AudioUnavailable ? desiredVolume : player.Volume,
             privacyMuted ? desiredMuted : AudioUnavailable || RestoredCompleted || player.Mute, player.Rate, player.IsSeekable,
             Volatile.Read(ref failed) == 0 ? null : "현재 영상 재생 오류");
@@ -399,11 +410,43 @@ public sealed class PreparedVideo : IAsyncDisposable
         return player.Spu < 0 || player.SetSpu(-1);
     }
 
-    public async Task<ExternalSubtitleApplyResult> LoadExternalSubtitleAsync(VideoVisit token, string path)
+    // Register before IO starts. Disposal waits for the full load including late-result cleanup.
+    private Task<T> OwnIo<T>(Func<Task<T>> action)
+    {
+        dispatcher.VerifyAccess();
+        if (retiring) throw new InvalidOperationException("미디어 해제 중입니다.");
+        if (ownedIo.Count != 0) throw new InvalidOperationException("미디어 IO 처리 중입니다.");
+        var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ownedIo.Add(completion.Task);
+        _ = Run();
+        return completion.Task;
+        async Task Run()
+        {
+            try { completion.SetResult(await action()); }
+            catch (Exception ex) { completion.SetException(ex); }
+            finally { ownedIo.Remove(completion.Task); }
+        }
+    }
+
+    public Task<bool> SeekAsync(VideoVisit token, long milliseconds) => OwnIo(async () =>
+    {
+        RequireVisit(token);
+        if (!player.IsSeekable) return false;
+        long target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : Math.Max(0, milliseconds);
+        await NativeAsync("seek", () => { player.Time = target; return true; });
+        RequireVisit(token);
+        if (RestoredCompleted && target != completedPosition)
+        { completedPosition = null; view.Visibility = Visibility.Visible; ApplyAudio(); }
+        return true;
+    });
+
+    public Task<ExternalSubtitleApplyResult> LoadExternalSubtitleAsync(VideoVisit token, string path) =>
+        OwnIo(() => LoadSubtitleCoreAsync(token, path));
+    private async Task<ExternalSubtitleApplyResult> LoadSubtitleCoreAsync(VideoVisit token, string path)
     {
         RequireVisit(token);
         string fullPath;
-        try { fullPath = ExternalSubtitleService.FromManualPath(path).Path; }
+        try { fullPath = (await Task.Run(() => ExternalSubtitleService.FromManualPath(path))).Path; RequireVisit(token); }
         catch (Exception ex) { return new(false, ex.Message, path, null, null, null); }
 
         if (loadedExternalSubtitles.TryGetValue(fullPath, out LoadedExternalSubtitle? loaded))
@@ -427,15 +470,15 @@ public sealed class PreparedVideo : IAsyncDisposable
         int previousSpu = player.Spu;
         var previousTrackIds = player.SpuDescription.Select(track => track.Id).ToHashSet();
         string uri = new Uri(source.LoadPath).AbsoluteUri;
-        if (!player.AddSlave(MediaSlaveType.Subtitle, uri, true))
+        // A converted temporary file is owned until Stop/Dispose, even if AddSlave returns late.
+        if (source.IsTemporary) temporarySubtitleFiles.Add(source.LoadPath);
+        if (!await NativeAsync("subtitle", () => player.AddSlave(MediaSlaveType.Subtitle, uri, true)))
         {
             if (source.IsTemporary) await Task.Run(() => ExternalSubtitleService.DeleteTemporary(source));
             return new(false, "LibVLC가 외부 자막 추가를 거부했습니다.", fullPath, source.EncodingName, null, null);
         }
 
-        if (source.IsTemporary)
-            temporarySubtitleFiles.Add(source.LoadPath);
-
+        RequireVisit(token);
         int trackId = -1;
         var watch = Stopwatch.StartNew();
         while (watch.Elapsed < TimeSpan.FromSeconds(3))
@@ -473,17 +516,16 @@ public sealed class PreparedVideo : IAsyncDisposable
         return new(true, null, fullPath, source.EncodingName, trackId, source.IsTemporary ? source.LoadPath : null);
     }
 
-    public async Task StopAsync(VideoVisit token)
+    public Task StopAsync(VideoVisit token) => OwnIo(async () =>
     {
         RequireVisit(token);
         // Caller must serialize commands until completion. Polling/native access is suspended.
-        if (RestoredCompleted) return;
-        retiring = true;
+        if (RestoredCompleted) return true;
         player.Mute = true;
-        try { await Task.Run(player.Stop); }
-        finally { retiring = false; }
+        await NativeAsync("stop", () => { player.Stop(); return true; });
+        return true;
         // Stop does not end the visit. The validation host reapplies desired volume/mute on Play.
-    }
+    });
 
     public ValueTask DisposeAsync()
     {
@@ -495,6 +537,8 @@ public sealed class PreparedVideo : IAsyncDisposable
     {
         retiring = true;
         ready = false;
+        // Invalidate first, drain actual workers and their late cleanup before native disposal.
+        try { await WhenIdleAsync(); } catch { /* Caller observes the IO result; release still drains. */ }
         visit = null;
         view.Visibility = Visibility.Hidden;
         view.Content = null;

@@ -34,6 +34,9 @@ public sealed partial class LibraryDatabase
         $"SELECT {BindingColumns} FROM StorageBinding WHERE RootKey=$root;", ReadBinding,
         ("$root", WindowsPath.Normalize(path).RootKey)).SingleOrDefault();
 
+    public IReadOnlyList<StorageBinding> GetStorageBindings() => Read(
+        $"SELECT {BindingColumns} FROM StorageBinding;", ReadBinding);
+
     private StorageBinding RequireBinding(SqliteTransaction transaction, string path)
     {
         using var command = Command(transaction, $"SELECT {BindingColumns} FROM StorageBinding WHERE RootKey=$root;",
