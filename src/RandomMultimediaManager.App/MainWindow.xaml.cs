@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     {
         this.database = database; this.deletions = deletions;
         Scans = scans ?? new(database);
+        deletions.ConfirmedGeneration = Scans.ConfirmedDeletionGeneration;
         InitializeComponent();
         CategoryEditor.DataContext = new ViewModels.CategoryEditorViewModel(database, Scans);
         LibraryBrowser.DataContext = new ViewModels.LibraryBrowserViewModel(database);
@@ -118,7 +119,7 @@ public partial class MainWindow : Window
     public void SetExitRequested(bool value)
     {
         exitRequested = value;
-        if (value) _ = Scans.CloseAsync();
+        if (value) { deletions.BeginClosing(); _ = Scans.CloseAsync(); }
         MainContent.IsEnabled = !value;
         if (LibraryBrowser.DataContext is ViewModels.LibraryBrowserViewModel browser)
             browser.SetExitRequested(value || Scans.IsClosing);
@@ -132,6 +133,7 @@ public partial class MainWindow : Window
     {
         if (!Scans.Completion.IsCompleted) ShowLifecycleError("종료 준비: 진행 중인 IO의 실제 완료를 기다립니다. 복원 키/트레이를 사용할 수 있습니다.");
         await Scans.CloseAsync();
+        await deletions.DrainAsync();
         if (CategoryEditor.DataContext is ViewModels.CategoryEditorViewModel editor)
         {
             editor.CancelScan();

@@ -171,6 +171,7 @@ public sealed partial class SessionCoordinator
         var candidates = CandidatePolicy.GetCandidates(snapshot, destination.Selected, destination.Seen,
             quarantined.Concat(database.DeletionPaths).ToHashSet(), now, settings.HistoryExclusionDays);
         if (database.IsDeletionBlocked("")) return new(SessionStatus.CommitUnknown, "삭제 복구 확인이 필요합니다.");
+        candidates = candidates.Where(i => !database.IsDeletionBlocked(i.PathKey)).ToArray();
         if (candidates.Count == 0) return new(SessionStatus.NoCandidates);
         return await Move(new(destination, candidates[draw(candidates.Count)], VisitOrigin.Random));
     }

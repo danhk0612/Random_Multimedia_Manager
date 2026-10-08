@@ -22,8 +22,12 @@ internal static class T12NativeVerification
         Directory.CreateDirectory(root);
         try
         {
-            DeletionRecord Record(string path, DeletionMode mode) => new(1,Guid.NewGuid(),path.ToUpperInvariant(),path,
-                [new(Guid.NewGuid(),1,1)],mode,1,DeletionPhase.Prepared);
+            var evidence = await RandomMultimediaManager.App.Scanning.WindowsStorageProbe.ObserveAsync(root, CancellationToken.None);
+            var local = new StorageBinding(WindowsPath.Normalize(root).RootKey, evidence.Kind, evidence.Target,
+                evidence.EvidenceKind, 1, false, evidence.Provider, evidence.Device, evidence.Volume);
+            DeletionRecord Record(string path, DeletionMode mode) => new(2,Guid.NewGuid(),path.ToUpperInvariant(),path,
+                [new(Guid.NewGuid(),1,1,path.ToUpperInvariant())],mode,1,DeletionPhase.Prepared,
+                [new(local,0)],DeletionQuarantineScope.Targets);
             foreach (var mode in new[] { DeletionMode.Recycle, DeletionMode.Permanent })
             {
                 string file=Path.Combine(root,mode+".txt"); File.WriteAllText(file,"synthetic T12 copy");
@@ -38,6 +42,9 @@ internal static class T12NativeVerification
                     Check(failed.Outcome!=DeletionOutcome.Succeeded && File.Exists(locked), mode+" locked file preserved");
                 }
             }
+            foreach (int error in new[] { 2, 3, 5, 53, 64, 121 })
+                Check(WindowsFileDeletion.ClassifyPermanentFailure(error, true) is { Outcome: DeletionOutcome.Unknown, Missing: false },
+                    "injected remote native error remains Unknown: " + error);
             var sink=new WindowsFileDeletion.RecycleSink();
             Check(sink.PreDeleteItem(0,IntPtr.Zero)<0 && sink.Vetoed,"non-recycle fallback veto");
             string protectedDir=Path.Combine(root,"protected"); Directory.CreateDirectory(protectedDir);

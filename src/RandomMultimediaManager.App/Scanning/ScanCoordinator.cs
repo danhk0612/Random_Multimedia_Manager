@@ -267,6 +267,15 @@ public sealed class ScanCoordinator
         }
     }
 
+    // Deletion shares the viewing admission and existing explicit process confirmation.
+    public long? ConfirmedDeletionGeneration(StorageBinding binding)
+    {
+        lock (gate)
+            return !closing && exclusions > 0 && bindings.TryGetValue(binding.RootKey, out var verification)
+                && verification.Binding == binding && verification.CanAccess(binding.RootKey, verification.Generation)
+                ? verification.Generation : null;
+    }
+
     // T18A-5 supplies the user confirmation UI. This API never accepts a changed target.
     public async Task ConfirmBindingAsync(Guid sourceId)
     {
@@ -357,6 +366,7 @@ public sealed class ScanCoordinator
         }
     }
     private bool Quarantined(SourceState state) => database.IsDeletionBlocked("")
+        || database.IsDeletionBlocked(state.Source.RootPathKey)
         || database.GetItems(state.Category.Id).Any(i => database.IsDeletionBlocked(i.PathKey))
         || database.DeletionPaths.Any(p => database.GetSources(state.Category.Id)
             .Any(s => WindowsPath.IsSameOrDescendant(p, s.RootPathKey)));
