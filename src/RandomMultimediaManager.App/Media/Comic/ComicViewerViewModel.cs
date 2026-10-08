@@ -410,8 +410,8 @@ public sealed class PreparedComic : IDisposable, IAsyncDisposable
         Task[] reads;
         lock (_sync) { _closing = true; _lifetime.Cancel(); reads = _reads.ToArray(); }
         try { await Task.WhenAll(reads); }
-        catch (OperationCanceledException) { }
-        finally { await Task.Run(Dispose); }
+        catch { /* Page errors belong to the read; actual archive release must still complete. */ }
+        await Task.Run(Dispose);
     }
 
     private async Task PreloadSafeAsync(int index)
