@@ -141,8 +141,8 @@ internal static class T18A4Verification
             Source = Db.AddSource(new(Guid.NewGuid(), Category.Id, @"Z:\media", @"Z:\MEDIA"));
             Original = Evidence = StorageObservation.Classify(Source.RootPath, MappingLookup.Mapped, @"\\server\share");
             Db.ConfirmStorageBinding(Source.RootPath, 0, Original, true);
-            A = new(Guid.NewGuid(), Category.Id, MediaType.Video, @"Z:\media\a.mp4", @"Z:\MEDIA\A.MP4", 1, 1);
-            B = new(Guid.NewGuid(), Category.Id, MediaType.Video, @"Z:\media\b.mp4", @"Z:\MEDIA\B.MP4", 1, 1);
+            A = new(Guid.Parse("00000000-0000-0000-0000-000000000001"), Category.Id, MediaType.Video, @"Z:\media\a.mp4", @"Z:\MEDIA\A.MP4", 1, 1);
+            B = new(Guid.Parse("00000000-0000-0000-0000-000000000002"), Category.Id, MediaType.Video, @"Z:\media\b.mp4", @"Z:\MEDIA\B.MP4", 1, 1);
             Db.ApplyObservedItems([A, B], []);
             Access = new(Db, observe: async (_, _) => { if (Probe is { } p) await p(); return Evidence; },
                 accessible: (p, _) => Unavailable.Contains(p) ? Task.FromException(new IOException("offline")) : Task.CompletedTask);
