@@ -428,6 +428,21 @@ public sealed class PreparedVideo : IAsyncDisposable
         }
     }
 
+    public Task PlayAsync(VideoVisit token) => OwnIo(async () =>
+    {
+        RequireVisit(token);
+        if (RestoredCompleted)
+        {
+            completedPosition = null;
+            view.Visibility = Visibility.Visible;
+            ApplyAudio();
+            player.SetPause(false);
+        }
+        else if (!await NativeAsync("play", () => player.Play())) throw new InvalidOperationException("재생 실패");
+        RequireVisit(token);
+        return true;
+    });
+
     public Task<bool> SeekAsync(VideoVisit token, long milliseconds) => OwnIo(async () =>
     {
         RequireVisit(token);

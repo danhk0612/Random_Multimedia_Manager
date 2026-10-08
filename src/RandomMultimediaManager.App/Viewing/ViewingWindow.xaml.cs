@@ -348,7 +348,7 @@ public partial class ViewingWindow : Window
     }
     private Task VideoAction(Action<PreparedVideo, VideoVisit> action, bool checkpoint = false) =>
         VideoCommand((v,t) => { action(v,t); return Task.CompletedTask; }, checkpoint);
-    private async void Play(object s, RoutedEventArgs e) => await VideoAction((v,t) => { v.Play(t); v.SetVolume(t,(int)Volume.Value); v.SetMuted(t,Muted.IsChecked == true); });
+    private async void Play(object s, RoutedEventArgs e) => await VideoCommand(async (v,t) => { await v.PlayAsync(t); v.SetVolume(t,(int)Volume.Value); v.SetMuted(t,Muted.IsChecked == true); });
     private async void Pause(object s, RoutedEventArgs e) => await VideoAction((v,t) => v.SetPaused(t,true), true);
     private async void Stop(object s, RoutedEventArgs e) => await VideoCommand((v,t) => v.StopAsync(t), true);
     private async void SeekBack(object s, RoutedEventArgs e) => await VideoCommand(async (v,t) => { await v.SeekAsync(t,v.CaptureProgress(t).VideoPositionMs!.Value-10000); });

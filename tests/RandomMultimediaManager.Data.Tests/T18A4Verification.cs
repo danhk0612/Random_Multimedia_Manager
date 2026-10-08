@@ -111,7 +111,7 @@ internal static class T18A4Verification
             Db.ConfirmStorageBinding(Source.RootPath, 0, Original, true);
             A = new(Guid.NewGuid(), Category.Id, MediaType.Video, @"Z:\media\a.mp4", @"Z:\MEDIA\A.MP4", 1, 1);
             B = new(Guid.NewGuid(), Category.Id, MediaType.Video, @"Z:\media\b.mp4", @"Z:\MEDIA\B.MP4", 1, 1);
-            Db.ApplyObservedItems(Category.Id, [A, B], 1);
+            Db.ApplyObservedItems([A, B], []);
             Access = new(Db, observe: async (_, _) => { if (Probe is { } p) await p(); return Evidence; },
                 accessible: (p, _) => Unavailable.Contains(p) ? Task.FromException(new IOException("offline")) : Task.CompletedTask);
             C = new(Db, P, clock: () => 2000, draw: _ => 0, access: Access);

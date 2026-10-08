@@ -229,8 +229,17 @@ public partial class VideoValidationWindow : Window
         try { action(current, visit); }
         catch (Exception ex) { Status.Text = ex.Message; }
     }
-    private void Play(object sender, RoutedEventArgs e) => Apply((v, t) =>
-        { v.Play(t); v.SetVolume(t, (int)Volume.Value); v.SetMuted(t, Muted.IsChecked == true); });
+    private async Task ApplyIo(Func<PreparedVideo, VideoVisit, Task> action)
+    {
+        if (busy || closing || current is null || visit is null) return;
+        busy = true; UpdateControls();
+        command = action(current, visit);
+        try { await command; }
+        catch (Exception ex) { Status.Text = ex.Message; }
+        finally { busy = false; UpdateControls(); }
+    }
+    private async void Play(object sender, RoutedEventArgs e) => await ApplyIo(async (v, t) =>
+        { await v.PlayAsync(t); v.SetVolume(t, (int)Volume.Value); v.SetMuted(t, Muted.IsChecked == true); });
     private void Pause(object sender, RoutedEventArgs e) => Apply((v, t) => v.SetPaused(t, true));
     private async void Stop(object sender, RoutedEventArgs e)
     {
@@ -244,7 +253,7 @@ public partial class VideoValidationWindow : Window
     }
     private void SeekBack(object sender, RoutedEventArgs e) => SeekRelative(-10000);
     private void SeekForward(object sender, RoutedEventArgs e) => SeekRelative(10000);
-    private void SeekRelative(long offset) => Apply((v, t) => { if (!v.Seek(t, v.CaptureProgress(t).VideoPositionMs!.Value + offset)) Status.Text = "탐색 불가"; });
+    private async void SeekRelative(long offset) => await ApplyIo(async (v, t) => { if (!await v.SeekAsync(t, v.CaptureProgress(t).VideoPositionMs!.Value + offset)) Status.Text = "탐색 불가"; });
     private void VolumeChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => Apply((v, t) => v.SetVolume(t, (int)e.NewValue));
     private void MuteChanged(object sender, RoutedEventArgs e) => Apply((v, t) => v.SetMuted(t, Muted.IsChecked == true));
     private void RateChanged(object sender, SelectionChangedEventArgs e) => Apply((v, t) =>
@@ -358,8 +367,8 @@ public partial class VideoValidationWindow : Window
     }
 
     private void BeginSeek(object sender, MouseButtonEventArgs e) => seeking = true;
-    private void EndSeek(object sender, MouseButtonEventArgs e)
-    { Apply((v, t) => { if (!v.Seek(t, (long)Position.Value)) Status.Text = "탐색 불가"; }); seeking = false; }
+    private async void EndSeek(object sender, MouseButtonEventArgs e)
+    { await ApplyIo(async (v, t) => { if (!await v.SeekAsync(t, (long)Position.Value)) Status.Text = "탐색 불가"; }); seeking = false; }
 
     private void RefreshSnapshot()
     {
