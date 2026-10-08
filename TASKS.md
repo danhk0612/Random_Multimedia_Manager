@@ -22,13 +22,13 @@
 | T15 | 트레이 및 창 동작 | Astra | 구현·Windows 자동 검증 완료 (PR #17 main 통합, 사용자 Windows 확인 대기) | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
-| T18A | 변경 감지와 경로 상태 갱신 | Astra | 네트워크 설계 PR #22 main 통합; 정책 승인 완료, T18A-1 PR #23 구현·Windows 자동 검증 완료/main 통합 완료; T18A-2 PR #24 보완·Windows 자동 재검증 완료/main 통합 완료 | T05/T12; T02 식별 계약 |
+| T18A | 변경 감지와 경로 상태 갱신 | Astra | 네트워크 설계 PR #22 main 통합; 정책 승인 완료, T18A-1 PR #23 구현·Windows 자동 검증 완료/main 통합 완료; T18A-2 PR #24 보완·Windows 자동 재검증 완료/main 통합 완료; T18A-3 PR #25 구현·Windows 자동 검증 완료/검토 대기(main 미통합) | T05/T12; T02 식별 계약 |
 | T18 | Windows 배포 및 통합 검증 | Astra | 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 바로 다음 작업
 
-T18A 네트워크 보완 설계 및 아래 T18A-1~6 구현 인계를 작성했다. D13 지원 목표는 사용자 확정이며 현재 코드의 네트워크 지원 완료를 뜻하지 않는다. 설계 PR #22는 `2959391`로 main에 통합했다. DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. T18A-2 PR #24는 `d2848f5`로 main 통합 완료했다. 바로 다음 작업은 고성능 Work의 T18A-3이며 최신 main에서 별도 브랜치로 시작한다. 이전 전역 두 bool·10분 전체 검사는 구현 기준이 아니다.
+T18A 네트워크 보완 설계 및 아래 T18A-1~6 구현 인계를 작성했다. D13 지원 목표는 사용자 확정이며 현재 코드의 네트워크 지원 완료를 뜻하지 않는다. 설계 PR #22는 `2959391`로 main에 통합했다. DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. T18A-2 PR #24는 `d2848f5`로 main 통합 완료했다. T18A-3는 `task/t18a-3-network-deletion` / PR #25에서 구현·Windows 자동 검증 완료이다. 바로 다음은 이 PR의 검토이며, main 통합 후에만 고성능 Work의 T18A-4를 시작한다. 이전 전역 두 bool·10분 전체 검사는 구현 기준이 아니다.
 
 T18 배포와 제품 구현을 병렬 진행하지 않는다. 기존 수동 미검증/승인 생략 및 AVI 무음 조사 보류는 유지한다.
 
@@ -248,7 +248,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18A — 변경 감지와 경로 상태 갱신
 
 - 목적: 외부 파일 변경과 라이브러리 정합성 유지.
-- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 통합 완료); T18A-2 PR #24 구현·보완·Windows 자동 재검증 완료/main 통합 완료; T18A-3~6 미착수.
+- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 통합 완료); T18A-2 PR #24 구현·보완·Windows 자동 재검증 완료/main 통합 완료; T18A-3 PR #25 구현·Windows 자동 검증 완료/main 미통합; T18A-4~6 미착수.
 - 선행: T05/T12; T02 식별 계약.
 - 범위/수정 영역: 변경 감지·스캔·경로 추가/Missing 갱신(이동 상태 승계 없음).
 - 완료 조건/검증: 추가/삭제/이름변경·이벤트 중복/누락 뒤 재스캔, 잘못된 기록 병합 방지, 시작 검증 옵션 확인.
@@ -272,7 +272,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 완료 조건/검증: 공식 SDK/GPU/드라이버 조건, 현재 출력 결합 가능성·성능/복사비용·색/HDR·일반 재생 복귀 검증; 통합 여부와 별도 구현 Task 제안.
 - 수정하지 말아야 할 영역: 초기 엔진 선제 교체·검증 없이 VSR 지원 표기.
 
-## T18A 구현 인계 — T18A-2 main 통합 완료, 다음 T18A-3
+## T18A 구현 인계 — T18A-2 main 통합, T18A-3 PR #25 검토
 
 모든 작업은 최신 main의 AI_WORKFLOW 및 DATA_AND_RANDOM_POLICY T18A 전체와 해당 절을 읽는다. D10~D12/D14~D16이 결정되고 이 보완 설계 PR이 main에 통합되었는지 먼저 확인한다. 미충족이면 코드 변경 없이 차단을 보고한다. 아래 순서에 따라 **지정된 하나의 Task만** 진행하고 문서/검증 결과·PR까지 제출하며 직접 병합/다음 Task 착수는 하지 않는다. 완료 문서는 CURRENT_STATE/TASKS의 실제 영향 범위만 갱신한다.
 
@@ -280,7 +280,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 |---|---|---|---|---|---|
 | T18A-1 (완료, PR #23 main 통합 완료) | Astra | 보완 설계 통합·정책 결정 | 공통 경로/바인딩·소스 정책 값과 v2 migration/API, v1/v2 저널 읽기 계약; Core, Data, 경로 검증, Journal | N01~N03 저장/정규화/호환, 기존 키·ID·기록 보존. 실제 API/저널 필드를 문서화 | 자동 갱신 실행·원격 삭제 활성화·미디어 엔진 변경 |
 | T18A-2 (PR #24 보완·자동 재검증 완료/main 통합 완료) | Astra | 1 | 소스 단위 관찰/증거·단일 scan admission·watcher/예약·IO 등록/drain; Scanning/MainWindow/AppLifecycle | N04~N05/N09~N11 조정자 범위, 감상 중 반영 0·부재 오판 방지·DB 해제 후 접근 0 | 삭제 결과/후보 정책·UI 전체 개편 |
-| T18A-3 | Astra | 1, 2 | 별칭/광역 격리·원격 결과 분류·recycle capability·저널/대상별 원자 정리; Deletion/Data/SessionCoordinator.Deletion | N07~N09, v1 복구/재매핑/중복 정리, OS 재삭제 0·임의 영구삭제 0 | 추정 별칭 기록 삭제·정상 종료 우회 |
+| T18A-3 (PR #25 구현·Windows 자동 검증 완료, main 미통합) | Astra | 1, 2 | 별칭/광역 격리·원격 결과 분류·recycle capability·저널/대상별 원자 정리; Deletion/Data/SessionCoordinator.Deletion | N07~N09, v1 복구/재매핑/중복 정리, OS 재삭제 0·임의 영구삭제 0 | 추정 별칭 기록 삭제·정상 종료 우회 |
 | T18A-4 | Astra | 1, 2, 3 | 승인된 일시 후보 억제·바인딩 확인, ZIP/영상/자막 지연 IO와 기존 세션/해제 연결 | N06/N09~N12 감상 범위, 한 명령 한 후보·기존 Pending·Ready 보호 | 재생 엔진 교체·본문 선다운로드·새 캐시/클라우드 API |
 | T18A-5 | Sol (공통 계약 변경 시 Astra 회송) | 1~4 | UNC/소스 정책 UI, 마지막 관찰/접근 상태, DB 목록·Explorer 비동기 연결; CategoryEditor/LibraryBrowser/Views | N01/N04/N12 UI, 저장 실패 원복·필터/선택 유지·닫힌 창 갱신 없음 | DB/세션/삭제 의미·원격 로그인·UI 전체 재설계 |
 | T18A-6 | Astra | 1~5 | Windows 통합·실물 검증 및 지원 한계 인계; 영향 tests/검증 문서 | N01~N12 및 영향 회귀 결과를 오류 주입/실물별 구분. 미실시 항목 명시 | T18 배포·VSR·무관한 수정 |
@@ -329,7 +329,7 @@ CURRENT_STATE.md/TASKS.md와 영향 계약·검증 문서를 갱신하고 PR로 
 
 ### T18A-2 결과와 후속 기준
 
-검증 코드 `093a3fc`의 Windows Release 및 T03/T05/T06/T09/T11 영향 CI 5개가 통과했다. PR #24는 실제 연결 근거, 소스별 스캔/로컬 watcher/예약, revision·generation 반영 검증, 감상 창 전체 수명 및 편집/복구 배타 제어, Closing 실제 IO drain을 구현한다. API는 DATA_AND_RANDOM_POLICY §7, 오류 주입·실파일·실제 NAS/RaiDrive 미검증은 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md를 따른다. 원격 삭제/v2 복구(T18A-3), 감상 후보/지연 IO(T18A-4), UNC·정책 UI(T18A-5), 실물 통합(T18A-6)은 미착수다. PR #24 main 통합을 완료했으며 다음은 위 T18A-3 지시문을 따른다.
+검증 코드 `093a3fc`의 Windows Release 및 T03/T05/T06/T09/T11 영향 CI 5개가 통과했다. PR #24는 실제 연결 근거, 소스별 스캔/로컬 watcher/예약, revision·generation 반영 검증, 감상 창 전체 수명 및 편집/복구 배타 제어, Closing 실제 IO drain을 구현한다. API는 DATA_AND_RANDOM_POLICY §7, 오류 주입·실파일·실제 NAS/RaiDrive 미검증은 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md를 따른다. T18A-2 결과 당시 원격 삭제/v2 복구(T18A-3), 감상 후보/지연 IO(T18A-4), UNC·정책 UI(T18A-5), 실물 통합(T18A-6)은 미착수였으며 최신 삭제 상태는 아래 PR #25 절을 따른다. PR #24 main 통합을 완료했으며 다음은 위 T18A-3 지시문을 따른다.
 
 ### T18A-1 결과와 후속 기준
 
@@ -340,4 +340,10 @@ CURRENT_STATE.md/TASKS.md와 영향 계약·검증 문서를 갱신하고 PR로 
 
 PR #24를 `d2848f5`로 main에 통합했다. 종료 drain·probe 합류·진행 콜백·요청별 취소·watcher backoff의 다섯 보완을 검토했다. 검증 코드 `ac2a4d6`의 Windows CI 5개 성공, 이후 `d3c11bc`까지 문서 4개만 변경됨을 확인했다. T11 최초 파일 선택창 복원 실패와 코드 변경 없는 1회 재실행 통과는 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md에 보존한다. 실제 NAS/RaiDrive·사용자 로그오프는 미검증이다.
 
-다음은 고성능 Work의 T18A-3(원격 삭제·별칭/광역 격리·v2 복구)이며 TASKS.md의 새 작업 시작 지시문을 따른다. T18A 전체 완료나 배포 완료가 아니다. 제품 구현은 기존 선행 순서대로 진행하며 테스트 환경/복사본 준비만 병렬 가능하다.
+T18A-2 통합 당시 다음은 고성능 Work의 T18A-3(원격 삭제·별칭/광역 격리·v2 복구)이며 TASKS.md의 새 작업 시작 지시문을 따른다. T18A 전체 완료나 배포 완료가 아니다. 제품 구현은 기존 선행 순서대로 진행하며 테스트 환경/복사본 준비만 병렬 가능하다.
+
+### T18A-3 결과와 후속 기준
+
+검증 코드 `7ab2448`의 Windows Release(경고 0·오류 0), N07~N09 새 시나리오 10개와 영향 CI 5개가 통과했다. PR #25는 검증된 별칭 대상/v2 저널·원격/불명 격리·원자 DB 정리·v1/v2 복구와 삭제 IO drain을 연결한다. 원격 휴지통의 기본 판정은 실제 backend 근거 부재로 Unknown/실행 차단이며 임의 영구삭제 전환은 없다. N07~N09/영향 회귀의 근거와 실물 미검증은 docs/T18A_3_NETWORK_DELETION_VALIDATION.md, API는 DATA_AND_RANDOM_POLICY T18A §7을 따른다. 기존 새 작업 시작 지시문은 T18A-3의 최초 작업 계약으로 보존한다.
+
+현재 다음 작업은 PR #25 재검토·main 통합 판단이다. 직접 병합하지 않았다. 후속 T18A-4의 기준 브랜치는 **PR #25 통합 이후 최신 main**이며, T18A-4 행과 DATA_AND_RANDOM_POLICY T18A 전체(특히 §2/4/6~8)의 승인된 후보 억제·바인딩/지연 IO 연결만 수행한다. 고성능 Work를 사용하며 UNC/정책 UI는 T18A-5, 실물 통합은 T18A-6, 배포는 T18에 유지한다.

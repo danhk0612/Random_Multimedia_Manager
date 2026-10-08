@@ -290,11 +290,11 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 - AppliedDeletion 표식은 저널 파일 제거 후에도 보존한다. 저널 제거 직후 전원 단절에 따른 파일 재등장에도 기존 멱등 표식을 적용한다. 삭제 저널 파일 자체는 성공 정리 후 제거한다.
 - 구체적인 오류·재시작·사용자 확인 및 검증 범위는 docs/T12_DELETION_VALIDATION.md. T14 생명주기 문서의 최종 연결은 T12 통합 후 대조하며 트레이/빠른 종료를 구현하지 않았다.
 
-## T18A 변경 감지 설계 — T18A-1~2 구현, 후속 연결 대기
+## T18A 변경 감지 설계 — T18A-1~3 구현, 후속 연결 대기
 
 기준 main `c8252a0`, PR #21 merge `7fb2ad4` 포함. D13은 로컬·매핑/RaiDrive·직접 UNC 지원 목표의 승인이다. 아래는 2026-10-04 사용자가 D10~D12/D14~D16을 승인한 구현 기준이다. 제품 구현/호환성 확인 완료는 아니다. 이전 PR #21의 전역 두 bool 및 10분 전체 검사는 이 절로 대체한다. 제품 정책 결정은 DECISIONS.md D10~D12/D14~D16, 구현 인계는 TASKS.md T18A-1~6을 따른다. T18A-1은 DB v2와 저널 읽기 계약만 구현한다. 기존 식별/기록/진행 의미와 v1 저널 복구는 유지한다.
 
-T18A-2의 소스별 스캔·생명주기 조정자는 PR #24에서 구현·Windows 자동 검증을 완료했다. 감상 엔진·원격 삭제·UI 연결은 후속 Task다. 아래 §1 표는 설계 시점 코드 대조이며 현재 API와 인계 경계는 §7을 따른다.
+T18A-2의 소스별 스캔·생명주기 조정자는 PR #24에서 구현·Windows 자동 검증을 완료했다. T18A-3의 원격 삭제/복구는 PR #25에서 연결하며, 감상 엔진·UI 연결은 후속 Task다. 아래 §1 표는 설계 시점 코드 대조이며 현재 API와 인계 경계는 §7을 따른다.
 
 ### 1. 설계 시점 코드 대조와 변경 책임
 
@@ -397,7 +397,7 @@ D14/D15 확정 정책이다. 매핑 경로와 UNC는 **서로 다른 PathKey/Ite
 
 현재 recycle flag/sink는 보존하되 원격 provider가 recycle-only를 지키는지 검증해야 한다. NAS/클라우드 자체 휴지통과 Windows Shell 휴지통은 같은 기능으로 간주하지 않는다. 영구삭제는 서버 측 보존/스냅샷 완전 제거까지 보장하지 않는다. 실패 후 자동 영구삭제·로그인·권한 상승·OS 삭제 자동 재실행은 금지한다.
 
-저널 v2 제안: 기존 OperationId/모드/시각/phase와 실행 Path/PathKey에 binding 근거·generation, 격리 범위, 각 target의 ItemId+PathKey+기존 size/time을 추가한다. 삭제 전 대상 집합과 격리를 DB 경계에서 캡처하고 durable Prepared 쓰기 성공 전 OS 호출 금지다. 네트워크 탐색을 DB writer lock 안에서 하지 않는다. 별칭 확인 결과는 admission 아래 재검증하고 대상 캡처 때 일치 여부를 검사한다.
+삭제 저널 v2: 기존 OperationId/모드/시각/phase와 실행 Path/PathKey에 binding 근거·generation, 격리 범위, 각 target의 ItemId+PathKey+기존 size/time을 추가한다. 삭제 전 대상 집합과 격리를 DB 경계에서 캡처하고 durable Prepared 쓰기 성공 전 OS 호출 금지다. 네트워크 탐색을 DB writer lock 안에서 하지 않는다. 별칭 확인 결과는 admission 아래 재검증하고 대상 캡처 때 일치 여부를 검사한다.
 
 ApplyDeletion은 v2의 각 target 키를 검증하고 모든 대상 기록/진행/VisitCommit 정리 및 AppliedDeletion을 한 transaction으로 처리한다. 일부만 완료 처리하지 않는다. 재시작 복구는 저장된 집합을 사용하고 새 매핑에 대상을 다시 해석하지 않는다. Succeeded는 실제 파일 재조회 없이 DB 정리만 재시도; Prepared/Unknown은 원래 대상 정보를 표시하는 기존 사용자 확인으로 해결한다. 재매핑 상태에서도 새 대상 파일을 삭제하지 않는다. 살아 있는 OS 작업이 있으면 사용자 성공/실패 확인으로 먼저 격리를 풀 수 없다. 저널 손상으로 집합/범위를 못 읽으면 전역 차단을 유지한다.
 
@@ -452,7 +452,7 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 - `GetSourceRefreshPolicy(sourceId)`의 null은 미선택이다. `GetEffectiveSourceRefreshPolicy`는 미선택을 Manual/시작 끔으로 반환한다. `SaveSourceRefreshPolicy`는 기존 기간/Resume 설정과 독립 저장하며 Manual=null 주기, Events/Scheduled=1~168시간, Events=확인된 Local만 검증한다. LastCompletedAtUtc는 후속 조정자가 성공 완료 시 갱신할 값이다. 행 저장 자체는 스캔/타이머/watcher를 실행하지 않는다. 확인된 루트에 추가한 새 소스는 승인 기본값을 저장하며 중복 등록은 기존 정책을 보존한다. 기존 Events 정책을 원격/Unknown 루트로 옮기는 편집은 정책을 먼저 수정하기 전까지 rollback한다.
 - 모든 기존 ID/Path/PathKey/이력/진행/VisitCommit/AppliedDeletion/AppSettings는 migration에서 재작성하지 않는다. 기존 소스 및 소스 밖 항목의 루트를 Unknown/RequiresConfirmation으로 생성하고 정책 행은 만들지 않는다. 신규 소스/항목 저장도 루트 행을 보장한다. 소스 삭제는 정책만 cascade하고 바인딩과 항목/기록은 남긴다. 새 쓰기의 경로 쌍은 공통 정규화와 일치해야 하며 기존 행의 키는 정규화 명목으로 바꾸지 않는다.
 - `DeletionRecord` v2는 기존 공통 필드에 `Bindings: DeletionBinding[]`와 `QuarantineScope(Targets/RemoteAndUnknown)`를 추가한다. 각 binding은 `StorageBinding` snapshot과 `Generation≥0`, 각 target은 기존 ItemId/size/time과 `PathKey`를 가진다. 실행 경로와 모든 target의 루트 근거, 중복 ID/루트, enum/필수 필드를 검증한다. v1은 추가 필드 없이 읽고 쓸 수 있으며 읽기 과정에서 원본을 보강/덮어쓰지 않는다. SQL 버전과 저널 버전은 독립이다.
-- **단계적 안전 경계:** 현재 삭제 실행은 기존 v1이다. v2 읽기는 지원하지만 T18A-3의 target별 원자 정리/광역 격리 연결 전에는 v2 저널을 전역 차단하고 자동/사용자 확인 복구·OS 실행을 거부한다. 손상 v2는 실행 경로만 복구해 부분 격리하지 않는다. v1의 원격 가능성 판단·보수 광역 격리와 v2 실제 복구는 T18A-3가 연결한다. 따라서 v1/v2 혼재 읽기 통과를 원격 복구 완료로 해석하지 않는다.
+- **T18A-3 연결:** 새 삭제는 v2로 준비·실행하며 v1은 복구 전용이다. 정상 v2는 캡처 대상과 RemoteAndUnknown 범위를 복원한다. 손상 v2는 실행 경로만 복구해 부분 격리하지 않고 전역 차단한다. v1의 원격 가능성은 보수 광역 격리하고 원래 대상만 정리한다. 실제 API·제약은 아래 T18A-3 절을 따른다.
 
 검증 근거와 실물 미검증은 `T18A_1_PATH_STORAGE_VALIDATION.md`를 따른다.
 
@@ -464,9 +464,21 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 - `EnterExclusiveAsync`는 신규 scan admission 차단 → 취소 요청 → 실제 worker 완료 순서로 lease를 반환한다. 감상 창 전체 수명, 소스 편집, 기존 삭제 복구를 보호한다. `ConfigurationChanged`는 성공한 편집의 lease 안에서 호출하여 이전 관찰을 무효화한다. 삭제 격리 분류는 자동/수동 검사 모두 보류한다.
 - Events watcher 생성 실패는 스캔 실패와 별도의 횟수/시각으로 같은 30초→2분→10분 backoff를 적용한다. 메타데이터 부재 관찰 성공은 watcher 실패 상태를 초기화하지 않으며 실제 attach 성공 또는 설정 변경에서만 초기화한다. 권한 실패는 자동 반복 대신 명시적 조치를 기다린다. 수동 요청은 재시도 시각 전에도 허용하고 Closing/배타 진입의 실제 IO drain은 유지한다.
 - `CloseAsync`는 sticky Closing, timer/watcher 폐기, queued 요청 취소와 실제 worker drain을 제공한다. Restore는 이를 해제하지 않는다. 기존 MainWindow/AppLifecycle의 저장·복구·목록 읽기 drain 다음 DB를 해제한다. 숨김은 Closing이 아니며 유휴 자동 검사가 UI를 노출하지 않는다. `App.RequestShutdownAsync`는 시작 실패를 포함한 앱 내부 종료 요청을 같은 AppLifecycle 종료 작업으로 연결한다. Scans 시작 뒤 WPF SessionEnding은 Cancel을 동기 설정한 후 이 비동기 경계로 들어간다. OnExit에서 async 대기하거나 Dispatcher를 막지 않는다. OS 요청은 거부될 수 있어 앱 종료 후 사용자가 로그오프/시스템 종료를 다시 요청해야 할 수 있으며 강제 OS 종료/프로세스 제거는 정상 저장·drain을 보장하지 않는다.
-- 실제 원격 삭제/v2 복구, 별칭 정리, 감상 후보/엔진 IO, UNC·정책 UI는 T18A-3~5에 남긴다. 검증 범위와 실물 미검증은 `T18A_2_SCAN_LIFECYCLE_VALIDATION.md`를 따른다.
+- 실제 원격 삭제/v2 복구·별칭 격리는 아래 T18A-3에서 연결한다. 감상 후보/엔진 IO, UNC·정책 UI는 T18A-4~5에 남긴다. 검증 범위와 실물 미검증은 `T18A_2_SCAN_LIFECYCLE_VALIDATION.md`를 따른다.
 
-### 8. 지원·검증 기준 (T18A-1~2 자동 검증, 실물/후속 검증 대기)
+#### T18A-3 삭제 API와 인계 경계 (PR #25, main 미통합)
+
+- `DeletionService.PrepareAsync`는 worker에서 `WindowsStorageProbe`의 현재 루트 근거를 모은다. 실행 루트는 확인 필수이며 실패/미확인/재매핑된 다른 루트는 별칭 집합에 추정 추가하지 않는다. 현재 OS의 정확한 UNC 대상 이름+상대 경로만 `DeletionSafety.AliasKey`로 비교한다. DB writer에서 네트워크 조회를 하지 않는다. 캡처 전 재관찰, `CaptureDeletion(pathKey, keys, bindings, remoteAndUnknown)`의 revision 검증, 격리, v2 durable Prepared 순서다. 검증된 로컬 최초 근거는 기존 DB 확인 API로 채택하되 원격/Unknown 최초 확인은 암묵 승인하지 않는다.
+- Unknown의 사용자 확인은 `ScanCoordinator.ConfirmedDeletionGeneration`에서 같은 viewing exclusive lease의 기존 process confirmation만 받아 재검증한다. 소스 밖 과거 항목도 루트 바인딩을 확인한다. 영속 `UserConfirmation` 자체로 이번 실행을 승인하지 않는다. UI 확인/UNC 입력 연결은 T18A-5에 남는다. OS가 숨기는 대상 교체 및 최종 검사와 실제 IO 사이 경합의 기존 한계는 유지한다.
+- `RecycleCapability`는 Supported/Unsupported/Unknown과 별도의 `RecycleOnlyGuaranteed`를 분리한다. Unsupported 또는 recycle-only 근거 부재면 Prepared/OS 실행을 거부한다. Windows 기본 경로는 기존 로컬 Shell flag/sink를 유지한다. **검증된 NAS/RaiDrive backend가 없으므로 모든 원격 기본값은 Unknown/실행 차단**이고 `WindowsFileDeletion`도 이를 다시 확인한다. 오류 주입의 Supported/provider 판정은 실물 지원 증거가 아니다. 기본값을 영구삭제로 변경하지 않으며 기존 확인창의 별도 영구삭제 선택만 받는다.
+- `ExecuteAsync`는 이 프로세스의 준비 record만 한 번 실행한다. 실행 직전 바인딩을 재확인한다. 원격 NotFound/연결·권한 오류의 OS 호출 후 결과는 Unknown, 명확한 삭제 성공 응답만 Succeeded다. OS 발행 전 확인 실패는 Failed로 종료하며 Missing을 추정 반영하지 않는다. 실패/확인 후 재열기는 `ValidateReopenAsync`로 원래 실행 루트를 재검증하고 변경/Closing이면 기존 Pending·마지막 진행을 보존한다. 일반 감상 바인딩/엔진 IO 확장은 T18A-4다.
+- `LibraryDatabase.SetDeletionIsolation`은 미해결 저널 전체의 target 키·광역·전역 격리 합집합을 복원한다. RemoteAndUnknown은 DB 바인딩의 확인된 Local 외 항목/소스와 아직 바인딩 없는 새 원격/불명 경로를 차단하며 소스 밖 항목도 포함한다. `IsDeletionBlocked`/`DeletionPaths`를 기존 열기/후보/checkpoint와 스캔 분류 게이트에서 사용한다. 격리 대상 분류/소스/정책 편집은 같은 DB transaction에서 검사한다. 추정 별칭에는 Missing/기록 정리를 수행하지 않는다.
+- `ApplyDeletion(operationId, targets)`는 target별 ItemId/PathKey를 확인해 모든 Missing·기록/진행/VisitCommit 정리와 AppliedDeletion을 한 transaction으로 수행한다. 원래 v1 단일 key overload도 유지한다. v2 저널은 다른 대상/불명 광역 누락을 검증하며 검증된 별칭이 아닌 target 또는 손상 scope는 전역 차단한다. size/time은 캡처 증거이며 복구에서 새 OS 파일을 조회하지 않는다.
+- `InitializeAsync`/`CompleteAsync`/`ConfirmAsync`는 v1/v2의 저장된 집합만 사용하고 OS 삭제나 새 별칭 탐색을 하지 않는다. v1 원격 가능성은 alias 증거 부재로 광역 격리하되 v1 파일을 자동 보강/재작성하지 않는다. 손상 v2/알 수 없는 버전은 전역 차단하며 성공 대상 추측을 거부한다. AppliedDeletion을 저널 제거 뒤에도 보존해 오래된 저널 재등장이 새 방문을 지우지 않는다.
+- `BeginClosing`은 sticky 신규 삭제 IO 차단, `DrainAsync`는 실제 준비/probe/삭제/복귀 확인 worker 완료 대기다. 실행 중 성공/실패 확인이나 같은 record의 OS 재실행으로 격리를 풀 수 없다. 기존 viewing 명령/복구 완료 대기를 합쳐 DB 해제 순서를 유지한다. Quick Hide/mute·복원 키·ExitBlocked 정책과 Pending/기록 의미는 유지한다.
+- N07~N09 오류 주입, Windows 로컬 실파일/네이티브 회귀와 NAS/RaiDrive 미검증은 `T18A_3_NETWORK_DELETION_VALIDATION.md`를 따른다. T18A-4~6·배포는 미착수다.
+
+### 8. 지원·검증 기준 (T18A-1~3 자동 검증, 실물/후속 검증 대기)
 
 | 환경 | 목표 지원 | 제약 / 반드시 실제 확인 |
 |---|---|---|
