@@ -7,6 +7,7 @@ public partial class App : Application
 {
     private Lifecycle.TrayIcon? tray;
     private Lifecycle.GlobalHotKeys? keys;
+    private int requestedExitCode;
     public Lifecycle.AppLifecycle? Lifecycle { get; private set; }
     public Deletion.DeletionService Deletions { get; private set; } = null!;
     public LibraryDatabase Database { get; private set; } = null!;
@@ -21,13 +22,14 @@ public partial class App : Application
                 System.IO.Path.GetDirectoryName(LibraryDatabase.DefaultPath)!, "delete-journal")), Deletion.WindowsFileDeletion.DeleteAsync);
             await Deletions.InitializeAsync();
             await Deletion.DeletionDialogs.RecoverAsync(Deletions);
-            if (Deletions.GloballyBlocked) { Shutdown(1); return; }
+            if (Deletions.GloballyBlocked) { await RequestShutdownAsync(1); return; }
             var main = new MainWindow(Database, Deletions);
             MainWindow = main;
             Lifecycle = new(main, Database, Deletions, () => tray?.EnsureAvailable() == true,
-                () => keys?.HideRegistered == true, () => tray?.Dispose(), () => Shutdown());
+                () => keys?.HideRegistered == true, () => tray?.Dispose(), () => base.Shutdown(requestedExitCode));
             main.Lifecycle = Lifecycle;
             main.Show();
+            main.Scans.Start();
             var unavailable = new List<string>();
             // Independent attempts: tray construction failure must not skip key registration.
             try
@@ -52,8 +54,30 @@ public partial class App : Application
         {
             MessageBox.Show($"데이터를 열 수 없습니다.\n{ex.Message}", "Random Multimedia Manager",
                 MessageBoxButton.OK, MessageBoxImage.Error);
-            Shutdown(1);
+            await RequestShutdownAsync(1);
         }
+    }
+
+    // All app-controlled termination requests use this boundary. Only the lifecycle's
+    // terminal callback calls WPF Shutdown after actual IO and resource drain.
+    public Task<bool> RequestShutdownAsync(int exitCode = 0)
+    {
+        Dispatcher.VerifyAccess();
+        if (exitCode != 0) requestedExitCode = exitCode;
+        if (Lifecycle is not null) return Lifecycle.ExitAsync();
+        // Startup recovery has not constructed/started the scan coordinator yet.
+        base.Shutdown(requestedExitCode);
+        return Task.FromResult(true);
+    }
+
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        base.OnSessionEnding(e);
+        if (Lifecycle is null) return; // No scan IO before lifecycle creation.
+        // WPF cannot await this OS notification. Defer synchronously, then reuse the
+        // dispatcher-owned asynchronous exit, preserving ExitBlocked/retry/restore.
+        e.Cancel = true;
+        _ = RequestShutdownAsync();
     }
 
     protected override void OnExit(ExitEventArgs e)

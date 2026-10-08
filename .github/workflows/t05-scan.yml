@@ -41,3 +41,6 @@ jobs:
       - name: Case-sensitive directory rejection
         timeout-minutes: 2
         run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- case
+      - name: T18A-2 source admission and IO drain
+        timeout-minutes: 3
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- lifecycle

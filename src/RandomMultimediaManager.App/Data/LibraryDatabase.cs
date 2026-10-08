@@ -10,6 +10,7 @@ public sealed partial class LibraryDatabase : IDisposable
     private readonly SqliteConnection connection;
     private readonly object gate = new();
     private bool disposed;
+    public bool IsDisposed { get { lock (gate) return disposed; } }
     public static string DefaultPath => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "RandomMultimediaManager", "library.db");
