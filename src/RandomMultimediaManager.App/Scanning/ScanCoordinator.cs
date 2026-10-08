@@ -15,6 +15,8 @@ public sealed class ScanCoordinator
     private readonly Func<string, CancellationToken, Task<StorageObservation>> observe;
     private readonly Func<Category, CategorySource, bool, IProgress<LibraryScanProgress>?, CancellationToken, Task<SourceScanObservation>> collect;
     private readonly Func<DateTimeOffset> now;
+    private readonly Func<CategorySource, FileSystemWatcher> createWatcher;
+    private bool runningAutomatic;
     private readonly Dictionary<Guid, SourceState> sources = new();
     private readonly Dictionary<string, BindingVerification> bindings = new(StringComparer.Ordinal);
     private Task running = Task.CompletedTask;
@@ -35,23 +37,42 @@ public sealed class ScanCoordinator
         public SourceRefreshPolicy Policy = policy;
         public long Dirty, Captured, Order;
         public bool Startup, Discovery, Baseline, Manual, Suppressed, WatcherFailed, Collecting, AcceptsManual;
-        public DateTimeOffset FirstSignal, LastSignal, RetryAt;
-        public int Failures;
+        public DateTimeOffset FirstSignal, LastSignal, RetryAt, WatcherRetryAt;
+        public int Failures, WatcherFailures;
         public SourceAccessState Access;
         public FileSystemWatcher? Watcher;
-        public TaskCompletionSource<LibraryScanResult>? Completion, ActiveCompletion;
-        public IProgress<LibraryScanProgress>? Progress;
+        public RequestGroup? Completion, ActiveCompletion;
+    }
+
+    private sealed class ManualRequest(SourceState source, IProgress<LibraryScanProgress>? progress)
+    {
+        public SourceState Source = source;
+        public RequestGroup? Group;
+        public readonly TaskCompletionSource<LibraryScanResult> Completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public IProgress<LibraryScanProgress>? Progress = progress;
+        public bool Cancelled;
+    }
+    private sealed class RequestGroup
+    {
+        public readonly List<ManualRequest> Requests = new();
+        public bool HasWaiters => Requests.Any(r => !r.Cancelled && !r.Completion.Task.IsCompleted);
     }
 
     public ScanCoordinator(LibraryDatabase database,
         Func<string, CancellationToken, Task<StorageObservation>>? observe = null,
         Func<Category, CategorySource, bool, IProgress<LibraryScanProgress>?, CancellationToken, Task<SourceScanObservation>>? collect = null,
-        Func<DateTimeOffset>? now = null)
+        Func<DateTimeOffset>? now = null,
+        Func<CategorySource, FileSystemWatcher>? createWatcher = null)
     {
         this.database = database;
         this.observe = observe ?? WindowsStorageProbe.ObserveAsync;
         this.collect = collect ?? new LibraryScanner(database).CollectAsync;
         this.now = now ?? (() => DateTimeOffset.UtcNow);
+        this.createWatcher = createWatcher ?? (source => new FileSystemWatcher(source.RootPath)
+        {
+            IncludeSubdirectories = source.IncludeSubdirectories,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size | NotifyFilters.LastWrite
+        });
         lock (gate) Reload();
     }
 
@@ -94,17 +115,17 @@ public sealed class ScanCoordinator
     public async Task<LibraryScanResult> ScanCategoryAsync(Guid categoryId,
         IProgress<LibraryScanProgress>? progress = null, CancellationToken token = default)
     {
-        Task<LibraryScanResult>[] tasks;
+        ManualRequest[] requests;
         lock (gate)
         {
-            if (closing || exclusions != 0) return Cancelled();
+            if (closing || exclusions != 0 || token.IsCancellationRequested) return Cancelled();
             Reload();
-            tasks = sources.Values.Where(s => s.Category.Id == categoryId && s.Source.IsEnabled)
+            requests = sources.Values.Where(s => s.Category.Id == categoryId && s.Source.IsEnabled)
                 .Select(s => Request(s, progress)).ToArray();
             Pump();
         }
-        using var registration = token.Register(CancelManual);
-        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+        using var registration = token.Register(() => CancelRequests(requests));
+        var results = await Task.WhenAll(requests.Select(r => r.Completion.Task)).ConfigureAwait(false);
         return new(results.Any(r => r.Status == LibraryScanStatus.Cancelled)
                 ? LibraryScanStatus.Cancelled : LibraryScanStatus.Completed,
             results.Sum(r => r.PresentCount), results.Sum(r => r.MissingCount),
@@ -113,48 +134,81 @@ public sealed class ScanCoordinator
 
     public Task<LibraryScanResult> ScanSourceAsync(Guid sourceId, CancellationToken token = default)
     {
-        Task<LibraryScanResult> task;
+        ManualRequest request;
         lock (gate)
         {
-            if (closing || exclusions != 0) return Task.FromResult(Cancelled());
+            if (closing || exclusions != 0 || token.IsCancellationRequested) return Task.FromResult(Cancelled());
             Reload();
             if (!sources.TryGetValue(sourceId, out var state) || !state.Source.IsEnabled)
                 return Task.FromResult(Cancelled());
-            task = Request(state, null); Pump();
+            request = Request(state, null); Pump();
         }
-        return WaitManual(task, token);
+        return WaitManual(request, token);
     }
-    private async Task<LibraryScanResult> WaitManual(Task<LibraryScanResult> task, CancellationToken token)
-    { using var registration = token.Register(CancelManual); return await task.ConfigureAwait(false); }
-    private Task<LibraryScanResult> Request(SourceState state, IProgress<LibraryScanProgress>? progress)
+    private async Task<LibraryScanResult> WaitManual(ManualRequest request, CancellationToken token)
     {
-        if (Quarantined(state)) return Task.FromResult(Warning("삭제 격리 분류는 스캔할 수 없습니다."));
+        using var registration = token.Register(() => CancelRequests(new[] { request }));
+        return await request.Completion.Task.ConfigureAwait(false);
+    }
+    private ManualRequest Request(SourceState state, IProgress<LibraryScanProgress>? progress)
+    {
+        var request = new ManualRequest(state, progress);
+        if (Quarantined(state))
+        {
+            request.Progress = null;
+            request.Completion.SetResult(Warning("삭제 격리 분류는 스캔할 수 없습니다."));
+            return request;
+        }
         bool sameWorker = ReferenceEquals(state, runningSource)
             && runningGeneration == generation && runningSourceSnapshot == state.Source
             && runningCategorySnapshot == state.Category && cancellation?.IsCancellationRequested == false;
-        if (state.Completion is not null
-            && (!ReferenceEquals(state.Completion, state.ActiveCompletion) || sameWorker))
-            return state.Completion.Task;
-        state.Suppressed = false;
-        state.Manual = !sameWorker || (!state.AcceptsManual && !state.Collecting);
-        state.Progress = progress;
-        state.Completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        if (!state.Manual) state.ActiveCompletion = state.Completion;
-        return state.Completion.Task;
+        if (state.Completion is null
+            || (ReferenceEquals(state.Completion, state.ActiveCompletion) && !sameWorker))
+        {
+            state.Suppressed = false;
+            state.Manual = !sameWorker || (!state.AcceptsManual && !state.Collecting);
+            state.Completion = new();
+            if (!state.Manual) state.ActiveCompletion = state.Completion;
+        }
+        request.Group = state.Completion;
+        state.Completion.Requests.Add(request);
+        return request;
     }
 
-    public void CancelManual()
+    private void CancelRequests(IEnumerable<ManualRequest> requests)
     {
         lock (gate)
         {
-            foreach (var state in sources.Values.Where(s => s.Manual || s.Completion is not null))
+            foreach (var request in requests)
             {
-                state.Manual = false; state.Suppressed = true; state.Progress = null;
-                if (!ReferenceEquals(state.Completion, state.ActiveCompletion))
-                    CompleteRequest(state, state.Completion, Cancelled());
+                if (request.Completion.Task.IsCompleted || request.Cancelled) continue;
+                request.Cancelled = true; request.Progress = null;
+                var state = request.Source; var group = request.Group!;
+                bool active = ReferenceEquals(state, runningSource) && ReferenceEquals(group, state.ActiveCompletion);
+                if (!group.HasWaiters && active && !runningAutomatic)
+                {
+                    // Last owner of a manual worker: retain its completion until actual IO returns.
+                    // A separately queued/new request is not suppressed or cancelled.
+                    if (ReferenceEquals(group, state.Completion)) state.Suppressed = true;
+                    cancellation?.Cancel();
+                }
+                else
+                {
+                    request.Completion.TrySetResult(Cancelled());
+                    if (!group.HasWaiters && ReferenceEquals(group, state.Completion))
+                    {
+                        state.Completion = null; state.Manual = false;
+                        if (!active) state.Suppressed = true;
+                    }
+                }
             }
-            cancellation?.Cancel();
         }
+    }
+    public void CancelManual()
+    {
+        lock (gate)
+            CancelRequests(sources.Values.SelectMany(s => new[] { s.Completion, s.ActiveCompletion })
+                .Where(g => g is not null).Distinct().SelectMany(g => g!.Requests).ToArray());
     }
 
     // Acquire before opening the viewing window (including Empty/SaveFailed), editing sources,
@@ -294,6 +348,7 @@ public sealed class ScanCoordinator
                 if (changed)
                 {
                     state.Watcher?.Dispose(); state.Watcher = null; state.Suppressed = false;
+                    state.WatcherFailures = 0; state.WatcherRetryAt = default;
                     state.Discovery = true;
                     state.Baseline = policy.RefreshMode != SourceRefreshMode.Manual;
                     state.Dirty++; state.FirstSignal = state.LastSignal = now();
@@ -311,6 +366,8 @@ public sealed class ScanCoordinator
         if (!state.Source.IsEnabled || Quarantined(state)) return false;
         if (state.Manual) return true;
         if (timer is null || !state.Category.IsEnabled || state.Suppressed) return false;
+        if (state.Policy.RefreshMode == SourceRefreshMode.Events && state.WatcherFailures > 0)
+            return now() >= state.WatcherRetryAt && now() >= state.RetryAt;
         if (state.Discovery || (state.Baseline && now() >= state.RetryAt)) return true;
         if (state.Startup && state.Policy.ScanOnStartup) return true;
         if (now() < state.RetryAt) return false;
@@ -337,6 +394,7 @@ public sealed class ScanCoordinator
         runningGeneration = version; runningSourceSnapshot = state.Source; runningCategorySnapshot = state.Category;
         state.AcceptsManual = true;
         bool manual = state.Manual, startup = state.Startup, discovery = state.Discovery;
+        runningAutomatic = !manual && (state.Baseline || (startup && state.Policy.ScanOnStartup) || !discovery);
         state.Manual = false; state.Startup = false; state.Discovery = false;
         state.ActiveCompletion = state.Completion;
         var source = state.Source; var category = state.Category;
@@ -421,8 +479,7 @@ public sealed class ScanCoordinator
             FileSystemWatcher? watcher = null;
             try
             {
-                watcher = new(source.RootPath) { IncludeSubdirectories = source.IncludeSubdirectories,
-                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.Size | NotifyFilters.LastWrite };
+                watcher = createWatcher(source);
                 var attached = watcher;
                 void Dirty()
                 {
@@ -438,14 +495,31 @@ public sealed class ScanCoordinator
                         if (!closing && ReferenceEquals(state.Watcher, attached))
                         { state.WatcherFailed = true; Dirty(); }
                 };
+                token.ThrowIfCancellationRequested();
                 watcher.EnableRaisingEvents = true;
                 lock (gate)
                 {
-                    if (Valid(state, source, category, version, token)) { state.Watcher = watcher; watcher = null; }
+                    if (Valid(state, source, category, version, token))
+                    {
+                        state.Watcher = watcher; watcher = null;
+                        state.WatcherFailures = 0; state.WatcherRetryAt = default;
+                    }
                 }
             }
-            catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
-            { Signal(source.Id); }
+            catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException
+                or System.Security.SecurityException or Win32Exception)
+            {
+                lock (gate)
+                    if (Valid(state, source, category, version, token))
+                    {
+                        state.WatcherFailures++;
+                        state.WatcherRetryAt = now() + RetryDelay(state.WatcherFailures);
+                        bool denied = ex is UnauthorizedAccessException or System.Security.SecurityException
+                            or Win32Exception { NativeErrorCode: 5 };
+                        state.Access = denied ? SourceAccessState.AccessDenied : SourceAccessState.Unavailable;
+                        if (denied) state.Suppressed = true;
+                    }
+            }
             finally { watcher?.Dispose(); }
         }
         IProgress<LibraryScanProgress> progress;
@@ -454,7 +528,7 @@ public sealed class ScanCoordinator
             if (!Valid(state, source, category, version, token)) return Cancelled();
             // Keep probe/discovery open to same-generation manual waiters until the final
             // collection decision. Once discovery completes, a new request queues separately.
-            shouldScan = manual || state.ActiveCompletion is not null || state.Baseline
+            shouldScan = manual || state.ActiveCompletion?.HasWaiters == true || state.Baseline
                 || (startup && state.Policy.ScanOnStartup)
                 || (!discovery && (state.Policy.RefreshMode != SourceRefreshMode.Manual
                     || (state.Failures > 0 && state.Policy.ScanOnStartup)));
@@ -504,12 +578,16 @@ public sealed class ScanCoordinator
                 observation.Warnings.Count, observation.Warnings);
         }
     }
-    private static void CompleteRequest(SourceState state, TaskCompletionSource<LibraryScanResult>? owner,
-        LibraryScanResult result)
+    private static void CompleteRequest(SourceState state, RequestGroup? owner, LibraryScanResult result)
     {
-        owner?.TrySetResult(result);
-        if (owner is not null && ReferenceEquals(owner, state.Completion))
-        { state.Completion = null; state.Progress = null; }
+        if (owner is null) return;
+        foreach (var request in owner.Requests)
+        {
+            request.Progress = null;
+            request.Completion.TrySetResult(request.Cancelled ? Cancelled() : result);
+        }
+        owner.Requests.Clear();
+        if (ReferenceEquals(owner, state.Completion)) state.Completion = null;
     }
     private sealed class RequestProgress(ScanCoordinator owner, SourceState state, long version,
         CancellationToken token) : IProgress<LibraryScanProgress>
@@ -521,8 +599,10 @@ public sealed class ScanCoordinator
                 if (!owner.closing && version == owner.generation && !token.IsCancellationRequested
                     && owner.cancellation is { } current && current.Token == token
                     && ReferenceEquals(owner.runningSource, state) && state.Collecting
-                    && state.ActiveCompletion is not null && ReferenceEquals(state.ActiveCompletion, state.Completion))
-                    state.Progress?.Report(value);
+                    && state.ActiveCompletion is { } group)
+                    foreach (var request in group.Requests.ToArray())
+                        if (!request.Cancelled && !request.Completion.Task.IsCompleted)
+                            request.Progress?.Report(value);
             }
         }
     }
@@ -534,8 +614,9 @@ public sealed class ScanCoordinator
     private void Backoff(SourceState state)
     {
         state.Failures++;
-        state.RetryAt = now() + TimeSpan.FromSeconds(state.Failures == 1 ? 30 : state.Failures == 2 ? 120 : 600);
+        state.RetryAt = now() + RetryDelay(state.Failures);
     }
+    private static TimeSpan RetryDelay(int failures) => TimeSpan.FromSeconds(failures == 1 ? 30 : failures == 2 ? 120 : 600);
     private static LibraryScanResult Cancelled() => new(LibraryScanStatus.Cancelled, 0, 0, 0, Array.Empty<string>());
     private static LibraryScanResult Warning(string message) => new(LibraryScanStatus.Completed, 0, 0, 1, new[] { message });
 }
