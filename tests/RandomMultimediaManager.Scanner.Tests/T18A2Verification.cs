@@ -288,11 +288,16 @@ internal static partial class T18A2Verification
         f.Confirm(source); release.SetResult(); await scan;
         Check(f.Db.GetItems(f.Category.Id).Single().FileSize == 1, "stale binding revision must discard whole observation");
         await coordinator.CloseAsync();
+        // Fixture setup precedes isolation. T18A-3 also blocks editing a quarantined category.
+        var sibling = f.Add(@"\\server\other"); f.Confirm(sibling);
         f.Db.QuarantineDeletion(item.PathKey);
+        bool editRejected = false;
+        try { f.Add(@"\\server\blocked-edit"); }
+        catch (InvalidOperationException) { editRejected = true; }
+        Check(editRejected, "quarantined category source edit rejected");
         int calls = 0;
         coordinator = new ScanCoordinator(f.Db, (p, _) => Task.FromResult(Evidence(p)),
             (_, _, _, _, _) => { calls++; return Task.FromResult(Empty); });
-        var sibling = f.Add(@"\\server\other"); f.Confirm(sibling);
         try
         {
             var result = await coordinator.ScanSourceAsync(sibling.Id);
