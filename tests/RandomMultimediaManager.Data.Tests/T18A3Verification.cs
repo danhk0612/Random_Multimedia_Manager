@@ -23,11 +23,11 @@ internal static class T18A3Verification
             for (int i = 0; i < 48; i++)
             {
                 var category = i % 3 == 0 ? f.RemoteCategory.Id : i % 3 == 1 ? f.Local.CategoryId : empty.Id;
-                var root = i % 3 == 0 ? $@"Z:\source{i}" : i % 3 == 1 ? $@"C:\local\source{i}" : $@"R:\source{i}";
+                var root = i % 3 == 0 ? $@"Z:\source{i}" : i == 1 ? @"C:\local" : i % 3 == 1 ? $@"C:\local\source{i}" : $@"R:\source{i}";
                 f.Db.AddSource(new(Guid.NewGuid(), category, root, root.ToUpperInvariant()));
             }
             var scan = new ScanCoordinator(f.Db, (_, _) => throw new Exception("unexpected OS probe"));
-            int? randomQueries = null;
+            int? randomQueries = null, manualQueries = null;
             foreach (int size in new[] { 100, 10000 })
             {
                 // Bulk seed uses real SQLite; no setup command counts enter the assertions.
@@ -54,15 +54,22 @@ internal static class T18A3Verification
                 Check(isolation.IsBlocked(@"Q:\not-registered.mp4") && !isolation.IsBlocked(@"C:\new.mp4"), "absent binding conservative, local root usable");
                 sql.Clear(); Check(f.Db.DeletionPaths.SetEquals(isolation.Paths) && sql.Count == 2, "DeletionPaths no history/progress or per-item lookup");
                 sql.Clear(); scan.Tick(); Check(sql.Count == 3, "48 source Pump uses one three-query isolation snapshot");
+                sql.Clear(); var manual = await scan.ScanCategoryAsync(f.RemoteCategory.Id);
+                Check(manual.WarningCount == 16, "all remote category sources rejected without probe");
+                Check(sql.Count(q => q.StartsWith("SELECT * FROM CategorySource WHERE CategoryId=")) == 4,
+                    "GetSources once per category during reload, never per quarantine path/source");
+                if (manualQueries is { } previous) Check(sql.Count == previous, "manual batch SQL independent of item count");
+                manualQueries = sql.Count;
                 sql.Clear(); var session = new SessionCoordinator(f.Db, new ReopenPreparer());
-                Check((await session.StartRandomAsync(Guid.NewGuid(), [f.Local.CategoryId, f.RemoteCategory.Id])).Status == SessionStatus.Completed, "local random candidate selected");
+                var selected = await session.StartRandomAsync(Guid.NewGuid(), [f.Local.CategoryId, f.RemoteCategory.Id]);
+                Check(selected.Status == SessionStatus.Completed, "local random candidate selected: " + selected.Status + " " + selected.Error);
                 Check(sql.Count(q => q.Contains("SELECT RootKey FROM StorageBinding")) == 1, "candidate batch reads binding set once");
                 Check(sql.Count(q => q.Contains("FROM StorageBinding WHERE RootKey=")) <= 1, "no binding query per candidate");
                 if (randomQueries is { } old) Check(sql.Count == old, "random SQL count independent of 100/10000 items");
                 randomQueries = sql.Count;
                 f.Db.QueryObserver = null;
                 Check((await session.LeaveAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "normal leave preserved");
-                Console.WriteLine($"BULK isolation items={size}, sources=48: snapshot=3, paths=2, Pump=3, random={randomQueries} SQL");
+                Console.WriteLine($"BULK isolation items={size}, sources=48: snapshot=3, paths=2, Pump=3, manual={manualQueries}, random={randomQueries} SQL");
             }
             f.Db.QueryObserver = null; await scan.CloseAsync();
         });
