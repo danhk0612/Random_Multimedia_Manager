@@ -105,9 +105,12 @@ public sealed partial class LibraryDatabase : IDisposable
         command.ExecuteNonQuery();
     }
 
+    internal Action<string>? QueryObserver { get; set; }
+
     private SqliteCommand Command(SqliteTransaction? transaction, string sql,
         params (string Name, object? Value)[] parameters)
     {
+        QueryObserver?.Invoke(sql);
         var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = sql;

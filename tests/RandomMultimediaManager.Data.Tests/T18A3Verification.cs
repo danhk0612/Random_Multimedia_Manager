@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using RandomMultimediaManager.App.Data;
 using RandomMultimediaManager.App.Deletion;
 using RandomMultimediaManager.App.Sessions;
+using RandomMultimediaManager.App.Scanning;
 using RandomMultimediaManager.Core;
 
 internal static class T18A3Verification
@@ -15,6 +16,88 @@ internal static class T18A3Verification
     { using var f = new Fixture(); await action(f); Console.WriteLine("PASS T18A-3: " + name); }
     public static async Task RunAsync()
     {
+        await Scenario("N07 bulk mixed isolation: constant SQL across items and source batches", async f =>
+        {
+            var empty = new Category(Guid.NewGuid(), "empty unknown", MediaType.Video);
+            f.Db.SaveCategory(empty);
+            for (int i = 0; i < 48; i++)
+            {
+                var category = i % 3 == 0 ? f.RemoteCategory.Id : i % 3 == 1 ? f.Local.CategoryId : empty.Id;
+                var root = i % 3 == 0 ? $@"Z:\source{i}" : i % 3 == 1 ? $@"C:\local\source{i}" : $@"R:\source{i}";
+                f.Db.AddSource(new(Guid.NewGuid(), category, root, root.ToUpperInvariant()));
+            }
+            var scan = new ScanCoordinator(f.Db, (_, _) => throw new Exception("unexpected OS probe"));
+            int? randomQueries = null;
+            foreach (int size in new[] { 100, 10000 })
+            {
+                // Bulk seed uses real SQLite; no setup command counts enter the assertions.
+                f.Db.SetDeletionIsolation([], false, false);
+                f.Sql($"""
+                    PRAGMA foreign_keys=ON;
+                    DELETE FROM MediaItem WHERE FileSize=42;
+                    WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<{size})
+                    INSERT INTO MediaItem(Id,CategoryId,MediaType,Path,PathKey,FileSize,LastWriteTimeUtc,IsFavorite,IsRandomExcluded,IsMissing)
+                    SELECT 'bulk-'||x, CASE WHEN x%4=0 THEN '{f.Local.CategoryId}' ELSE '{f.RemoteCategory.Id}' END,
+                        'Video', CASE x%4 WHEN 0 THEN 'C:\local\bulk' WHEN 1 THEN 'Z:\bulk' WHEN 2 THEN '\\server\share\bulk' ELSE 'R:\old\bulk' END || x || '.mp4',
+                        upper(CASE x%4 WHEN 0 THEN 'C:\local\bulk' WHEN 1 THEN 'Z:\bulk' WHEN 2 THEN '\\server\share\bulk' ELSE 'R:\old\bulk' END || x || '.mp4'),
+                        42,2,0,0,0 FROM n;
+                    """);
+                // MediaItem IDs must be valid GUIDs for session reads.
+                f.Sql("UPDATE MediaItem SET Id=lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))) WHERE FileSize=42;");
+                f.Db.SetDeletionIsolation([f.Mapped.PathKey], true, false);
+                var sql = new List<string>(); f.Db.QueryObserver = sql.Add;
+                var isolation = f.Db.GetDeletionIsolationSnapshot(includeCategories: true);
+                Check(sql.Count == 3 && sql.All(q => !q.Contains("ViewHistory") && !q.Contains("PlaybackProgress")), "three lightweight set reads only");
+                Check(isolation.Paths.Count == size * 3 / 4 + 4, "remote/UNC/unknown including historical items");
+                Check(isolation.IsCategoryBlocked(f.RemoteCategory.Id) && isolation.IsCategoryBlocked(empty.Id)
+                    && !isolation.IsCategoryBlocked(f.Local.CategoryId), "empty unknown source and mixed category, local unaffected");
+                Check(isolation.IsBlocked(@"Q:\not-registered.mp4") && !isolation.IsBlocked(@"C:\new.mp4"), "absent binding conservative, local root usable");
+                sql.Clear(); Check(f.Db.DeletionPaths.SetEquals(isolation.Paths) && sql.Count == 2, "DeletionPaths no history/progress or per-item lookup");
+                sql.Clear(); scan.Tick(); Check(sql.Count == 3, "48 source Pump uses one three-query isolation snapshot");
+                sql.Clear(); var session = new SessionCoordinator(f.Db, new ReopenPreparer());
+                Check((await session.StartRandomAsync(Guid.NewGuid(), [f.Local.CategoryId, f.RemoteCategory.Id])).Status == SessionStatus.Completed, "local random candidate selected");
+                Check(sql.Count(q => q.Contains("SELECT RootKey FROM StorageBinding")) == 1, "candidate batch reads binding set once");
+                Check(sql.Count(q => q.Contains("FROM StorageBinding WHERE RootKey=")) <= 1, "no binding query per candidate");
+                if (randomQueries is { } old) Check(sql.Count == old, "random SQL count independent of 100/10000 items");
+                randomQueries = sql.Count;
+                f.Db.QueryObserver = null;
+                Check((await session.LeaveAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "normal leave preserved");
+                Console.WriteLine($"BULK isolation items={size}, sources=48: snapshot=3, paths=2, Pump=3, random={randomQueries} SQL");
+            }
+            f.Db.QueryObserver = null; await scan.CloseAsync();
+        });
+        await Scenario("N07 fresh snapshots preserve overlap, boundaries, binding and source changes", async f =>
+        {
+            var sibling = new Category(Guid.NewGuid(), "sibling local", MediaType.Video);
+            var descendant = new Category(Guid.NewGuid(), "descendant local", MediaType.Video);
+            f.Db.SaveCategory(sibling); f.Db.SaveCategory(descendant);
+            f.Db.AddSource(new(Guid.NewGuid(), sibling.Id, @"C:\media2", @"C:\MEDIA2"));
+            var source = new CategorySource(Guid.NewGuid(), descendant.Id, @"C:\media", @"C:\MEDIA");
+            f.Db.AddSource(source);
+            f.Db.SetDeletionIsolation([@"C:\MEDIA\absent.mp4"], false, false);
+            var exact = f.Db.GetDeletionIsolationSnapshot(true);
+            Check(exact.IsCategoryBlocked(descendant.Id) && !exact.IsCategoryBlocked(sibling.Id), "descendant key without item, component boundary");
+            f.Db.SetDeletionIsolation([], false, true);
+            Check(f.Db.GetDeletionIsolationSnapshot(true).IsCategoryBlocked(sibling.Id), "global includes empty categories");
+            f.Db.SetDeletionIsolation([], false, false);
+            Check(!f.Db.GetDeletionIsolationSnapshot(true).IsCategoryBlocked(descendant.Id), "release fresh next decision");
+            f.Db.RemoveSource(source.Id);
+            f.Db.SetDeletionIsolation([@"C:\MEDIA\absent.mp4"], false, false);
+            Check(!f.Db.GetDeletionIsolationSnapshot(true).IsCategoryBlocked(descendant.Id), "removed source no stale category cache");
+            f.Db.SetDeletionIsolation([], false, false);
+            var remote = await f.Service.PrepareAsync(f.Mapped.PathKey, DeletionMode.Permanent);
+            var local = await f.Service.PrepareAsync(f.Local.PathKey, DeletionMode.Permanent);
+            Check(f.Service.Pending.Count == 2, "overlapping durable operations");
+            await f.Service.ConfirmAsync(f.Service.Pending.Single(p => p.Record!.OperationId == remote.OperationId), false);
+            var held = f.Db.GetDeletionIsolationSnapshot(true);
+            Check(held.IsBlocked(f.Local.PathKey) && !held.IsBlocked(f.Orphan.PathKey), "remaining exact operation survives broad release");
+            await f.Service.ConfirmAsync(f.Service.Pending.Single(p => p.Record!.OperationId == local.OperationId), false);
+            f.Db.ConfirmStorageBinding(@"R:\", 0, StorageObservation.Classify(@"R:\", MappingLookup.NotMapped,
+                localDriveType: true, device: "new-local", volume: "new-volume"), true);
+            f.Db.SetDeletionIsolation([], true, false);
+            Check(!f.Db.GetDeletionIsolationSnapshot().IsBlocked(f.Orphan.PathKey), "next decision observes newly confirmed local binding");
+            f.Db.SetDeletionIsolation([], false, false);
+        });
         await Scenario("N07 exact OS alias set, no inferred host/IP alias, unknown broad quarantine", async f =>
         {
             var record = await f.Service.PrepareAsync(f.Mapped.PathKey, DeletionMode.Permanent);

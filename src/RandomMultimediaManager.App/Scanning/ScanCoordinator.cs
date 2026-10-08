@@ -120,8 +120,9 @@ public sealed class ScanCoordinator
         {
             if (closing || exclusions != 0 || token.IsCancellationRequested) return Cancelled();
             Reload();
+            var isolation = database.GetDeletionIsolationSnapshot(includeCategories: true);
             requests = sources.Values.Where(s => s.Category.Id == categoryId && s.Source.IsEnabled)
-                .Select(s => Request(s, progress)).ToArray();
+                .Select(s => Request(s, progress, isolation)).ToArray();
             Pump();
         }
         using var registration = token.Register(() => CancelRequests(requests));
@@ -141,7 +142,7 @@ public sealed class ScanCoordinator
             Reload();
             if (!sources.TryGetValue(sourceId, out var state) || !state.Source.IsEnabled)
                 return Task.FromResult(Cancelled());
-            request = Request(state, null); Pump();
+            request = Request(state, null, database.GetDeletionIsolationSnapshot(includeCategories: true)); Pump();
         }
         return WaitManual(request, token);
     }
@@ -150,10 +151,10 @@ public sealed class ScanCoordinator
         using var registration = token.Register(() => CancelRequests(new[] { request }));
         return await request.Completion.Task.ConfigureAwait(false);
     }
-    private ManualRequest Request(SourceState state, IProgress<LibraryScanProgress>? progress)
+    private ManualRequest Request(SourceState state, IProgress<LibraryScanProgress>? progress, DeletionIsolationSnapshot isolation)
     {
         var request = new ManualRequest(state, progress);
-        if (Quarantined(state))
+        if (Quarantined(state, isolation))
         {
             request.Progress = null;
             request.Completion.SetResult(Warning("삭제 격리 분류는 스캔할 수 없습니다."));
@@ -365,15 +366,12 @@ public sealed class ScanCoordinator
             }
         }
     }
-    private bool Quarantined(SourceState state) => database.IsDeletionBlocked("")
-        || database.IsDeletionBlocked(state.Source.RootPathKey)
-        || database.GetItems(state.Category.Id).Any(i => database.IsDeletionBlocked(i.PathKey))
-        || database.DeletionPaths.Any(p => database.GetSources(state.Category.Id)
-            .Any(s => WindowsPath.IsSameOrDescendant(p, s.RootPathKey)));
+    private bool Quarantined(SourceState state, DeletionIsolationSnapshot? isolation = null) =>
+        (isolation ?? database.GetDeletionIsolationSnapshot(includeCategories: true)).IsCategoryBlocked(state.Category.Id);
 
-    private bool Eligible(SourceState state)
+    private bool Eligible(SourceState state, DeletionIsolationSnapshot isolation)
     {
-        if (!state.Source.IsEnabled || Quarantined(state)) return false;
+        if (!state.Source.IsEnabled || Quarantined(state, isolation)) return false;
         if (state.Manual) return true;
         if (timer is null || !state.Category.IsEnabled || state.Suppressed) return false;
         if (state.Policy.RefreshMode == SourceRefreshMode.Events && state.WatcherFailures > 0)
@@ -391,12 +389,13 @@ public sealed class ScanCoordinator
     private void Pump()
     {
         if (closing || exclusions != 0 || !running.IsCompleted) return;
-        foreach (var queued in sources.Values.Where(s => s.Completion is not null && (!s.Source.IsEnabled || Quarantined(s))))
+        var isolation = database.GetDeletionIsolationSnapshot(includeCategories: true);
+        foreach (var queued in sources.Values.Where(s => s.Completion is not null && (!s.Source.IsEnabled || Quarantined(s, isolation))))
         {
             CompleteRequest(queued, queued.Completion, Warning("소스 비활성 또는 삭제 격리로 스캔을 보류합니다."));
             queued.Manual = false;
         }
-        var state = sources.Values.Where(Eligible).OrderByDescending(s => s.Manual).ThenBy(s => s.Order).FirstOrDefault();
+        var state = sources.Values.Where(s => Eligible(s, isolation)).OrderByDescending(s => s.Manual).ThenBy(s => s.Order).FirstOrDefault();
         if (state is null) return;
         state.Order = ++order;
         runningSource = state;

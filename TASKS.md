@@ -347,3 +347,41 @@ T18A-2 통합 당시 다음은 고성능 Work의 T18A-3(원격 삭제·별칭/�
 검증 코드 `7ab2448`의 Windows Release(경고 0·오류 0), N07~N09 새 시나리오 10개와 영향 CI 5개가 통과했다. PR #25는 검증된 별칭 대상/v2 저널·원격/불명 격리·원자 DB 정리·v1/v2 복구와 삭제 IO drain을 연결한다. 원격 휴지통의 기본 판정은 실제 backend 근거 부재로 Unknown/실행 차단이며 임의 영구삭제 전환은 없다. N07~N09/영향 회귀의 근거와 실물 미검증은 docs/T18A_3_NETWORK_DELETION_VALIDATION.md, API는 DATA_AND_RANDOM_POLICY T18A §7을 따른다. 기존 새 작업 시작 지시문은 T18A-3의 최초 작업 계약으로 보존한다.
 
 현재 다음 작업은 PR #25 재검토·main 통합 판단이다. 직접 병합하지 않았다. 후속 T18A-4의 기준 브랜치는 **PR #25 통합 이후 최신 main**이며, T18A-4 행과 DATA_AND_RANDOM_POLICY T18A 전체(특히 §2/4/6~8)의 승인된 후보 억제·바인딩/지연 IO 연결만 수행한다. 고성능 Work를 사용하며 UNC/정책 UI는 T18A-5, 실물 통합은 T18A-6, 배포는 T18에 유지한다.
+
+## T18A-3 PR #25 병합 검토 — 보완 대기
+
+검토 헤드 `be87554b800769584bb594cd55fe14fb48efcc14`의 Windows CI 5개(T03 37787254091, T05 37787254083, T06 37787254081, T09 37787253989, T11 37787253992)는 모두 성공했다. 제품 코드는 아직 main에 통합하지 않았다. 실제 NAS/RaiDrive·사용자 로그오프 미검증은 유지한다.
+
+병합 검토에서 확인한 차단 사유(보완 검증 전): `LibraryDatabase.DeletionPaths`가 원격 광역 격리 중 전체 session snapshot을 읽고 항목마다 `GetStorageBinding` SQL을 호출한다. `ChooseRandom`의 후보별 `IsDeletionBlocked`도 반복 조회하며, `ScanCoordinator.Quarantined`는 소스별 평가 중 같은 판정과 소스 조회를 반복한다. 대규모 라이브러리에서 UI/DB gate를 오래 점유할 수 있다. 이는 코드 확인 결과이며 실제 대규모 지연 시간을 측정한 결과는 아니다. [리뷰 근거](https://github.com/danhk0612/Random_Multimedia_Manager/pull/25#discussion_r4219808461).
+
+### 기존 T18A-3 Work에 전달할 보완 지시문
+
+```text
+https://github.com/danhk0612/Random_Multimedia_Manager 의 PR #25만 보완해.
+
+최신 main의 AI_WORKFLOW.md, CURRENT_STATE.md, TASKS.md의 T18A-3 병합 검토를 읽고,
+기존 task/t18a-3-network-deletion 브랜치에서 작업해. 새 Task나 중복 PR을 만들지 마.
+main 문서 변경을 반영할 때 PR의 구현·검증 내용을 보존하고 상태 충돌을 정리해.
+
+원격 광역 격리 중 LibraryDatabase.DeletionPaths의 항목별 GetStorageBinding 조회를 제거해.
+ChooseRandom의 후보별 IsDeletionBlocked 및 ScanCoordinator.Quarantined의
+소스별 전체 항목/바인딩·GetSources 반복 조회까지 함께 점검해.
+필요한 바인딩/격리 정보를 일관된 한 판정 단위로 읽고 재사용하거나 집합 조회해.
+단순히 Task.Run으로 감싸거나 격리 검사를 제거하는 방식으로 해결하지 마.
+불필요한 ViewHistory/PlaybackProgress 전체 읽기도 피하고
+장기 캐시를 쓴다면 격리·바인딩·소스/항목 변경 시 무효화를 보장해.
+
+로컬/매핑/UNC/Unknown 혼합, 소스 밖 과거 항목, 겹친 pending 삭제,
+격리 설정·해제 및 분류/소스 경계의 기존 차단 의미를 유지해.
+대량 항목과 여러 소스에서 SQL 호출이 항목 수×소스 수로 늘지 않는 회귀 근거를 추가해.
+시간 임계치만으로 통과시키지 말고 조회 수 또는 동등한 결정적 근거를 남겨.
+N07~N09와 영향 저장/스캔/세션 회귀 및 Windows Release를 검증하고
+변경 영향에 필요한 CI 결과를 최종 코드 SHA와 함께 보고해.
+
+DB 스키마/삭제 정책·Pending 의미·원격 Unknown 보존·실제 IO drain은 바꾸지 마.
+CURRENT_STATE.md/TASKS.md와 T18A-3 검증 문서를 실제 결과로 갱신해.
+실제 NAS/RaiDrive 미검증 및 기존 T11 파일 선택창 복원 재실행 이력은 유지해.
+직접 병합하거나 T18A-4/UNC UI/배포를 시작하지 마.
+```
+
+보완 진행: main `047031a`의 문서 변경과 PR #25 구현·검증을 함께 보존했다. 이번 보완은 격리 스냅샷/조회 수 회귀이며 Windows 검증 후 실제 결과를 기록한다.
