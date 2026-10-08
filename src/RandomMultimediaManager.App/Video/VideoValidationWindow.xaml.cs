@@ -431,13 +431,15 @@ public partial class VideoValidationWindow : Window
     private async Task ShutdownCoreAsync()
     {
         closing = true;
+        current?.SetExitRequested(true);
+        staged?.SetExitRequested(true);
         timer.Stop();
         UpdateControls();
         operation = null;
         cancellation?.Cancel();
         await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
         await dialogTask;
-        await command;
+        try { await command; } catch { /* Command errors do not replace the actual release result. */ }
         await ReleaseAllAsync();
         allowClose = true;
         Close();

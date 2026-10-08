@@ -87,6 +87,7 @@ public partial class ViewingWindow : Window
     private void OnMediaActivated(ViewingMedia media)
     {
         Current = media;
+        media.Video?.SetExitRequested(applicationClosing || closing || exitRequested);
         ComicSurface.Content = media.ComicContent;
         ApplyFullscreenControlsVisibility();
         Volume.Value = 70; Muted.IsChecked = false; Rate.SelectedIndex = 1;
@@ -633,6 +634,7 @@ public partial class ViewingWindow : Window
     public void SetExitRequested(bool value)
     {
         exitRequested = value;
+        Current?.Video?.SetExitRequested(value || applicationClosing || closing);
         libraryBrowser?.SetExitRequested(value);
         if (value && libraryDialog is { IsVisible: true })
             libraryDialog.Close();
@@ -645,6 +647,7 @@ public partial class ViewingWindow : Window
         if (allowClose) return Task.FromResult(true);
         if (closeTask is { IsCompleted: false }) return closeTask;
         closing = true; CloseError = null;
+        Current?.Video?.SetExitRequested(true);
         Coordinator.SetExitRequested(true);
         Controls();
         Cancel(this, new RoutedEventArgs());
@@ -680,6 +683,7 @@ public partial class ViewingWindow : Window
         finally
         {
             closing = false;
+            Current?.Video?.SetExitRequested(exitRequested || applicationClosing);
             Coordinator.SetExitRequested(exitRequested);
             Controls();
         }

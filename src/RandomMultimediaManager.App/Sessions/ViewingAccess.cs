@@ -51,6 +51,8 @@ public sealed class ViewingAccess
             var observed = new List<Guid>();
             foreach (var source in group)
             {
+                token.ThrowIfCancellationRequested();
+                if (closing()) throw new OperationCanceledException();
                 try
                 {
                     await accessible(source.RootPath, token);

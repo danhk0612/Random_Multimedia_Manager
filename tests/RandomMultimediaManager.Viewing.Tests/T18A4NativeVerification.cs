@@ -20,7 +20,7 @@ internal static class T18A4NativeVerification
         await File.WriteAllTextAsync(subtitle, "1\n00:00:00,000 --> 00:00:05,000\ntest\n");
         try
         {
-            foreach (string stage in new[] { "seek", "subtitle", "stop", "play" })
+            foreach (string stage in new[] { "seek", "subtitle", "stop", "play", "closing-subtitle" })
             {
                 var operation = new VideoOperation(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
                 var prepared = await PreparedVideo.PrepareAsync(surface, operation, fixture, null, false, CancellationToken.None);
@@ -30,11 +30,21 @@ internal static class T18A4NativeVerification
                 var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
                 typeof(PreparedVideo).GetProperty("BeforeIo", BindingFlags.Instance | BindingFlags.NonPublic)!
-                    .SetValue(video, (Func<string, Task>)(async name => { if (name == stage) { entered.TrySetResult(); await release.Task; } }));
+                    .SetValue(video, (Func<string, Task>)(async name => { if (name == (stage == "closing-subtitle" ? "subtitle" : stage)) { entered.TrySetResult(); await release.Task; } }));
                 Task io = stage == "seek" ? video.SeekAsync(visit, 500)
-                    : stage == "subtitle" ? video.LoadExternalSubtitleAsync(visit, subtitle)
+                    : stage is "subtitle" or "closing-subtitle" ? video.LoadExternalSubtitleAsync(visit, subtitle)
                     : stage == "play" ? video.PlayAsync(visit) : video.StopAsync(visit);
                 await entered.Task;
+                if (stage == "closing-subtitle")
+                {
+                    video.SetExitRequested(true);
+                    release.SetResult();
+                    bool blocked = false;
+                    try { await io; } catch (InvalidOperationException) { blocked = true; }
+                    Check(blocked && video.Snapshot(visit).Visit == visit, "Closing skips late subtitle apply while preserving active visit");
+                    await video.DisposeAsync();
+                    continue;
+                }
                 var disposal = video.DisposeAsync().AsTask();
                 await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
                 Check(!disposal.IsCompleted && !video.WhenIdleAsync().IsCompleted && surface.Children.Count == 1,

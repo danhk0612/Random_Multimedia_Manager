@@ -48,10 +48,16 @@ public sealed class PreparedVideo : IAsyncDisposable
     private Task? disposal;
     private readonly HashSet<Task> ownedIo = [];
     private long lastValidPosition;
+    private bool ioClosing;
+    public void SetExitRequested(bool value) { dispatcher.VerifyAccess(); ioClosing = value; }
     // Deterministic delay injection via reflection in the Windows verification host only.
     private Func<string, Task>? BeforeIo { get; set; }
     private async Task<T> NativeAsync<T>(string stage, Func<T> action)
-    { if (BeforeIo is { } before) await before(stage); return await Task.Run(action); }
+    {
+        if (BeforeIo is { } before) await before(stage);
+        if (ioClosing || retiring) throw new InvalidOperationException("종료/해제 중에는 새 미디어 IO를 시작하지 않습니다.");
+        return await Task.Run(action);
+    }
     public Task WhenIdleAsync() => Task.WhenAll(ownedIo.ToArray());
     private long? completedPosition;
     private int desiredVolume;
@@ -137,6 +143,7 @@ public sealed class PreparedVideo : IAsyncDisposable
             if (!System.IO.Path.IsPathFullyQualified(path))
                 throw new ArgumentException("영상 경로는 절대 경로여야 합니다.", nameof(path));
             await Task.Run(() => { cancellation.ThrowIfCancellationRequested(); _ = File.GetAttributes(path); }, cancellation);
+            cancellation.ThrowIfCancellationRequested();
 
             // Separate instances prevent a candidate's volume/configuration from changing current.
             // The selected output starts muted before its first buffer; do not rely on pre-Play Mute.
@@ -151,6 +158,7 @@ public sealed class PreparedVideo : IAsyncDisposable
             owned.view.MediaPlayer = owned.player;
             if (owned.player.Hwnd == IntPtr.Zero)
                 throw new InvalidOperationException("숨김 WPF 영상 HWND 생성 실패: T02 준비 계약 검증 필요.");
+            cancellation.ThrowIfCancellationRequested();
             if (!await Task.Run(() => owned.player.Play())) throw new InvalidOperationException("엔진이 재생 시작을 거부했습니다.");
             owned.preparationStage = "video/audio decode and output";
             await owned.WaitForDecodedAsync(cancellation);
@@ -414,7 +422,7 @@ public sealed class PreparedVideo : IAsyncDisposable
     private Task<T> OwnIo<T>(Func<Task<T>> action)
     {
         dispatcher.VerifyAccess();
-        if (retiring) throw new InvalidOperationException("미디어 해제 중입니다.");
+        if (retiring || ioClosing) throw new InvalidOperationException("미디어 종료/해제 중입니다.");
         if (ownedIo.Count != 0) throw new InvalidOperationException("미디어 IO 처리 중입니다.");
         var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         ownedIo.Add(completion.Task);
@@ -461,7 +469,12 @@ public sealed class PreparedVideo : IAsyncDisposable
     {
         RequireVisit(token);
         string fullPath;
-        try { fullPath = (await Task.Run(() => ExternalSubtitleService.FromManualPath(path))).Path; RequireVisit(token); }
+        try
+        {
+            fullPath = (await Task.Run(() => ExternalSubtitleService.FromManualPath(path))).Path;
+            RequireVisit(token);
+            if (ioClosing) return new(false, "종료 중 자막 읽기를 시작하지 않습니다.", fullPath, null, null, null);
+        }
         catch (Exception ex) { return new(false, ex.Message, path, null, null, null); }
 
         if (loadedExternalSubtitles.TryGetValue(fullPath, out LoadedExternalSubtitle? loaded))
@@ -475,7 +488,11 @@ public sealed class PreparedVideo : IAsyncDisposable
         try { source = await Task.Run(() => ExternalSubtitleService.PrepareForLoad(fullPath)); }
         catch (Exception ex) { return new(false, $"자막 인코딩/읽기 실패: {ex.Message}", fullPath, null, null, null); }
 
-        try { RequireVisit(token); }
+        try
+        {
+            RequireVisit(token);
+            if (ioClosing) throw new InvalidOperationException("종료 중 자막 적용을 시작하지 않습니다.");
+        }
         catch
         {
             if (source.IsTemporary) await Task.Run(() => ExternalSubtitleService.DeleteTemporary(source));
