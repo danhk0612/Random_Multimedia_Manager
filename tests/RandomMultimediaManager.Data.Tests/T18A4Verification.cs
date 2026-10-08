@@ -29,6 +29,10 @@ internal static class T18A4Verification
             Check(f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor && f.C.View.Seen.SetEquals(prior.Seen), "Pending/cursor/Seen unchanged");
             Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == 2, "failed candidate not drawn again");
             Check(f.Db.GetItems(f.Category.Id).All(i => !i.IsMissing && !i.IsRandomExcluded) && f.Db.GetHistory(f.B.Id).Count == 0, "no persistent flags/history");
+            int attempts = f.P.Calls;
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.Failed, "failed restart preserves previous session");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == attempts + 1,
+                "failed restart does not clear old failed-open suppression");
             f.P.Fail = false;
             Check((await f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id)).Status == SessionStatus.Completed, "manual retry clears failed item");
             var current = f.C.View;

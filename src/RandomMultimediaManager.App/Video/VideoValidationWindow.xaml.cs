@@ -95,7 +95,9 @@ public partial class VideoValidationWindow : Window
         {
             try
             {
-                stagedSubtitleCandidates = ExternalSubtitleService.Discover(path);
+                var candidates = await Task.Run(() => ExternalSubtitleService.Discover(path));
+                if (closing || operation != request || token.IsCancellationRequested) return;
+                stagedSubtitleCandidates = candidates;
                 Status.Text += stagedSubtitleCandidates.Count == 0
                     ? "\n외부 자막 자동 검색: 후보 없음"
                     : $"\n외부 자막 자동 검색: {stagedSubtitleCandidates.Count}개, 활성화 후 '{stagedSubtitleCandidates[0].DisplayName}' 자동 선택";

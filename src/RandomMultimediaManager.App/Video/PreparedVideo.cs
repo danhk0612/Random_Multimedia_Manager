@@ -552,13 +552,13 @@ public sealed class PreparedVideo : IAsyncDisposable
     {
         retiring = true;
         ready = false;
-        // Invalidate first, drain actual workers and their late cleanup before native disposal.
-        try { await WhenIdleAsync(); } catch { /* Caller observes the IO result; release still drains. */ }
-        visit = null;
         view.Visibility = Visibility.Hidden;
         view.Content = null;
         player.Mute = true;
         player.Volume = 0;
+        // Hide/mute immediately; retain HWND/native ownership through actual late cleanup.
+        try { await WhenIdleAsync(); } catch { /* Caller observes the IO result; release still drains. */ }
+        visit = null;
         player.EncounteredError -= errorHandler;
         // Stop must finish while the bound HWND still exists. No UI/native callbacks block on it.
         await Task.Run(player.Stop);
