@@ -294,6 +294,6 @@ T18A-2 통합 당시 다음은 고성능 Work의 T18A-3(원격 삭제·별칭/�
 
 PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까지 문서 4개만 변경됐음을 확인했다. 다음은 TASKS.md 지시문의 T18A-4다. 실제 NAS/RaiDrive·로그오프 미검증, T11 파일 선택창 복원 1회 재실행 이력과 기존 수동 미검증/승인 생략은 유지한다. T18A-4·UNC UI·배포는 시작하지 않았다.
 
-## T18A-4 감상 연결 (구현·Windows 검증 진행 중)
+## T18A-4 감상 연결 (PR #26 재검토 대기)
 
-`task/t18a-4-network-viewing`에서 연결/바인딩 일시 후보 제외, 세션 실패 집합, 열기 전후 바인딩 확인과 live 삭제 격리, ZIP/영상/자막 실제 IO drain을 구현했다. 기존 Pending/기록/삭제/숨김·복원 의미를 보존한다. Windows Release/영향 CI는 제출 후 검증 중이며 실제 NAS/RaiDrive는 미검증이다. 상세 검사와 제한은 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. PR 병합 전이며 T18A-5/6·배포는 미착수다.
+`task/t18a-4-network-viewing`에서 연결/바인딩 일시 후보 제외, 세션 실패 집합, 열기 전후 바인딩 확인과 live 삭제 격리, ZIP/영상/자막 실제 IO drain을 구현했다. 기존 Pending/기록/삭제/숨김·복원 의미를 보존한다. 검증 코드 `9862d87`은 Windows x64 Release 경고·오류 0개 및 영향 CI 7개가 모두 통과했다. 실제 NAS/RaiDrive는 미검증이다. 상세 검사와 제한은 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. PR 병합 전이며 T18A-5/6·배포는 미착수다.

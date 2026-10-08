@@ -248,7 +248,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18A — 변경 감지와 경로 상태 갱신
 
 - 목적: 외부 파일 변경과 라이브러리 정합성 유지.
-- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 통합 완료); T18A-2 PR #24 구현·보완·Windows 자동 재검증 완료/main 통합 완료; T18A-3 PR #25 구현·성능 보완·Windows 검증 완료/main 통합 완료; T18A-4 구현·Windows 검증 진행 중, T18A-5~6 미착수.
+- 담당/상태: Astra / PR #21 main 통합 완료 (`7fb2ad4`), 네트워크 설계 PR #22 main 통합 (`2959391`), D10~D12/D14~D16 승인 완료. T18A-1 경로·저장 기반 구현·Windows 자동 검증 완료(PR #23, main 통합 완료); T18A-2 PR #24 구현·보완·Windows 자동 재검증 완료/main 통합 완료; T18A-3 PR #25 구현·성능 보완·Windows 검증 완료/main 통합 완료; T18A-4 PR #26 구현·Windows 검증 완료/재검토 대기, T18A-5~6 미착수.
 - 선행: T05/T12; T02 식별 계약.
 - 범위/수정 영역: 변경 감지·스캔·경로 추가/Missing 갱신(이동 상태 승계 없음).
 - 완료 조건/검증: 추가/삭제/이름변경·이벤트 중복/누락 뒤 재스캔, 잘못된 기록 병합 방지, 시작 검증 옵션 확인.
@@ -281,7 +281,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 | T18A-1 (완료, PR #23 main 통합 완료) | Astra | 보완 설계 통합·정책 결정 | 공통 경로/바인딩·소스 정책 값과 v2 migration/API, v1/v2 저널 읽기 계약; Core, Data, 경로 검증, Journal | N01~N03 저장/정규화/호환, 기존 키·ID·기록 보존. 실제 API/저널 필드를 문서화 | 자동 갱신 실행·원격 삭제 활성화·미디어 엔진 변경 |
 | T18A-2 (PR #24 보완·자동 재검증 완료/main 통합 완료) | Astra | 1 | 소스 단위 관찰/증거·단일 scan admission·watcher/예약·IO 등록/drain; Scanning/MainWindow/AppLifecycle | N04~N05/N09~N11 조정자 범위, 감상 중 반영 0·부재 오판 방지·DB 해제 후 접근 0 | 삭제 결과/후보 정책·UI 전체 개편 |
 | T18A-3 (PR #25 완료, main 통합 7437e9d) | Astra | 1, 2 | 별칭/광역 격리·원격 결과 분류·recycle capability·저널/대상별 원자 정리; Deletion/Data/SessionCoordinator.Deletion | N07~N09, v1 복구/재매핑/중복 정리, OS 재삭제 0·임의 영구삭제 0 | 추정 별칭 기록 삭제·정상 종료 우회 |
-| T18A-4 | Astra | 1, 2, 3 | 승인된 일시 후보 억제·바인딩 확인, ZIP/영상/자막 지연 IO와 기존 세션/해제 연결 | N06/N09~N12 감상 범위, 한 명령 한 후보·기존 Pending·Ready 보호 | 재생 엔진 교체·본문 선다운로드·새 캐시/클라우드 API |
+| T18A-4 | Astra / PR #26 재검토 대기 | 1, 2, 3 | 승인된 일시 후보 억제·바인딩 확인, ZIP/영상/자막 지연 IO와 기존 세션/해제 연결 | N06/N09~N12 감상 범위, 한 명령 한 후보·기존 Pending·Ready 보호 | 재생 엔진 교체·본문 선다운로드·새 캐시/클라우드 API |
 | T18A-5 | Sol (공통 계약 변경 시 Astra 회송) | 1~4 | UNC/소스 정책 UI, 마지막 관찰/접근 상태, DB 목록·Explorer 비동기 연결; CategoryEditor/LibraryBrowser/Views | N01/N04/N12 UI, 저장 실패 원복·필터/선택 유지·닫힌 창 갱신 없음 | DB/세션/삭제 의미·원격 로그인·UI 전체 재설계 |
 | T18A-6 | Astra | 1~5 | Windows 통합·실물 검증 및 지원 한계 인계; 영향 tests/검증 문서 | N01~N12 및 영향 회귀 결과를 오류 주입/실물별 구분. 미실시 항목 명시 | T18 배포·VSR·무관한 수정 |
 
@@ -359,4 +359,4 @@ PR #25를 `7437e9d`로 main에 통합했다. 항목별/소스별 반복 SQL을 �
 
 ### T18A-4 제출 상태
 
-`task/t18a-4-network-viewing`에서 위 지시문 범위 구현·결정적 지연 회귀를 추가했다. Windows Release/영향 CI 검증 중이며 PR 미병합이다. 실제 NAS/RaiDrive 및 사용자 수동 검증은 미실시로 유지한다. docs/T18A_4_NETWORK_VIEWING_VALIDATION.md가 결과의 단일 기준이다. 다음 Task는 PR 통합 뒤 최신 main에서 T18A-5이며 이번 작업에서는 시작하지 않는다.
+`task/t18a-4-network-viewing`에서 위 지시문 범위 구현·결정적 지연 회귀를 추가했다. 검증 코드 `9862d87`의 Windows x64 Release(경고·오류 0)와 영향 CI 7개가 모두 통과했으며 PR #26 재검토 대기/미병합이다. 실제 NAS/RaiDrive 및 사용자 수동 검증은 미실시로 유지한다. docs/T18A_4_NETWORK_VIEWING_VALIDATION.md가 결과의 단일 기준이다. 다음 Task는 PR 통합 뒤 최신 main에서 T18A-5이며 이번 작업에서는 시작하지 않는다.
