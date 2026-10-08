@@ -3,10 +3,11 @@ using RandomMultimediaManager.App.Scanning;
 using RandomMultimediaManager.App.ViewModels;
 using RandomMultimediaManager.Core;
 
-internal static class T18A2Verification
+internal static partial class T18A2Verification
 {
     public static async Task Run()
     {
+        await AdditionalReviewRegressions();
         await ReviewRegressions();
         await PostedProgressOwnership();
         await CancelledProbeAndOtherSource();

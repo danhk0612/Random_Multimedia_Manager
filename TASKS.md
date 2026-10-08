@@ -295,43 +295,37 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 
 ### 새 작업 시작 지시문
 
-2026-10-08 아래 보완 지시 수행·Windows 자동 재검증 완료. 원검토 계약은 그대로 보존하며 다음 작업은 PR #24 재검토다. T18A-3/T18은 선행 병합과 별도 지시까지 차단한다.
+2026-10-08 이전 세 보완·Windows 자동 재검증 결과를 보존하고 아래 추가 두 보완을 진행한다. T18A-3/T18은 선행 병합과 별도 지시까지 차단한다.
 
 ```text
-https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A-2 PR #24 병합 전 보완만 진행해.
+https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A-2 PR #24 추가 보완만 진행해.
 
-최신 main, PR #24와 task/t18a-2-scan-lifecycle, AI_WORKFLOW.md 및
-TASKS.md의 현재 보완 지시를 확인해. 기존 브랜치에서 이어 작업하고 main의
-검토 상태 문서와 PR의 구현/검증 문서를 내용 손실 없이 통합해.
+최신 main, PR #24, AI_WORKFLOW.md와 TASKS.md를 읽고
+기존 task/t18a-2-scan-lifecycle 브랜치를 이어 작업해.
+검토 기준은 22b61e1이며 실제 최신 상태를 우선해.
+이전 세 보완과 d563e0a Windows CI 5개 성공 결과를 보존해.
 
-검토 기준 헤드 f8942e1, 검증 코드 093a3fc. 아래 3건을 재현 검사 후 수정해.
+다음 두 문제를 수정 전 재현하고 범위 내에서 수정해.
 
-1. App.xaml.cs: Scans.Start 이후 WPF SessionEnding 및 앱이 제어하는 직접
-Shutdown 경로가 AppLifecycle의 실제 IO drain을 우회한다.
-앱이 처리 가능한 종료 요청을 공통 종료 경계로 연결하고 DB 해제 전
-신규 scan admission 차단·실제 worker 완료 대기를 보장해.
-OnExit async void 또는 Dispatcher를 막는 동기 대기로 해결하지 마.
-강제 OS 종료까지 정상 저장을 보장한다고 쓰지 말고 한계를 구분해.
-기존 Pending/삭제 복구/ExitBlocked/숨김·복원 정책을 보존해.
+1. ScanSourceAsync/ScanCategoryAsync가 token.Register(CancelManual)을 사용해
+한 요청 취소가 모든 수동 요청과 현재 worker를 취소·억제한다.
+요청 또는 분류 요청 그룹의 소유 범위로 취소를 제한해.
+실행 중 A와 대기 B에서 B 취소가 A를 중단하지 않아야 한다.
+동일 소스 공유 대기자 중 하나의 취소가 다른 대기자를 잘못 완료하거나
+진행 콜백을 지우지 않아야 한다. 자동 수집과 공유한 경우도 검증해.
+앱 종료/배타 진입의 전체 취소·실제 IO drain은 그대로 보존해.
 
-2. ScanCoordinator.Request: 자동 작업이 observe를 기다리는 동안 수동 요청이
-오면 Collecting=false라 Manual이 남아 성공 후 전체 수집을 다시 실행한다.
-이미 예정된 동일 소스 수집을 공유하고 수동 대기자도 그 결과로 완료해.
-관찰만 하는 discovery에는 필요한 수집을 한 번 연결하고,
-취소된 이전 작업·다른 source/generation과 잘못 합치지 마.
+2. Events 소스의 watcher 생성 실패가 Signal만 호출한다.
+삭제된 로컬 루트의 부재 스캔은 성공해 Failures를 0으로 만들지만
+새 dirty가 남아 약 2초 간격으로 probe/scan을 반복할 수 있다.
+watcher 실패를 승인된 backoff/권한 대기 정책에 연결하고,
+성공한 메타데이터 관찰이 watcher 실패 재시도 상태를 지우지 않게 해.
+새 정책이나 임의 주기를 추가하지 말고 정상 복구·수동 요청·종료를 보존해.
 
-3. 완료된 수동 요청의 Progress가 SourceState에 남아 후속 자동 스캔이
-이전 UI를 갱신한다. 요청 소유권을 기준으로 해제하고 새 요청의 콜백은 보존해.
-완료 후 자동 스캔 및 늦게 전달되는 진행 이벤트도 검사해.
-
-Windows Release 빌드와 T03/T05/T06/T09/T11 영향 회귀를 검증해.
-지연 worker 중 앱 종료 진입, probe 중 수동 요청(수집 1회),
-완료/취소 후 진행 콜백 및 새 요청 보존 회귀를 추가해.
-모의 SessionEnding/오류 주입과 실제 로그오프·NAS/RaiDrive 검증을 구분해.
-
-CURRENT_STATE.md/TASKS.md 및 영향 계약·검증 문서와 PR #24를 갱신해.
-새 기능·스키마·원격 삭제·후속 Task는 추가하지 말고,
-직접 병합하거나 T18A-3/T18로 넘어가지 마.
+Windows에서 두 회귀와 T03/T05/T06/T09/T11 영향 CI를 검증해.
+실제 로컬 폴더 제거/재생성과 오류 주입·실제 NAS/RaiDrive 결과를 구분해.
+기준 문서와 PR #24를 갱신하고 재검토로 넘겨.
+직접 병합·T18A-3·배포·무관한 리팩터링은 하지 마.
 ```
 
 후속 시작 시에는 위 공통 절차와 해당 행의 선행/범위/완료/금지 항목 전체를 작업 계약으로 사용한다. 브랜치는 `task/t18a-2-scan-lifecycle`, `task/t18a-3-network-deletion`, `task/t18a-4-network-viewing`, `task/t18a-5-source-ui`, `task/t18a-6-integration`이다. 담당·선행이 바뀌면 구현 전에 이 표를 먼저 재검토한다.
@@ -350,3 +344,10 @@ CURRENT_STATE.md/TASKS.md 및 영향 계약·검증 문서와 PR #24를 갱신�
 - PR 리뷰 3건을 실제 App.xaml.cs/ScanCoordinator.cs/AppLifecycle.cs와 대조했다. (1) SessionEnding/직접 Shutdown이 scan drain을 우회하고 OnExit에서 DB를 해제함, (2) 자동 probe 중 수동 요청이 동일 소스 수집을 중복 실행함, (3) 완료된 수동 Progress가 남아 후속 자동 검사에서 이전 UI에 전달됨을 코드 경로에서 확인했다. 수정 전 검토 당시 Windows 재현 테스트를 실행하지는 않았다.
 - 보완 완료(`d563e0a`, 2026-10-08): App 종료 경계/모의 SessionEnding drain, probe 중 수동 수집 1회, 완료·취소·늦은 진행 콜백/새 요청 보존 회귀를 추가했다. Windows Release 빌드 경고 0·오류 0, T03/T05/T06/T09/T11 5개 CI 통과. 재현 실패/수정 후 통과/실물 미검증은 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md를 따른다.
 - 기존 구현·검증 문서와 main `5e82e9d` 검토 지시를 작업 브랜치에 통합했다. PR #24는 미병합·재검토 대기이며 다음은 고성능 Work의 PR #24 재검토다. 실제 로그오프/NAS/RaiDrive는 미검증, T18A-3·배포는 차단한다.
+
+## T18A-2 PR #24 재검토 — 추가 보완 필요 (2026-10-08)
+
+- 헤드 `22b61e1`에서 이전 세 문제의 코드 수정과 재현/회귀 검사를 확인했다. 검증 코드 `d563e0a`의 Windows T03/T05/T06/T09/T11 CI 5개 성공, 이후 변경은 문서 5개임을 확인했다. 이전 세 지적은 해결된 것으로 판단한다.
+- 추가 차단: ScanCoordinator의 요청별 토큰이 전역 CancelManual을 호출하여 다른 소스/공유 요청까지 취소한다. watcher 생성 실패는 Signal만 남기고 정상 부재 관찰이 Failures를 초기화하여 짧은 주기 반복을 만들 수 있다. PR 추가 리뷰와 실제 코드를 대조한 결과이며 이번 검토에서 Windows 재현을 실행하지 않았다.
+- PR #24는 미병합이다. 다음은 TASKS.md 새 작업 시작 지시문의 두 추가 보완이다. 기존 구현·이전 보완·CI 결과를 보존하고 수정 전 재현 및 수정 후 Windows 검증을 제출한다. T18A-3와 배포는 선행 병합까지 차단한다. 실제 로그오프/NAS/RaiDrive 미검증은 유지한다.
+
