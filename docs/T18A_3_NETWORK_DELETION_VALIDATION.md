@@ -71,3 +71,35 @@ dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release
 T18A-5의 명시적 binding 확인 UI 및 T18A-6의 실물 검증 환경에서 새 테스트 복사본만 사용한다. 같은 파일의 매핑/UNC 등록, 원래 대상 및 remap, share 연결 단절/복구, backend별 recycle-only/명시 영구삭제, 미확인 alias의 기록 보존, 느린 IO 중 복원 키와 정상 종료 완료를 확인한다. 확인할 수 없는 backend는 계속 Unknown/휴지통 차단이다. 서버 보존/스냅샷까지 완전 제거하거나 숨겨진 대상 교체/최종 검사 뒤 경합을 탐지한다고 보장하지 않는다.
 
 PR #25 검토·main 통합 전에는 T18A-4를 시작하지 않는다. 배포는 T18A-6 이후 T18의 별도 승인 범위다.
+
+## PR #25 병합 검토 보완 — 격리 조회
+
+최신 main `047031aa70ef6f7366d635e018a4650e00cdab22`의 TASKS.md 병합 보류 지시를 기존 브랜치에 반영했다. main 문서와 PR 구현·검증 내용을 함께 보존했고 별도 PR/Task를 만들지 않았다. 제품 보완 `6836bc4`, 최종 코드·테스트 SHA `f4f3b29dc86313fb3612d54b4acb0e8910be1569`이다. 두 SHA 사이에는 fixture/회귀 검사 1파일만 변경됐다.
+
+`GetDeletionIsolationSnapshot`은 하나의 DB gate/read transaction에서 정확 키/광역·전역 flag와 확인된 Local 루트를 읽고, 필요한 항목/소스 키만 집합 조회한다. 격리 판정에서 ViewHistory/PlaybackProgress 전체 조회와 항목별 바인딩 SQL을 제거했다. 랜덤 후보는 같은 스냅샷을 재사용하고 실제 Move의 live 검사는 유지한다. 스캔 Pump는 소스 전체에 한 분류 격리 스냅샷을 사용하며 분류 수동 요청도 요청 배치에서 재사용한다. 소스 경계는 격리 키의 구성요소별 조상 집합으로 판정한다. 분류 편집 transaction의 바인딩 검사도 집합 조회를 재사용한다. 장기 캐시가 없고 다음 판정은 격리·바인딩·소스/항목 변경을 새로 읽는다.
+
+대량 회귀는 실제 SQLite와 48개 소스, 4개 분류에서 100개/10,000개 신규 항목을 각각 구성한다(기존 6항목 별도). 확인된 Local·RemoteMapped·UNC·Unknown, 소스 밖 과거 항목, 빈 Unknown 소스를 함께 사용한다. `LibraryDatabase.Command` observer로 판정 중 SQL 명령 수를 확인하며 native transaction 시작/종료는 이 observer 수에 포함하지 않는다. 시간 임계치로 통과시키지 않는다.
+
+| 판정 단위 | 100항목·48소스 | 10,000항목·48소스 | 결정적 검증 |
+|---|---:|---:|---|
+| 격리 스냅샷(분류 포함) | 3 | 3 | 바인딩 루트·항목 키·소스 키의 3개 SELECT, 이력/진행 조회 0 |
+| DeletionPaths | 2 | 2 | 바인딩 루트·항목 키만 조회 |
+| ScanCoordinator.Tick/Pump | 3 | 3 | 전체 소스에 한 격리 스냅샷, 소스별 항목/바인딩/GetSources 추가 조회 0 |
+| 분류 수동 요청(16소스 차단) | 59 | 59 | 기존 Reload 53 + 요청/Pump 격리 6; GetSources는 Reload에서 분류당 1회(총 4회), 격리 내부 반복 0 |
+| StartRandom 전체 명령 | 18 | 18 | 격리 바인딩 집합 1회, 선택된 단건 Move 검사만 추가; 후보별 바인딩 SQL 0 |
+
+두 추가 N07 시나리오에서 위 조회 수, 로컬 후보 선택/정상 Leave, 격리 설정·해제, 겹친 durable pending의 broad 해제 후 exact 유지, 전역 격리, 항목 없는 격리 키 아래 소스, `media`/`media2` 경계, 소스 제거 및 새 Local 바인딩의 다음 판정 반영을 확인했다. 기존 N07~N09 10개도 유지해 총 12개가 통과했다. DB 스키마·정책·Pending/원격 Unknown/실제 IO drain을 바꾸지 않았다. 별칭/연결·OS 결과 대역은 여전히 오류 주입이며 실제 NAS/RaiDrive 및 로그오프 미검증을 유지한다.
+
+Windows Server 2025 x64 / 10.0.26100 / .NET SDK 10.0.401에서 Release **경고 0·오류 0**, 최종 코드의 영향 CI 5개 모두 재실행 없이 통과했다. T03 job `113358433581`에서 위 조회 수/12개 PASS를 확인했고, T05 job `113358505986`의 N04/N05/N09/N10/N11 조정자·격리 회귀 및 T11 job `113358434066`의 기존 감상·삭제·숨김/복원·종료 회귀도 통과했다.
+
+| 최종 코드 SHA의 영향 CI | 결과 |
+|---|---|
+| [T03 저장·N07~N09·셸 37791114254](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37791114254) | 통과 |
+| [T05 스캔·조정자 37791114247](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37791114247) | 통과 |
+| [T06 Pending·기록·세션 37791114220](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37791114220) | 통과 |
+| [T09 영상 37791114232](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37791114232) | 통과 |
+| [T11 감상·삭제·숨김/복원·종료·만화/영상/자막 37791114238](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37791114238) | 통과 |
+
+보완 최초 `6836bc4`는 Release 경고/오류 0, T05/T09 성공이었으나 새 bulk fixture가 Local 파일을 등록 소스 밖에 둬 랜덤 후보가 없었다. [T03 37790736568](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37790736568), [T06 37790736527](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37790736527), [T11 37790736862](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37790736862)는 같은 새 assertion에서 실패했고 T11 native 단계는 실행되지 않았다. `f4f3b29`에서 fixture의 Local 상위 소스를 등록하고 수동 요청 조회 수 검사를 추가했다. 제품 격리나 기존 후보 정책을 완화하지 않았다. 이전 T18A-2 T11 파일 선택창 복원 실패/1회 재실행 이력과 위 최초 T18A-3 실패 이력은 보존한다.
+
+PR #25에 보완을 반영하며 직접 병합하지 않는다. 후속 T18A-4 기준은 PR #25 통합 이후 최신 main이고 이번 작업에서 시작하지 않는다.
