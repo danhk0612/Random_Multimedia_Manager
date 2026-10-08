@@ -38,17 +38,27 @@ public sealed partial class LibraryDatabase
             remoteDeletionBlocked = remoteAndUnknown; deletionRecoveryBlocked = global;
         }
     }
-    private bool IsRemoteOrUnknown(string key)
+    private bool IsRemoteOrUnknown(string key, Microsoft.Data.Sqlite.SqliteTransaction? transaction = null)
     {
         if (string.IsNullOrEmpty(key)) return false;
-        try { return GetStorageBinding(key) is not { Kind: StorageKind.Local, RequiresConfirmation: false }; }
+        try
+        {
+            if (transaction is null) return GetStorageBinding(key) is not { Kind: StorageKind.Local, RequiresConfirmation: false };
+            using var command = Command(transaction, "SELECT Kind,RequiresConfirmation FROM StorageBinding WHERE RootKey=$root;",
+                ("$root", WindowsPath.Normalize(key).RootKey));
+            using var reader = command.ExecuteReader();
+            return !reader.Read() || reader.GetString(0) != "Local" || reader.GetBoolean(1);
+        }
         catch (ArgumentException) { return true; }
     }
     private void RequireDeletionCategoryWritable(Microsoft.Data.Sqlite.SqliteTransaction transaction, Guid categoryId)
     {
-        if (deletionRecoveryBlocked || GetItems(categoryId).Any(i => IsDeletionBlocked(i.PathKey))
-            || GetSources(categoryId).Any(s => IsDeletionBlocked(s.RootPathKey)))
-            throw new InvalidOperationException("삭제 복구 중인 분류입니다.");
+        if (deletionRecoveryBlocked) throw new InvalidOperationException("삭제 복구 중인 분류입니다.");
+        var keys = new List<string>();
+        using (var command = Command(transaction, "SELECT PathKey FROM MediaItem WHERE CategoryId=$id UNION SELECT RootPathKey FROM CategorySource WHERE CategoryId=$id;", ("$id", Id(categoryId))))
+        using (var reader = command.ExecuteReader())
+            while (reader.Read()) keys.Add(reader.GetString(0));
+        foreach (var key in keys) RequireDeletionPathWritable(key, transaction);
     }
     public MediaItem[] CaptureDeletion(string pathKey, IReadOnlyCollection<string> keys,
         IReadOnlyCollection<DeletionBinding> bindings, bool remoteAndUnknown)
@@ -65,14 +75,14 @@ public sealed partial class LibraryDatabase
             return items;
         }
     }
-    private void RequireDeletionPathWritable(string key)
+    private void RequireDeletionPathWritable(string key, Microsoft.Data.Sqlite.SqliteTransaction? transaction = null)
     {
-        if (IsDeletionBlocked(key))
+        if (deletionRecoveryBlocked || deletionPaths.Contains(key) || (remoteDeletionBlocked && IsRemoteOrUnknown(key, transaction)))
             throw new InvalidOperationException("삭제 복구 중인 경로입니다. 복구 확인을 먼저 완료하세요.");
     }
     private void RequireDeletionItemWritable(Microsoft.Data.Sqlite.SqliteTransaction transaction, Guid id)
     {
         var key = Scalar(transaction, "SELECT PathKey FROM MediaItem WHERE Id=$id;", ("$id", Id(id))) as string;
-        RequireDeletionPathWritable(key ?? "");
+        RequireDeletionPathWritable(key ?? "", transaction);
     }
 }

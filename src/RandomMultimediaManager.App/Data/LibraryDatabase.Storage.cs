@@ -51,7 +51,7 @@ public sealed partial class LibraryDatabase
         observation.Validate();
         return Write(transaction =>
         {
-            RequireDeletionPathWritable(WindowsPath.Normalize(path).PathKey);
+            RequireDeletionPathWritable(WindowsPath.Normalize(path).PathKey, transaction);
             var old = RequireBinding(transaction, path);
             if (old.Revision != expectedRevision) throw new InvalidOperationException("오래된 바인딩 결과입니다.");
             if ((old.ExpectedTarget is not null && old.Observation != observation)
@@ -95,7 +95,7 @@ public sealed partial class LibraryDatabase
         string path = Scalar(transaction, "SELECT RootPath FROM CategorySource WHERE Id=$source;",
             ("$source", Id(sourceId))) as string ?? throw new InvalidOperationException("소스가 없습니다.");
         RequireDeletionCategoryWritable(transaction, Guid.Parse((string)Scalar(transaction, "SELECT CategoryId FROM CategorySource WHERE Id=$id;", ("$id", Id(sourceId)))!));
-        RequireDeletionPathWritable(WindowsPath.Normalize(path).PathKey);
+        RequireDeletionPathWritable(WindowsPath.Normalize(path).PathKey, transaction);
         policy.Validate(RequireBinding(transaction, path));
         WritePolicy(transaction, sourceId, policy, onlyIfAbsent: false);
         return 0;

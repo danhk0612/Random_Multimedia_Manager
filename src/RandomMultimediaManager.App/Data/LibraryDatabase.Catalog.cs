@@ -24,7 +24,7 @@ public sealed partial class LibraryDatabase
         return Write(transaction =>
         {
             RequireDeletionCategoryWritable(transaction, source.CategoryId);
-            RequireDeletionPathWritable(source.RootPathKey);
+            RequireDeletionPathWritable(source.RootPathKey, transaction);
             EnsureStorageRoot(transaction, source.RootPath);
             int inserted = Execute(transaction, """
                 INSERT INTO CategorySource VALUES($id,$category,$path,$key,$recursive,$enabled)
@@ -52,7 +52,7 @@ public sealed partial class LibraryDatabase
         Write(transaction =>
         {
             RequireDeletionCategoryWritable(transaction, source.CategoryId);
-            RequireDeletionPathWritable(source.RootPathKey);
+            RequireDeletionPathWritable(source.RootPathKey, transaction);
             EnsureStorageRoot(transaction, source.RootPath);
             using (var policyCommand = Command(transaction,
                 "SELECT ScanOnStartup,RefreshMode,IntervalHours,LastCompletedAtUtc FROM SourceRefreshPolicy WHERE SourceId=$id;",
@@ -85,7 +85,7 @@ public sealed partial class LibraryDatabase
         {
             foreach (var item in presentItems)
             {
-                RequireDeletionPathWritable(item.PathKey);
+                RequireDeletionPathWritable(item.PathKey, transaction);
                 EnsureStorageRoot(transaction, item.Path);
                 Execute(transaction, """
                     DELETE FROM PlaybackProgress WHERE MediaItemId IN
