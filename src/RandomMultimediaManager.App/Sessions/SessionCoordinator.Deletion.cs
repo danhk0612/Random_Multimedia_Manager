@@ -37,11 +37,11 @@ public sealed partial class SessionCoordinator
                 // return Unknown for exceptions after the OS boundary.
                 outcome = new(osStarted ? DeletionOutcome.Unknown : DeletionOutcome.Failed, ex.Message);
             }
-            if (outcome.Outcome == DeletionOutcome.Succeeded) DeleteSessionPath(item.PathKey);
+            if (outcome.Outcome == DeletionOutcome.Succeeded) DeleteSessionTargets(record);
             var result = await service.RecordResultAsync(record, outcome);
             string? reopenError = null;
             if ((outcome.Outcome is DeletionOutcome.Failed or DeletionOutcome.Cancelled) && result.Resolved)
-                reopenError = await ReopenDeletedVisit();
+                reopenError = await ReopenDeletedVisit(service, record);
             phase = RestingPhase;
             return new(result.Resolved ? SessionStatus.Completed : SessionStatus.CommitUnknown,
                 reopenError ?? result.Error ?? (result.Resolved ? outcome.Outcome switch {
@@ -50,16 +50,24 @@ public sealed partial class SessionCoordinator
                     _ => "삭제하지 못했습니다. 같은 방문을 유지합니다." } : "삭제 복구 확인이 필요합니다."));
         });
 
+    private static IEnumerable<string> TargetKeys(DeletionRecord record) => record.Version == 1
+        ? [record.PathKey] : record.Targets.Select(t => t.PathKey!).Distinct();
+    private void DeleteSessionTargets(DeletionRecord record)
+    {
+        foreach (var key in TargetKeys(record)) DeleteSessionPath(key);
+    }
     private void DeleteSessionPath(string key)
     {
         path?.DeleteSucceeded(key);
         if (path?.Pending is null)
         { current = null; activeToken = null; latestProgress = null; releasedItem = null; releasedState = null; }
     }
-    private async Task<string?> ReopenDeletedVisit()
+    private async Task<string?> ReopenDeletedVisit(DeletionService service, DeletionRecord? record)
     {
         if (releasedItem is null || path?.Pending is null || activeToken is null) return null;
         if (current is not null) return "미디어 해제가 완료되지 않았습니다.";
+        if (record is null) return "원래 삭제 대상을 확인할 수 없어 Pending과 진행을 보존합니다.";
+        if (await service.ValidateReopenAsync(record) is { } bindingError) return bindingError;
         var token = activeToken with { OperationId = Guid.NewGuid(), VisitId = null };
         ISessionMedia? media = null;
         try
@@ -85,7 +93,7 @@ public sealed partial class SessionCoordinator
         // Durable success must precede cleanup, but in-memory Pending must be cleared even
         // when the DB cleanup fails. A live confirmation can never generate a new visit.
         if (succeeded && entry.Record is { } target && path?.Pending is not null
-            && path.Slots[path.Cursor].PathKey == target.PathKey && current is not null)
+            && TargetKeys(target).Contains(path.Slots[path.Cursor].PathKey) && current is not null)
         {
             // Prepared may survive a lost write acknowledgement before media release. A user
             // confirmation must release that still-owned media too, not merely drop its owner.
@@ -96,9 +104,9 @@ public sealed partial class SessionCoordinator
         }
         var result = await service.ConfirmAsync(entry, succeeded);
         if (succeeded && entry.Record is { } r && result.Record?.Phase == DeletionPhase.Succeeded)
-            DeleteSessionPath(r.PathKey);
+            DeleteSessionTargets(r);
         string? reopenError = null;
-        if (!succeeded && result.Resolved) reopenError = await ReopenDeletedVisit();
+        if (!succeeded && result.Resolved) reopenError = await ReopenDeletedVisit(service, entry.Record);
         phase = RestingPhase;
         return new(result.Resolved ? SessionStatus.Completed : SessionStatus.CommitUnknown, result.Error ?? reopenError);
     });

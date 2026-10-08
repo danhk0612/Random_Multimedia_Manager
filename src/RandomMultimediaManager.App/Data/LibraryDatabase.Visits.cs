@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using RandomMultimediaManager.Core;
+using RandomMultimediaManager.App.Deletion;
 
 namespace RandomMultimediaManager.App.Data;
 
@@ -56,28 +57,31 @@ public sealed partial class LibraryDatabase
     // Caller (T12) supplies the durable Succeeded journal snapshot and owns path isolation.
     // This never deletes an OS file and never infers success from a missing path.
     public CommitResult ApplyDeletion(Guid operationId, string pathKey, IReadOnlyCollection<Guid> itemIds)
+        => ApplyDeletion(operationId, itemIds.Select(id => new DeletionTarget(id, 0, 0, pathKey)).ToArray());
+
+    public CommitResult ApplyDeletion(Guid operationId, IReadOnlyCollection<DeletionTarget> targets)
     {
         try
         {
             Id(operationId);
-            if (string.IsNullOrWhiteSpace(pathKey) || itemIds.Count == 0)
-                throw new ArgumentException("삭제 대상이 비어 있습니다.");
-            var targets = itemIds.Distinct().Select(Id).ToArray();
+            if (targets.Count == 0 || targets.Select(t => t.ItemId).Distinct().Count() != targets.Count
+                || targets.Any(t => t.ItemId == Guid.Empty || string.IsNullOrWhiteSpace(t.PathKey)))
+                throw new ArgumentException("삭제 대상이 비어 있거나 중복되었습니다.");
             return Write(transaction =>
             {
                 if (Scalar(transaction, "SELECT OperationId FROM AppliedDeletion WHERE OperationId=$id;",
                     ("$id", Id(operationId))) is string)
                     return new CommitResult(CommitStatus.AlreadyCommitted);
-                foreach (string item in targets)
+                foreach (var target in targets)
                 {
                     RequireOne(Execute(transaction,
                         "UPDATE MediaItem SET IsMissing=1 WHERE Id=$id AND PathKey=$path;",
-                        ("$id", item), ("$path", pathKey)));
+                        ("$id", Id(target.ItemId)), ("$path", target.PathKey)));
                     Execute(transaction, """
                         DELETE FROM ViewHistory WHERE MediaItemId=$id;
                         DELETE FROM PlaybackProgress WHERE MediaItemId=$id;
                         DELETE FROM VisitCommit WHERE MediaItemId=$id;
-                        """, ("$id", item));
+                        """, ("$id", Id(target.ItemId)));
                 }
                 Execute(transaction, "INSERT INTO AppliedDeletion VALUES($id);", ("$id", Id(operationId)));
                 return new CommitResult(CommitStatus.Committed);

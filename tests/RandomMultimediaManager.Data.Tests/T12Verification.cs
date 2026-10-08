@@ -202,7 +202,7 @@ internal static class T12Verification
         {
             var record=await f.Service.PrepareAsync(f.A.PathKey,DeletionMode.Recycle);
             string file=f.Journal.FileFor(record);
-            File.WriteAllText(file,File.ReadAllText(file).Replace("\"Version\": 1","\"Version\": 99"));
+            File.WriteAllText(file,File.ReadAllText(file).Replace("\"Version\": 2","\"Version\": 99"));
             await f.Restart();
             Check(f.Service.GloballyBlocked && f.Db.IsDeletionBlocked(f.A.PathKey) && f.Db.IsDeletionBlocked(f.B.PathKey),"unknown version cannot establish target scope");
             await f.Service.ConfirmAsync(f.Service.Pending.Single(),false);

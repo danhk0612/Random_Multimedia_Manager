@@ -9,12 +9,12 @@ public sealed partial class LibraryDatabase
         string name = category.Name.Trim();
         if (name.Length is < 1 or > 100 || !Enum.IsDefined(category.MediaType))
             throw new ArgumentException("분류 이름 또는 타입이 올바르지 않습니다.");
-        Write(transaction => Execute(transaction, """
+        Write(transaction => { RequireDeletionCategoryWritable(transaction, category.Id); return Execute(transaction, """
             INSERT INTO Category VALUES($id,$name,$type,$enabled)
             ON CONFLICT(Id) DO UPDATE SET Name=excluded.Name,
             MediaType=excluded.MediaType, IsEnabled=excluded.IsEnabled;
             """, ("$id", Id(category.Id)), ("$name", name),
-            ("$type", category.MediaType.ToString()), ("$enabled", category.IsEnabled)));
+            ("$type", category.MediaType.ToString()), ("$enabled", category.IsEnabled)); });
         // The composite FK rejects a type change even if registered items are Missing.
     }
 
@@ -23,6 +23,8 @@ public sealed partial class LibraryDatabase
         ValidatePathPair(source.RootPath, source.RootPathKey);
         return Write(transaction =>
         {
+            RequireDeletionCategoryWritable(transaction, source.CategoryId);
+            RequireDeletionPathWritable(source.RootPathKey, transaction);
             EnsureStorageRoot(transaction, source.RootPath);
             int inserted = Execute(transaction, """
                 INSERT INTO CategorySource VALUES($id,$category,$path,$key,$recursive,$enabled)
@@ -49,6 +51,8 @@ public sealed partial class LibraryDatabase
         ValidatePathPair(source.RootPath, source.RootPathKey);
         Write(transaction =>
         {
+            RequireDeletionCategoryWritable(transaction, source.CategoryId);
+            RequireDeletionPathWritable(source.RootPathKey, transaction);
             EnsureStorageRoot(transaction, source.RootPath);
             using (var policyCommand = Command(transaction,
                 "SELECT ScanOnStartup,RefreshMode,IntervalHours,LastCompletedAtUtc FROM SourceRefreshPolicy WHERE SourceId=$id;",
@@ -65,7 +69,11 @@ public sealed partial class LibraryDatabase
         });
     }
     public void RemoveSource(Guid sourceId) => Write(transaction =>
-        Execute(transaction, "DELETE FROM CategorySource WHERE Id=$id;", ("$id", Id(sourceId))));
+    {
+        var category = Scalar(transaction, "SELECT CategoryId FROM CategorySource WHERE Id=$id;", ("$id", Id(sourceId))) as string;
+        if (category is not null) RequireDeletionCategoryWritable(transaction, Guid.Parse(category));
+        return Execute(transaction, "DELETE FROM CategorySource WHERE Id=$id;", ("$id", Id(sourceId)));
+    });
 
     // T05 supplies only successfully observed records and explicitly confirmed missing IDs.
     // This method performs no scan, path discovery, or missing inference.
@@ -77,7 +85,7 @@ public sealed partial class LibraryDatabase
         {
             foreach (var item in presentItems)
             {
-                RequireDeletionPathWritable(item.PathKey);
+                RequireDeletionPathWritable(item.PathKey, transaction);
                 EnsureStorageRoot(transaction, item.Path);
                 Execute(transaction, """
                     DELETE FROM PlaybackProgress WHERE MediaItemId IN

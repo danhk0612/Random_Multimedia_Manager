@@ -62,7 +62,7 @@
 
 ## 다음 작업과 차단
 
-T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·Windows 자동 검증 완료이나 병합 전 성능 보완 대기다. T18A-4~6/T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 현재 검토 대상은 T18A-3 PR #25이며 main 제품 코드는 T18A-2 통합 상태다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
+T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3는 PR #25에서 구현·Windows 자동 검증 완료이며 main 미통합이다. T18A-4~6/T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 현재 검토 대상은 T18A-3 PR #25이며 최신 main `047031a`의 병합 전 조회 성능 보완과 Windows 영향 검증을 완료했다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
 
 ## T03 저장 구현
 
@@ -260,14 +260,14 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 - 기준 main `7b90722`, 브랜치 `task/t18a-2-scan-lifecycle`. `MainWindow.Scans`가 실제 Windows 연결 근거와 바인딩 revision/generation을 검증하고 SourceId별 관찰·watcher·시작/예약을 조정한다. 원격 Manual 자동 열거는 하지 않으며 원격/불확실한 부재로 기존 항목을 Missing 처리하지 않는다.
 - 감상 창 생성 전부터 ShowDialog 반환까지 스캔 배타 lease를 유지한다. 소스 편집/삭제 복구와 반영을 직렬화한다. Closing은 신규 스캔/감상/편집/삭제를 차단하며 취소를 무시하는 실제 worker도 완료한 다음 기존 종료 drain과 DB 해제를 진행한다. ExitBlocked의 기존 저장 재시도·복구·복원은 유지하고 스캔을 자동 재개하지 않는다.
 - 검증 코드 `093a3fc`의 Windows x64/.NET 10 Release 빌드(경고 0·오류 0) 및 T03/T05/T06/T09/T11 CI 5개가 통과했다. N04~N05/N09~N11 조정자 오류 주입과 실제 로컬 watcher/WPF 검증, 실제 NAS·RaiDrive 미검증을 [검증 기록](docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md)에 구분한다. 이후 완료 반영은 문서만 변경한다.
-- PR #24 main 통합 완료 (`d2848f5`). 원격 삭제/v2 복구, 후보 정책, 감상 엔진 지연 IO, UNC·설정 UI는 후속 T18A-3~6에 남긴다. T18 배포와 직접 병합은 수행하지 않았다.
+- PR #24 main 통합 완료 (`d2848f5`). T18A-2 당시 원격 삭제/v2 복구, 후보 정책, 감상 엔진 지연 IO, UNC·설정 UI는 후속 T18A-3~6에 남겼으며 최신 삭제 연결은 아래 PR #25 절을 따른다. T18 배포와 직접 병합은 수행하지 않았다.
 
 
 ## T18A-1 경로·바인딩·저장 기반
 
 - 기준 main `ae77b8b`, PR #22 통합과 D10~D12/D14~D16 승인을 확인했다. 브랜치 `task/t18a-1-path-storage`, [PR #23](https://github.com/danhk0612/Random_Multimedia_Manager/pull/23), 구현·Windows 자동 검증 완료/main 통합 완료.
 - IO 없는 로컬/매핑·UNC 정규화, 연결 근거 분류·revision/generation 확인 계약, 소스별 정책 API, v1→v2 migration, v1/v2 저널 읽기·검증을 구현했다. 기존 ID/키/기록/진행/저널 보존을 검사한다.
-- 자동 갱신/원격 삭제 활성화, UNC UI, 스캔·감상 IO admission 연결은 하지 않았다. v2 저널 복구는 T18A-3 연결 전 전역 차단한다. 실제 API/필드/후속 연결 경계는 DATA_AND_RANDOM_POLICY T18A §7.
+- 자동 갱신/원격 삭제 활성화, UNC UI, 스캔·감상 IO admission 연결은 하지 않았다. T18A-1 당시 v2 저널 복구는 T18A-3 연결 전 전역 차단했고 최신 연결은 아래 PR #25 절을 따른다. 실제 API/필드/후속 연결 경계는 DATA_AND_RANDOM_POLICY T18A §7.
 - 검증 코드 `af4bd6e`: Windows Server 2025 x64/.NET SDK 10.0.401 Release 빌드 경고 0·오류 0. N01~N03 6개와 T03/T05/T06/T09/T11(만화·자막 및 T12~T17 영향 회귀 포함) CI 5개 모두 성공. 실제 NAS/RaiDrive·사용자 DB·Windows 수동 UI는 미검증. Linux 부분 실행 및 최초 Windows 검사 기대값 보완은 검증 문서에 구분했다.
 - PR #23은 `08adddc`로 main 통합 완료했다. 검증 이후 최종 헤드 `06a89f4`까지의 차이는 문서 3개뿐임을 확인했다. 상세 검증은 docs/T18A_1_PATH_STORAGE_VALIDATION.md. T18A-2도 PR #24로 통합됐으며 다음 작업은 T18A-3이다. 인계는 TASKS.md의 새 작업 지시문을 따른다. T18A 전체 완료나 실제 네트워크 호환성 통과를 뜻하지 않는다.
 
@@ -276,8 +276,20 @@ T17 병합 검토: PR 최종 코드 `01b7bbd2b48b5decd94f0e3a6ffeb2da93e1317c`�
 
 PR #24를 `d2848f5`로 main에 통합했다. 종료 drain·probe 합류·진행 콜백·요청별 취소·watcher backoff의 다섯 보완을 검토했다. 검증 코드 `ac2a4d6`의 Windows CI 5개 성공, 이후 `d3c11bc`까지 문서 4개만 변경됨을 확인했다. T11 최초 파일 선택창 복원 실패와 코드 변경 없는 1회 재실행 통과는 docs/T18A_2_SCAN_LIFECYCLE_VALIDATION.md에 보존한다. 실제 NAS/RaiDrive·사용자 로그오프는 미검증이다.
 
-다음은 고성능 Work의 T18A-3(원격 삭제·별칭/광역 격리·v2 복구)이며 TASKS.md의 새 작업 시작 지시문을 따른다. T18A 전체 완료나 배포 완료가 아니다. 제품 구현은 기존 선행 순서대로 진행하며 테스트 환경/복사본 준비만 병렬 가능하다.
+T18A-2 통합 당시 다음은 고성능 Work의 T18A-3(원격 삭제·별칭/광역 격리·v2 복구)이며 TASKS.md의 새 작업 시작 지시문을 따른다. T18A 전체 완료나 배포 완료가 아니다. 제품 구현은 기존 선행 순서대로 진행하며 테스트 환경/복사본 준비만 병렬 가능하다.
 
-## T18A-3 PR #25 병합 보류
+## T18A-3 원격 삭제·별칭 격리·v2 복구 (PR #25, main 미통합)
 
-헤드 `be87554`의 Windows CI 5개 성공을 확인했다. 원격 광역 격리의 항목별 바인딩 SQL 및 랜덤/소스별 반복 판정이 대규모 라이브러리에서 UI/DB gate를 오래 점유할 수 있어 병합을 보류한다. 실제 지연 측정 결과가 아닌 코드 검토에서 확인한 문제다. 기존 T18A-3 고성능 Work에서 TASKS.md의 병합 검토 보완 지시문을 수행한다. 제품 코드와 T18A-3 검증 문서는 PR #25에만 있으며 main 미통합이다. T18A-4 착수는 보완 검증·병합 이후다. 실제 NAS/RaiDrive·로그오프와 기존 수동 미검증 상태는 유지한다.
+- 최신 main `b5debb3`(T18A-2 merge `d2848f5`)에서 `task/t18a-3-network-deletion`을 시작했다. 검증된 Windows 매핑 대상+상대 경로의 정확한 UNC 별칭만 사전 캡처한다. 원격/불명 광역 격리에는 소스 밖 과거 항목도 포함되며 추정 별칭 기록은 정리하지 않는다.
+- 새 실행은 v2 Prepared durable 저널 이후 한 번만 OS 호출한다. 원격 부재/응답 유실은 Unknown으로 보존하고, 원격 휴지통은 실제 backend 검증 근거가 없어 기본 Unknown/차단이다. 기존 영구삭제는 사용자의 별도 선택에서만 실행한다.
+- v1/v2 복구는 저장된 ItemId/PathKey 집합의 DB 정리만 수행한다. 대상별 키 검증·기록/진행/VisitCommit 제거·AppliedDeletion은 같은 transaction이며 저널 제거 실패/재등장도 멱등 처리한다. 손상 v2는 전역 차단, v1 원격 가능성은 보수 광역 격리다.
+- 실제 삭제 IO가 살아 있으면 성공/실패 확인으로 격리를 먼저 풀 수 없다. Closing은 새 삭제 조회/OS IO를 막고 실제 작업 완료 및 기존 세션 명령/복구 drain 뒤 DB를 해제한다. 실패 복귀도 원래 실행 바인딩을 확인하며 재매핑 시 재열기 없이 Pending·마지막 진행을 보존한다.
+- 검증 코드 `7ab2448`의 Windows Server 2025 x64/.NET SDK 10.0.401 Release 경고 0·오류 0, N07~N09 새 시나리오 10개 및 T03/T05/T06/T09/T11 CI 5개가 모두 통과했다. 검증 결과는 [T18A_3_NETWORK_DELETION_VALIDATION.md](docs/T18A_3_NETWORK_DELETION_VALIDATION.md)를 따른다. 실제 NAS/RaiDrive backend·실제 사용자 로그오프는 미검증이다. 기존 T11 파일 선택창 복원 재실행 이력·수동 미검증·승인 생략·AVI 조사 보류는 유지한다. PR #25 병합 전에는 후속 T18A-4를 시작하지 않는다. UNC/설정 UI·감상 후보/엔진 IO·배포는 추가하지 않았다.
+
+## T18A-3 PR #25 병합 검토 보완
+
+최신 main `047031a`의 병합 보류 사유와 TASKS.md 보완 지시문을 반영했다. 기존 PR의 구현·검증 기록은 보존한다. 격리 판정의 항목별/소스별 SQL을 DB gate/read transaction의 판정 단위 스냅샷으로 개선했다. 장기 캐시 없이 후보/소스 배치가 재사용하고 실제 열기/반영의 live 게이트를 유지한다.
+
+최종 코드·테스트 `f4f3b29dc86313fb3612d54b4acb0e8910be1569`(제품 코드 `6836bc4`)의 Windows Release 경고 0·오류 0, N07~N09 12개 및 T03/T05/T06/T09/T11 영향 CI 5개가 모두 통과했다. 100/10,000항목·48소스에서 격리 스냅샷 3회·DeletionPaths 2회·Pump 3회·분류 수동 요청 59회·랜덤 명령 18회로 SQL 수가 동일함을 확인했다. 이력/진행 없는 격리 조회와 Local/매핑/UNC/Unknown·과거 항목·겹친 pending·해제/경계/변경의 의미를 검증했다. 새 fixture 소스 범위 오류로 인한 최초 실패와 수정은 [T18A-3 검증 기록](docs/T18A_3_NETWORK_DELETION_VALIDATION.md)에 남겼다.
+
+PR #25 재검토 대기/main 미통합이다. 실제 NAS/RaiDrive·로그오프 미검증, T11 파일 선택창 복원 1회 재실행 이력과 기존 수동 미검증/승인 생략은 유지한다. T18A-4·UNC UI·배포는 시작하지 않았다.

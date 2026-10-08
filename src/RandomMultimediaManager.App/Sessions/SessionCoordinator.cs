@@ -168,9 +168,11 @@ public sealed partial class SessionCoordinator
         long now = clock();
         snapshot ??= await Task.Run(database.GetSessionSnapshot);
         var settings = await Task.Run(database.GetSettings);
+        var isolation = database.GetDeletionIsolationSnapshot();
+        if (isolation.GloballyBlocked) return new(SessionStatus.CommitUnknown, "삭제 복구 확인이 필요합니다.");
         var candidates = CandidatePolicy.GetCandidates(snapshot, destination.Selected, destination.Seen,
-            quarantined.Concat(database.DeletionPaths).ToHashSet(), now, settings.HistoryExclusionDays);
-        if (database.IsDeletionBlocked("")) return new(SessionStatus.CommitUnknown, "삭제 복구 확인이 필요합니다.");
+            quarantined.Concat(isolation.Paths).ToHashSet(), now, settings.HistoryExclusionDays);
+        candidates = candidates.Where(i => !isolation.IsBlocked(i.PathKey)).ToArray();
         if (candidates.Count == 0) return new(SessionStatus.NoCandidates);
         return await Move(new(destination, candidates[draw(candidates.Count)], VisitOrigin.Random));
     }

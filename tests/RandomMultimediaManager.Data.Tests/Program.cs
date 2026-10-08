@@ -8,6 +8,12 @@ if (args.Contains("--t18a1"))
     return;
 }
 
+if (args.Contains("--t18a3"))
+{
+    await T18A3Verification.RunAsync();
+    return;
+}
+
 int passed = 0;
 void Check(bool condition, string message = "Assertion failed")
 {
@@ -258,3 +264,4 @@ await T15Verification.RunAsync();
 await T17Verification.RunAsync();
 
 await T18A1Verification.RunAsync();
+await T18A3Verification.RunAsync();

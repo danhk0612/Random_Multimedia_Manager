@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using RandomMultimediaManager.App.Sessions;
+using RandomMultimediaManager.Core;
 
 namespace RandomMultimediaManager.App.Deletion;
 
@@ -21,24 +22,33 @@ public static class WindowsFileDeletion
     }
     private static FileDeletionResult Delete(DeletionRecord record)
     {
+        if (record.Version != 2) return new(DeletionOutcome.Failed, "v1 복구 저널로 OS 삭제를 실행하지 않습니다.");
+        bool remote = DeletionSafety.IsRemote(record);
+        var executionBinding = record.Bindings!.Single(b => b.Binding.RootKey == WindowsPath.Normalize(record.Path).RootKey).Binding;
+        if (record.Mode == DeletionMode.Recycle && !RecycleCapability.For(executionBinding).CanRecycle)
+            return new(DeletionOutcome.Failed, "검증되지 않은 원격 휴지통은 실행하지 않습니다.");
         try
         {
             // Reparse paths must not turn a file deletion into a different target or a tree.
+            string root = WindowsPath.Normalize(record.Path).Root;
             for (string? p = record.Path; p is not null; p = System.IO.Path.GetDirectoryName(p))
+            {
                 if ((File.GetAttributes(p) & FileAttributes.ReparsePoint) != 0)
                     return new(DeletionOutcome.Failed, "Reparse 경로는 삭제하지 않습니다.");
+                if (p.TrimEnd('\\').Equals(root.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)) break;
+            }
             if ((File.GetAttributes(record.Path) & FileAttributes.Directory) != 0)
                 return new(DeletionOutcome.Failed, "폴더는 삭제하지 않습니다.");
         }
-        catch (FileNotFoundException ex) { return new(DeletionOutcome.Failed, ex.Message, true); }
-        catch (DirectoryNotFoundException ex) { return new(DeletionOutcome.Failed, ex.Message, true); }
+        catch (FileNotFoundException ex) { return new(remote ? DeletionOutcome.Unknown : DeletionOutcome.Failed, ex.Message, !remote); }
+        catch (DirectoryNotFoundException ex) { return new(remote ? DeletionOutcome.Unknown : DeletionOutcome.Failed, ex.Message, !remote); }
         catch (Exception ex) { return new(DeletionOutcome.Failed, ex.Message); }
         if (record.Mode == DeletionMode.Permanent)
         {
             // Unlike File.Delete, DeleteFileW does not report an already absent file as success.
             if (DeleteFile(record.Path)) return new(DeletionOutcome.Succeeded);
             int error = Marshal.GetLastWin32Error();
-            return new(DeletionOutcome.Failed, new Win32Exception(error).Message, error is 2 or 3);
+            return ClassifyPermanentFailure(error, remote);
         }
         IFileOperation? operation = null;
         IShellItem? item = null;
@@ -58,8 +68,8 @@ public static class WindowsFileDeletion
             operation.GetAnyOperationsAborted(out bool aborted);
             if (sink.Result is >= 0 && sink.Recycling && sink.RecycledItem) return new(DeletionOutcome.Succeeded);
             if (sink.Vetoed) return new(DeletionOutcome.Failed, "휴지통으로 이동할 수 없습니다. 영구 삭제로 전환하지 않았습니다.");
-            if (sink.Result is < 0) return new(DeletionOutcome.Failed, Marshal.GetExceptionForHR(sink.Result.Value)?.Message);
-            if (aborted) return new(DeletionOutcome.Cancelled, "휴지통 이동이 취소되었습니다.");
+            if (sink.Result is < 0) return new(remote ? DeletionOutcome.Unknown : DeletionOutcome.Failed, Marshal.GetExceptionForHR(sink.Result.Value)?.Message);
+            if (aborted) return new(remote ? DeletionOutcome.Unknown : DeletionOutcome.Cancelled, "휴지통 이동이 취소되었습니다.");
             return new(DeletionOutcome.Unknown, $"휴지통 작업 결과를 확인할 수 없습니다 (perform=0x{hr:X8}, post={sink.Result:X8}, recycle={sink.Recycling}, item={sink.RecycledItem}).");
         }
         catch (Exception ex) { return new(started ? DeletionOutcome.Unknown : DeletionOutcome.Failed, ex.Message); }
@@ -70,6 +80,9 @@ public static class WindowsFileDeletion
             GC.KeepAlive(sink);
         }
     }
+    public static FileDeletionResult ClassifyPermanentFailure(int error, bool remote) =>
+        new(remote ? DeletionOutcome.Unknown : DeletionOutcome.Failed, new Win32Exception(error).Message, !remote && error is 2 or 3);
+
     [DllImport("kernel32.dll", EntryPoint = "DeleteFileW", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DeleteFile(string path);
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = true)]

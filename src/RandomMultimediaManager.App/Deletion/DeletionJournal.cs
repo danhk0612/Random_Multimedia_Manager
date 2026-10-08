@@ -112,6 +112,17 @@ public class DeletionJournal(string directory)
                     || path.Path != target.PathKey || path.PathKey != target.PathKey || !roots.Contains(path.RootKey))
                     throw new ArgumentException("대상별 경로 키/바인딩 누락");
             if (!r.Targets.Any(t => t.PathKey == r.PathKey)) throw new ArgumentException("실행 경로 대상 누락");
+            if (r.Bindings.Any(b => b.Binding.Kind != StorageKind.Local || b.Binding.RequiresConfirmation)
+                && r.QuarantineScope != DeletionQuarantineScope.RemoteAndUnknown)
+                throw new ArgumentException("원격/불명 광역 격리 누락");
+            var execution = r.Bindings.Single(b => b.Binding.RootKey == WindowsPath.Normalize(r.Path).RootKey);
+            string? alias = DeletionSafety.AliasKey(r.Path, execution.Binding.Observation);
+            foreach (var target in r.Targets.Where(t => t.PathKey != r.PathKey))
+            {
+                var binding = r.Bindings.Single(b => b.Binding.RootKey == WindowsPath.Normalize(target.PathKey!).RootKey);
+                if (alias is null || DeletionSafety.AliasKey(target.PathKey!, binding.Binding.Observation) != alias)
+                    throw new ArgumentException("검증된 별칭이 아닌 대상");
+            }
         }
         catch (ArgumentException ex) { throw new InvalidDataException("v2 삭제 저널 계약 오류", ex); }
     }

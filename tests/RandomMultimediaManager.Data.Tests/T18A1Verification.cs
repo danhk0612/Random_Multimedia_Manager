@@ -173,7 +173,7 @@ internal static class T18A1Verification
             unknown.Invalidate(); Check(!unknown.Observe(1, failed), "reconnect reconfirmation");
             return Task.CompletedTask;
         });
-        await Scenario("N02 v1/v2 journal coexistence, v1 bytes preserved, v2 fail closed", async dir =>
+        await Scenario("N02 v1/v2 journal coexistence, bytes preserved, scoped recovery", async dir =>
         {
             using var db = LibraryDatabase.Open(Path.Combine(dir, "library.db")); var source = Source(db, @"Z:\media");
             var n = WindowsPath.Normalize(@"Z:\media\a.mp4");
@@ -189,8 +189,8 @@ internal static class T18A1Verification
             int osCalls = 0;
             var service = new DeletionService(db, journal, _ => { osCalls++; return Task.FromResult(new FileDeletionResult(DeletionOutcome.Succeeded)); });
             await service.InitializeAsync();
-            Check(service.GloballyBlocked && db.IsDeletionBlocked(@"C:\OTHER"), "v2 cannot enter legacy recovery");
-            Check(!(await service.ConfirmAsync(service.Pending.Single(p => p.Record?.Version == 2), true)).Resolved, "no v2 partial cleanup");
+            Check(!service.GloballyBlocked && db.IsDeletionBlocked(n.PathKey), "v2 target and remote isolation restored");
+            Reject(() => service.ExecuteAsync(v2)); // A recovered intent cannot become a new OS operation.
             Check(osCalls == 0 && v1bytes.SequenceEqual(File.ReadAllBytes(journal.FileFor(v1))), "no OS replay or v1 rewrite");
             File.WriteAllText(journal.FileFor(v1), File.ReadAllText(journal.FileFor(v1)).Replace("\"FileSize\": 1", "\"FileSize\": -1"));
             var corruptV1 = journal.ReadAll().Single(r => r.File == journal.FileFor(v1));
