@@ -41,7 +41,7 @@ public sealed partial class SessionCoordinator
             var result = await service.RecordResultAsync(record, outcome);
             string? reopenError = null;
             if ((outcome.Outcome is DeletionOutcome.Failed or DeletionOutcome.Cancelled) && result.Resolved)
-                reopenError = await ReopenDeletedVisit();
+                reopenError = await ReopenDeletedVisit(service, record);
             phase = RestingPhase;
             return new(result.Resolved ? SessionStatus.Completed : SessionStatus.CommitUnknown,
                 reopenError ?? result.Error ?? (result.Resolved ? outcome.Outcome switch {
@@ -62,10 +62,12 @@ public sealed partial class SessionCoordinator
         if (path?.Pending is null)
         { current = null; activeToken = null; latestProgress = null; releasedItem = null; releasedState = null; }
     }
-    private async Task<string?> ReopenDeletedVisit()
+    private async Task<string?> ReopenDeletedVisit(DeletionService service, DeletionRecord? record)
     {
         if (releasedItem is null || path?.Pending is null || activeToken is null) return null;
         if (current is not null) return "미디어 해제가 완료되지 않았습니다.";
+        if (record is null) return "원래 삭제 대상을 확인할 수 없어 Pending과 진행을 보존합니다.";
+        if (await service.ValidateReopenAsync(record) is { } bindingError) return bindingError;
         var token = activeToken with { OperationId = Guid.NewGuid(), VisitId = null };
         ISessionMedia? media = null;
         try
@@ -104,7 +106,7 @@ public sealed partial class SessionCoordinator
         if (succeeded && entry.Record is { } r && result.Record?.Phase == DeletionPhase.Succeeded)
             DeleteSessionTargets(r);
         string? reopenError = null;
-        if (!succeeded && result.Resolved) reopenError = await ReopenDeletedVisit();
+        if (!succeeded && result.Resolved) reopenError = await ReopenDeletedVisit(service, entry.Record);
         phase = RestingPhase;
         return new(result.Resolved ? SessionStatus.Completed : SessionStatus.CommitUnknown, result.Error ?? reopenError);
     });

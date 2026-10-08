@@ -138,6 +138,22 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
                 throw new InvalidOperationException("BindingChanged: 삭제 대상이 변경되었거나 확인되지 않았습니다.");
         }
     }
+    // Deletion failure/confirmation may preserve a Pending visit after a remap. Never
+    // reopen the new target as that old visit; the general viewing policy belongs to T18A-4.
+    public async Task<string?> ValidateReopenAsync(DeletionRecord record)
+    {
+        try
+        {
+            if (record.Version != 2) return "원래 삭제 대상의 바인딩을 확인할 수 없어 재열기를 보류합니다.";
+            await Io(async () =>
+            {
+                await VerifyAsync(record.Bindings!.Where(b => b.Binding.RootKey == WindowsPath.Normalize(record.Path).RootKey));
+                return true;
+            });
+            return null;
+        }
+        catch (Exception ex) { return ex.Message; }
+    }
     public Task<FileDeletionResult> ExecuteAsync(DeletionRecord record)
     {
         lock (ioGate)
@@ -204,7 +220,8 @@ public sealed class DeletionService(LibraryDatabase database, DeletionJournal jo
                 return new(record, DeletionOutcome.Unknown, false, "삭제 성공 여부를 확인하세요.");
             await Task.Run(() => journal.Remove(journal.FileFor(record)));
             Pending = Pending.Where(p => p.Record?.OperationId != record.OperationId).ToArray();
-            incompleteSuccess.Remove(record.OperationId); prepared.Remove(record.OperationId);
+            incompleteSuccess.Remove(record.OperationId);
+            lock (ioGate) prepared.Remove(record.OperationId);
             RestoreIsolation();
             // AppliedDeletion remains durable, including after journal removal.
             return new(record, record.Phase == DeletionPhase.Succeeded ? DeletionOutcome.Succeeded :

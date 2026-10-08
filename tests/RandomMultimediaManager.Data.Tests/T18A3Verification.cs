@@ -86,6 +86,20 @@ internal static class T18A3Verification
             Check((await f.Service.ConfirmAsync(f.Service.Pending.Single(), true)).Resolved && f.OsCalls == 0, "explicit captured-set cleanup only");
             Check(f.Db.GetHistory(f.Unc.Id).Count == 0 && f.Db.GetHistory(f.Inferred.Id).Count == 1, "no alias expansion during recovery");
         });
+        await Scenario("N08 remap failure never reopens a replacement as the preserved Pending visit", async f =>
+        {
+            var preparer = new ReopenPreparer();
+            var coordinator = new SessionCoordinator(f.Db, preparer);
+            Check((await coordinator.OpenManualAsync(Guid.NewGuid(), f.Mapped.Id)).Status == SessionStatus.Completed, "original visit ready");
+            var visit = coordinator.View.Pending;
+            preparer.OnRelease = () => f.Remapped = true;
+            var result = await coordinator.DeleteCurrentAsync(Guid.NewGuid(), f.Service, DeletionMode.Permanent);
+            Check(result.Status == SessionStatus.Completed && result.Error!.Contains("BindingChanged") && f.OsCalls == 0,
+                "remap discovered after media release prevents OS deletion");
+            Check(preparer.Calls == 1 && coordinator.View.Pending == visit && f.Db.GetHistory(f.Mapped.Id).Count == 1,
+                "no replacement reopen, old Pending/history retained");
+            Check((await coordinator.LeaveAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "old visit can leave with last valid progress");
+        });
         await Scenario("N07 target-key validation and late SQL failure rollback whole set and AppliedDeletion", async f =>
         {
             var record = await f.Service.PrepareAsync(f.Mapped.PathKey, DeletionMode.Permanent);
@@ -138,6 +152,19 @@ internal static class T18A3Verification
             finish.SetResult(); await drain;
             Check((await f.Service.RecordResultAsync(record, await execution)).Resolved && f.OsCalls == 1, "actual return precedes cleanup and release");
         });
+    }
+    sealed class ReopenPreparer : ISessionMediaPreparer
+    {
+        public int Calls; public Action? OnRelease;
+        public Task<SessionPreparation> PrepareAsync(MediaItem item, PlaybackProgress? progress, SessionToken token, CancellationToken cancellation)
+        { Calls++; return Task.FromResult(new SessionPreparation(PreparationStatus.Ready, token, new ReopenMedia(() => OnRelease?.Invoke()))); }
+    }
+    sealed class ReopenMedia(Action release) : ISessionMedia
+    {
+        public void Activate(SessionToken token) { }
+        public void Resume(SessionToken token) { }
+        public PlaybackProgress PauseAndCapture(SessionToken token) => PlaybackProgress.Video(42);
+        public ValueTask DisposeAsync() { release(); return ValueTask.CompletedTask; }
     }
     sealed class FaultJournal(string path) : DeletionJournal(path)
     {
