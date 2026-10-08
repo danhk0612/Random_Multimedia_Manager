@@ -165,7 +165,7 @@ public sealed class ScanCoordinator
         if (state.Completion is null
             || (ReferenceEquals(state.Completion, state.ActiveCompletion) && !sameWorker))
         {
-            state.Suppressed = false;
+            if (!sameWorker) state.Suppressed = false;
             state.Manual = !sameWorker || (!state.AcceptsManual && !state.Collecting);
             state.Completion = new();
             if (!state.Manual) state.ActiveCompletion = state.Completion;

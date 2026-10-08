@@ -6,7 +6,7 @@ internal static partial class T18A2Verification
     private static async Task AdditionalReviewRegressions()
     {
         var errors = new List<Exception>();
-        foreach (var test in new Func<Task>[] { ScopedCancellation, SharedCancellation, CategoryGroupCancellation, AutomaticOwnerCancellation, MissingRootWatcherRetry, WatcherFailureInjection })
+        foreach (var test in new Func<Task>[] { ScopedCancellation, SharedCancellation, CategoryGroupCancellation, AutomaticOwnerCancellation, MissingRootWatcherRetry, WatcherFailureInjection, WatcherPermissionJoin })
         {
             try { await test(); }
             catch (Exception ex) { Console.WriteLine("FAIL additional review: " + ex.Message); errors.Add(ex); }
@@ -191,6 +191,30 @@ internal static partial class T18A2Verification
         }
         finally { await scans.CloseAsync(); }
         Console.WriteLine("PASS additional review: injected watcher 30/120/600 backoff, permission wait, manual recovery, Closing");
+    }
+
+    private static async Task WatcherPermissionJoin()
+    {
+        using var f = new Fixture(); var source = f.Add(f.DirectoryPath);
+        var proof = await WindowsStorageProbe.ObserveAsync(source.RootPath, default);
+        var binding = f.Db.GetStorageBinding(source.RootPath)!;
+        f.Db.ConfirmStorageBinding(source.RootPath, binding.Revision, proof, false);
+        f.Db.SaveSourceRefreshPolicy(source.Id, new(true, SourceRefreshMode.Events, 24));
+        var clock = DateTimeOffset.UtcNow; int attempts = 0;
+        var entered = NewSignal(); var release = NewSignal();
+        var scans = new ScanCoordinator(f.Db, (_, _) => Task.FromResult(proof),
+            async (_, _, _, _, _) => { entered.TrySetResult(); await release.Task; return Empty; }, () => clock,
+            _ => { attempts++; throw new UnauthorizedAccessException("injected watcher permission failure"); });
+        try
+        {
+            scans.Start(); await entered.Task;
+            var joined = scans.ScanSourceAsync(source.Id);
+            release.SetResult(); await joined; await scans.Completion;
+            clock += TimeSpan.FromDays(2); scans.Tick(); await scans.Completion;
+            Check(attempts == 1, "joining a worker after watcher denial must not clear its permission wait");
+        }
+        finally { release.TrySetResult(); await scans.CloseAsync(); }
+        Console.WriteLine("PASS additional review: joining a failed watcher observation preserves permission wait");
     }
 
 }
