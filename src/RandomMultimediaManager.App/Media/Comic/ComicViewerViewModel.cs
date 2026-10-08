@@ -48,7 +48,7 @@ public sealed class ComicViewerViewModel : IDisposable
             ComicPrepareResult result = await PreparedComic.PrepareAsync(path, progress, linked.Token);
             if (generation != Volatile.Read(ref _prepareGeneration) || linked.IsCancellationRequested)
             {
-                result.Comic?.Dispose();
+                if (result.Comic is not null) await result.Comic.DisposeAsync();
                 return new(ComicPrepareStatus.Cancelled);
             }
             return result;
@@ -78,28 +78,7 @@ public sealed class ComicViewerViewModel : IDisposable
 
     public SKBitmap? GetPage(int index) => _activeComic?.GetCachedPage(index);
 
-    public Task<bool> EnsurePageAsync(int index, CancellationToken cancellationToken = default)
-    {
-        lock (_sync)
-        {
-            if (_closing || _disposed) return Task.FromResult(false);
-            if (_pageReads.TryGetValue(index, out var existing)) return existing;
-            var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _reads.Add(completion.Task);
-            _pageReads.Add(index, completion.Task);
-            _ = Run();
-            return completion.Task;
-            async Task Run()
-            {
-                try { completion.TrySetResult(await ReadPageAsync(index, cancellationToken)); }
-                catch (OperationCanceledException) { completion.TrySetCanceled(); }
-                catch (Exception ex) { completion.TrySetException(ex); }
-                finally { lock (_sync) { _reads.Remove(completion.Task); _pageReads.Remove(index); } }
-            }
-        }
-    }
-
-    private async Task<bool> ReadPageAsync(int index, CancellationToken cancellationToken)
+    public async Task<bool> EnsurePageAsync(int index, CancellationToken cancellationToken = default)
     {
         PreparedComic? comic = _activeComic;
         if (comic is null || index < 0 || index >= comic.PageCount)
@@ -300,6 +279,11 @@ public sealed class PreparedComic : IDisposable, IAsyncDisposable
         {
             await prepared.DisposeAsync();
             return new(ComicPrepareStatus.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            await prepared.DisposeAsync();
+            return new(ComicPrepareStatus.DecodeFailed, Error: ex.Message);
         }
     }
 

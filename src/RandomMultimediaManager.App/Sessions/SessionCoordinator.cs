@@ -134,7 +134,19 @@ public sealed partial class SessionCoordinator
     public Task<SessionResult> StartRandomAsync(Guid commandId, IEnumerable<Guid> categories)
     {
         var selection = categories.ToHashSet();
-        return Command(commandId, () => ChooseRandom(new SessionPath(selection)));
+        return Command(commandId, async () =>
+        {
+            var destination = new SessionPath(selection);
+            var previousFailures = failedOpens.ToArray();
+            var previousSession = failureSession;
+            try { return await ChooseRandom(destination); }
+            finally
+            {
+                // A failed restart must not clear the still-active session's suppression.
+                if (path is not null && path.SessionId != destination.SessionId)
+                { failedOpens.Clear(); failedOpens.UnionWith(previousFailures); failureSession = previousSession; }
+            }
+        });
     }
     public Task<SessionResult> NextAsync(Guid commandId) => Command(commandId, async () =>
     {
@@ -283,6 +295,8 @@ public sealed partial class SessionCoordinator
                 catch (Exception ex)
                 { RememberOpenFailure(transition); return new(SessionStatus.Failed, ex.Message); }
                 ready = result.Media;
+                if (cancelled || exitRequested || result.Token != targetToken || result.Status == PreparationStatus.Cancelled)
+                    return new(SessionStatus.Cancelled);
                 if (result.Status == PreparationStatus.Failed) RememberOpenFailure(transition);
                 if (ready is not null && bindingTicket is not null && access is not null)
                 {
