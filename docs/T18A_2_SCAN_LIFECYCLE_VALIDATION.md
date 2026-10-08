@@ -77,6 +77,24 @@ main `5e82e9d`의 검토 지시와 기존 구현/검증 내용을 함께 보존�
 
 SessionEnding 이벤트 인자의 비공개 생성자는 재현 fixture에서만 reflection으로 호출한다. [WPF 공식 소스](https://source.dot.net/presentationframework/System/Windows/SessionEndingCancelEventArgs.cs.html)와 [SessionEnding 공식 문서](https://learn.microsoft.com/en-us/dotnet/api/system.windows.application.sessionending?view=windowsdesktop-10.0)는 2026-10-08 접근 확인했다. 모의 호출은 실제 WM_QUERYENDSESSION/사용자 로그오프를 검증하지 않는다. Cancel=true는 OS 요청을 거부할 수 있으므로 앱 종료 뒤 사용자가 OS 종료/로그오프를 다시 요청해야 할 수 있다. 강제 OS 종료·전원 차단·프로세스 제거까지 정상 저장/실제 IO drain을 보장하지 않는다.
 
+## 추가 검토 두 항목 보완 (2026-10-08)
+
+main `e06cbea`의 추가 지시를 기존 구현/이전 세 보완 문서와 함께 통합했다. 수정 전 제품 코드에 재현 테스트만 추가한 `564e171`의 [T05 37709695891](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37709695891)에서 다음 세 검사가 실패했다: 대기 B 취소가 실행 A를 취소, 공유 대기자 하나의 취소가 worker/다른 대기자에 전파, 삭제된 로컬 소스의 watcher 생성 실패 후 3초만에 재관찰. 기존 basic/state/cancel/access/reparse/case 검사는 통과했다.
+
+- 요청별 완료/취소/Progress를 분리한다. 소스별 worker는 공유하지만 취소 토큰은 자신의 대기자 또는 분류 요청 그룹만 취소한다. 자동 작업/다른 대기자가 있으면 실제 worker를 중단하지 않는다. 마지막 수동 소유자가 취소한 worker는 실제 IO 완료까지 소유권을 유지한다. 기존 Closing/배타 진입은 여전히 전체 worker 취소와 실제 완료 대기다.
+- watcher 실패 횟수/재시도 시각을 메타데이터 스캔 성공과 분리한다. 승인된 30초→2분→10분 backoff를 재사용하고 권한 실패는 명시적 조치 대기다. 실제 watcher attach 성공으로 복구하며 수동 요청은 재시도 시각 전에 가능하다.
+- 검사 구분: 대기 A/B·동일 소스 공유·분류 그룹·자동 소유자·진행 콜백·Closing은 지연 worker 오류 주입이다. 로컬 폴더 제거/재생성·watcher 재연결/파일 관찰은 Windows 실파일과 실제 연결 근거를 사용하고 시계만 제어한다. 30/120/600초·권한 실패·수동 복구는 watcher factory 오류 주입이다. 실제 NAS/RaiDrive 및 사용자 로그오프 검증은 아니다.
+
+검증 코드 `ac2a4d6e8a2c0ead0fa98d4a56e98440540a51ed`. Windows Server 2025 x64(OS 10.0.26100), .NET SDK 10.0.401, Release 빌드 경고 0·오류 0. 새 검사 7개와 이전 probe/진행/전체 조정자 검사가 통과했다. T11 최초 실행은 기존 T16 native file picker 복원 검사(`native dialog restored False`)에서 실패했다. 직전 `fbfd836`은 같은 T11 37709893937을 통과했고 이전 검증에도 같은 실패가 기록되어 있어 제품/테스트 변경 없이 실패 job만 재실행했다. 1회 재실행 job `113094504890`에서 해당 복원 검사와 감상·스캔·만화·영상·자막 전체가 통과했다. 최초 실패는 삭제하거나 통과로 덮어쓰지 않는다.
+
+| 추가 보완 Windows workflow | 결과 |
+|---|---|
+| [T03 저장/셸 37710101629](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37710101629) | 통과 |
+| [T05 스캔/추가 7개 회귀 37710101585](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37710101585) | 통과 |
+| [T06 세션 37710101596](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37710101596) | 통과 |
+| [T09 영상 37710101605](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37710101605) | 통과 |
+| [T11 감상/모의 SessionEnding·만화/영상/자막 37710101599](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37710101599) | 1회 재실행 통과 (최초 T16 복원 실패) |
+
 ## 실제 환경 미검증
 
 - 실제 Windows 로그오프/시스템 종료/강제 종료는 미실시이며 위 결과는 모의 SessionEnding이다.
