@@ -15,6 +15,8 @@ internal static class Program
 
         try
         {
+            // Async test continuations must run after the module initializer completes.
+            T08Checks.DelayedPageDrain(root).GetAwaiter().GetResult();
             NaturalSortAndPageRead(root);
             EmptyArchive(root);
             NoImageEntries(root);

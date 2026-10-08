@@ -30,11 +30,10 @@ internal static class T08Checks
         ProgressAndReadingDirection(root);
         PreparationCancellationDoesNotReplaceActive(root);
         BoundedCacheEvictsOldPages(root);
-        DelayedPageDrain(root).GetAwaiter().GetResult();
         Console.WriteLine("PASS T08 prepared comic checks");
     }
 
-    private static async Task DelayedPageDrain(string root)
+    public static async Task DelayedPageDrain(string root)
     {
         string path = Path.Combine(root, "t18a4-drain.cbz");
         CreateImageArchive(path, 4);
@@ -54,6 +53,15 @@ internal static class T08Checks
         try { await page; } catch (OperationCanceledException) { }
         await disposal;
         True(CanOpenExclusive(path), "T18A-4 actual page completion precedes archive release");
+
+        var failed = await PreparedComic.PrepareAsync(path, null, CancellationToken.None,
+            (index, _) => index == 1 ? Task.FromException(new IOException("injected read failure")) : Task.CompletedTask);
+        var vm = new ComicViewerViewModel(); vm.Activate(failed.Comic!);
+        bool readFailed = false;
+        try { await vm.MoveAsync(1); } catch (IOException) { readFailed = true; }
+        True(readFailed && vm.GetProgress().ComicPageIndex == 0, "T18A-4 active page error retains last valid progress");
+        await vm.DisposeAsync();
+        True(CanOpenExclusive(path), "T18A-4 page failure is separate from actual successful archive release");
     }
 
     private static void PrepareReadyRequiresDecodedStartPage(string root)
