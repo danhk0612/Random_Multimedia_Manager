@@ -13,14 +13,14 @@ internal static class T18A4NativeVerification
         var surface = new Grid();
         var window = new Window { Content = surface, Width = 400, Height = 300 };
         window.Show(); await Dispatcher.Yield(DispatcherPriority.Loaded);
-        string fixture = Path.Combine(AppContext.BaseDirectory, "Fixtures", "silent.mp4");
+        string fixture = Path.Combine(AppContext.BaseDirectory, "silent.mp4");
         string root = Path.Combine(Path.GetTempPath(), "rmm-t18a4-native-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         string subtitle = Path.Combine(root, "test.srt");
         await File.WriteAllTextAsync(subtitle, "1\n00:00:00,000 --> 00:00:05,000\ntest\n");
         try
         {
-            foreach (string stage in new[] { "seek", "subtitle", "stop" })
+            foreach (string stage in new[] { "seek", "subtitle", "stop", "play" })
             {
                 var operation = new VideoOperation(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
                 var prepared = await PreparedVideo.PrepareAsync(surface, operation, fixture, null, false, CancellationToken.None);
@@ -32,7 +32,8 @@ internal static class T18A4NativeVerification
                 typeof(PreparedVideo).GetProperty("BeforeIo", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .SetValue(video, (Func<string, Task>)(async name => { if (name == stage) { entered.TrySetResult(); await release.Task; } }));
                 Task io = stage == "seek" ? video.SeekAsync(visit, 500)
-                    : stage == "subtitle" ? video.LoadExternalSubtitleAsync(visit, subtitle) : video.StopAsync(visit);
+                    : stage == "subtitle" ? video.LoadExternalSubtitleAsync(visit, subtitle)
+                    : stage == "play" ? video.PlayAsync(visit) : video.StopAsync(visit);
                 await entered.Task;
                 var disposal = video.DisposeAsync().AsTask();
                 await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);

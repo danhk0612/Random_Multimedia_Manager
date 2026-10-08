@@ -40,6 +40,34 @@ internal static class T18A4Verification
             Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "Forward preserved");
             await f.C.LeaveAsync(Guid.NewGuid());
         });
+        await Scenario("N06 source batch has no per-source binding SQL", async f =>
+        {
+            foreach (int count in new[] { 1, 48 })
+            {
+                var sources = Enumerable.Range(0, count).Select(i => new CategorySource(Guid.NewGuid(),
+                    f.Category.Id, $@"Z:\media\source{i}", $@"Z:\MEDIA\SOURCE{i}")).ToArray();
+                var queries = new List<string>(); f.Db.QueryObserver = queries.Add;
+                var available = await f.Access.AvailableSourcesAsync(sources, CancellationToken.None);
+                f.Db.QueryObserver = null;
+                Check(available.Count == count && queries.Count == 3, "one binding set + root pre/post queries for any source count");
+            }
+        });
+        await Scenario("N06 Unknown disconnection requires a new process confirmation", async f =>
+        {
+            var category = new Category(Guid.NewGuid(), "unknown", MediaType.Video); f.Db.SaveCategory(category);
+            var source = f.Db.AddSource(new(Guid.NewGuid(), category.Id, @"R:\media", @"R:\MEDIA"));
+            var evidence = StorageObservation.Classify(source.RootPath, MappingLookup.Failed, provider: "virtual");
+            var binding = f.Db.ConfirmStorageBinding(source.RootPath, 0, evidence, true);
+            long? generation = null; bool offline = false;
+            var access = new ViewingAccess(f.Db, _ => generation, observe: (_, _) => Task.FromResult(evidence),
+                accessible: (_, _) => offline ? Task.FromException(new IOException("disconnected")) : Task.CompletedTask);
+            async Task<bool> Available() => (await access.AvailableSourcesAsync([source], CancellationToken.None)).Contains(source.Id);
+            Check(!await Available(), "durable user confirmation alone is insufficient at process start");
+            generation = 1; Check(await Available(), "explicit process confirmation accepted");
+            offline = true; Check(!await Available(), "disconnect invalidates generation");
+            offline = false; Check(!await Available(), "same confirmation cannot approve observed reconnection");
+            generation = 2; Check(await Available(), "new explicit confirmation releases connection suppression");
+        });
         await Scenario("N09 late Ready discarded; actual release keeps Busy and shutdown drain", async f =>
         {
             await f.C.OpenManualAsync(Guid.NewGuid(), f.A.Id);
