@@ -34,6 +34,13 @@ internal static class T18A5SourceUiVerification
             Check(savedPolicy is { ScanOnStartup: true, RefreshMode: SourceRefreshMode.Scheduled, IntervalHours: 168 },
                 "T18A-5 persists the configured remote interval");
 
+            long latestCompleted = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            database.SaveSourceRefreshPolicy(remote.Id, savedPolicy! with { LastCompletedAtUtc = latestCompleted });
+            await scans.SavePolicyAsync(remote.Id, savedPolicy!);
+            Check(database.GetEffectiveSourceRefreshPolicy(remote.Id).LastCompletedAtUtc == latestCompleted,
+                "T18A-5 policy save preserves a newer scan completion committed after the UI read");
+            savedPolicy = database.GetEffectiveSourceRefreshPolicy(remote.Id);
+
             var detectionBeforeFailure = scans.GetAccess(remote.Id);
             editor.SelectedSourceRefreshMode = SourceRefreshMode.Events;
             var rejected = await editor.SaveSelectedSourcePolicyAsync();
