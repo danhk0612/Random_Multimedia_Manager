@@ -434,7 +434,7 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 - 시작 검사, `Manual/Events/Scheduled`, 1~168시간 예약 값은 기존 `SourceRefreshPolicy` 및 `ScanCoordinator.SavePolicyAsync`에 저장한다. 확인된 Local에서 Events를 허용하고, Remote/Unknown에는 Manual/Scheduled만 노출한다. 원격 예약/시작 검사는 사용자가 명시적으로 저장해야 한다. 저장 실패는 이전 정책과 coordinator 감지 상태를 유지하며 화면 입력도 저장 값으로 복원한다. 마지막 성공 시각은 정책 편집에서 보존한다.
 - 연결 대상 표시는 StorageBinding의 저장된 종류/대상/revision이며, 접근 상태는 현재 프로세스의 `SourceAccessState`다. 이 표시를 실시간 연결 보장이나 영속 Available로 해석하지 않는다. 명시 확인 버튼은 `ScanCoordinator.ConfirmBindingAsync`에서 현재 근거를 재관찰하고 generation/revision 검사를 거친다. 영속 확인만으로 Unknown을 실행 중 Available로 간주하지 않는다.
 - LibraryBrowser는 SQLite DB 목록을 먼저 보여주며 네트워크 열거를 시작 조건으로 요구하지 않는다. Explorer 실행은 기존 `ViewingAccess.CheckAsync/RecheckAsync`와 source scan exclusive lease를 사용해 worker에서 바인딩/접근을 재확인하고, DB 최신 경로·누락·삭제 격리·Closing·요청/선택 세대를 확인한다. UNC 경로는 한글/공백을 포함해 `/select,<path>` 단일 인수로 전달한다. 이미 시작한 검사는 브라우저 읽기 drain에 포함한다.
-- Windows T03/T05/T09/T11 영향 CI와 Release는 코드 검증 커밋 `3a21a121e21eb92540fea2d9c081de72319d5ba8`에서 통과했다. Explorer 자체 창 생성, NAS/RaiDrive 실물 연결 및 provider별 캐시·재매핑 동작은 미검증이며 자동 검증과 구분한다. PR #27은 병합 전이다. 상세 근거는 `docs/T18A_5_SOURCE_UI_VALIDATION.md`를 따른다.
+- Windows T03/T05/T09/T11 영향 CI와 Release는 코드 검증 커밋 `f509d2bc3325ab43df62c539662f74f2af647946`에서 통과했다. Explorer 자체 창 생성, NAS/RaiDrive 실물 연결 및 provider별 캐시·재매핑 동작은 미검증이며 자동 검증과 구분한다. PR #27은 병합 전이다. 상세 근거는 `docs/T18A_5_SOURCE_UI_VALIDATION.md`를 따른다.
 
 ### 8. 지원·검증 기준 (T18A-1~5 자동 검증 완료, 실물 검증 대기)
 
