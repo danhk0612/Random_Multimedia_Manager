@@ -363,4 +363,4 @@ PR #26을 `863c86d`로 main에 통합했다. 준비 후 재확인 실패 억제�
 
 ### T18A-5 PR #27 결과
 
-`task/t18a-5-source-ui`에서 UNC/로컬 입력, source별 시작·갱신 정책, binding/접근 상태와 명시적 확인 UI, DB 목록 기반 비동기 Explorer 연결을 구현했다. 코드 검증 커밋 `3a21a121e21eb92540fea2d9c081de72319d5ba8`은 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401에서 Release 경고 0·오류 0이며 T03/T05/T09/T11 영향 CI 네 개가 통과했다. PR #27은 열려 있고 직접 병합하지 않았다. 자동/실물 구분은 docs/T18A_5_SOURCE_UI_VALIDATION.md를 따른다. 실 NAS/RaiDrive·실제 Explorer 창 검증은 미실시다. T18A-6은 T18A-5 통합 후, T18 배포는 6 이후다.
+`task/t18a-5-source-ui`에서 UNC/로컬 입력, source별 시작·갱신 정책, binding/접근 상태와 명시적 확인 UI, DB 목록 기반 비동기 Explorer 연결을 구현했다. 코드 검증 커밋 `f509d2bc3325ab43df62c539662f74f2af647946`은 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401에서 Release 경고 0·오류 0이며 T03/T05/T09/T11 영향 CI 네 개가 통과했다. PR #27은 열려 있고 직접 병합하지 않았다. 자동/실물 구분은 docs/T18A_5_SOURCE_UI_VALIDATION.md를 따른다. 실 NAS/RaiDrive·실제 Explorer 창 검증은 미실시다. T18A-6은 T18A-5 통합 후, T18 배포는 6 이후다.
