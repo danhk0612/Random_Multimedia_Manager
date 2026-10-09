@@ -29,6 +29,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         CategoryEditor.DataContext = new ViewModels.CategoryEditorViewModel(database, Scans);
         LibraryBrowser.DataContext = new ViewModels.LibraryBrowserViewModel(database);
+        LibraryBrowser.Scans = Scans;
+        LibraryBrowser.Access = new Sessions.ViewingAccess(database, Scans.ConfirmedDeletionGeneration, () => Scans.IsClosing);
         LibraryBrowser.ManualOpenRequested += OpenManualItem;
     }
 
