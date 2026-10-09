@@ -421,7 +421,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         SourceIncludeSubdirectories = true;
         SourceIsEnabled = true;
         SourceScanOnStartup = false;
-        SourceRefreshMode = SourceRefreshMode.Manual;
+        SelectedSourceRefreshMode = SourceRefreshMode.Manual;
         SourceIntervalHours = 24;
         loadedSourcePolicy = new();
         SelectedSourceBindingMessage = "저장 후 연결 대상을 확인할 수 있습니다.";
