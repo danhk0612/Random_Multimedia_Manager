@@ -212,10 +212,9 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
             return SetResult(false, "소스 갱신 조정자를 사용할 수 없습니다.");
 
         var source = SelectedSource;
-        var previous = database.GetEffectiveSourceRefreshPolicy(source.Id);
         var policy = new SourceRefreshPolicy(SourceScanOnStartup, SelectedSourceRefreshMode,
             SelectedSourceRefreshMode == SourceRefreshMode.Manual ? null : SourceIntervalHours ?? 24,
-            previous.LastCompletedAtUtc);
+            LastCompletedAtUtc: null);
         try
         {
             await Scans.SavePolicyAsync(source.Id, policy);
