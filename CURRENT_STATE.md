@@ -308,5 +308,5 @@ PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까�
 
 - 최신 기준 main `91778a4`와 T18A-1~4 통합을 확인한 뒤 `task/t18a-5-source-ui`에서 진행한다.
 - UNC/로컬 입력 정규화, source별 정책 및 연결 상태/명시 확인 UI, DB 목록 기반 비동기 Explorer 연결을 기존 API에 연결했다. 저장 실패 복원, 선택 변경/닫힘 뒤 지연 결과 억제, Explorer 접근 확인의 pending read drain 검증을 추가했다.
-- 코드 검증 커밋 `3a21a121e21eb92540fea2d9c081de72319d5ba8`은 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401 Release 경고 0·오류 0, T03/T05/T09/T11 영향 CI 4개가 통과했다. 자동/실물 검증 구분은 [T18A-5 검증 문서](docs/T18A_5_SOURCE_UI_VALIDATION.md)를 따른다.
+- 코드 검증 커밋 `f509d2bc3325ab43df62c539662f74f2af647946`은 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401 Release 경고 0·오류 0, T03/T05/T09/T11 영향 CI 4개가 통과했다. 자동/실물 검증 구분은 [T18A-5 검증 문서](docs/T18A_5_SOURCE_UI_VALIDATION.md)를 따른다.
 - PR #27은 `task/t18a-5-source-ui`에서 열려 있으며 병합하지 않았다. DB/감상/삭제/숨김·종료 계약과 항목 식별자는 유지했다. 실 NAS/RaiDrive 및 실제 Explorer 창 표시는 미검증이며 T18A-6·배포는 시작하지 않았다.
