@@ -62,7 +62,7 @@
 
 ## 다음 작업과 차단
 
-T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증을 확인하고 `7437e9d`로 main 통합했다. T18A-4는 PR #26에서 구현·보완 검증 완료이며 main 미통합이다. T18A-5/6·T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 다음은 T18A-4 PR #26 보완 결과의 재검토이며 TASKS.md의 병합 검토 지시문과 보완 결과를 따른다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
+T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증을 확인하고 `7437e9d`로 main 통합했다. T18A-4 PR #26은 구현·보완 검증을 확인하고 `863c86d`로 main 통합했다. T18A-5/6·T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 다음은 저성능 Work의 T18A-5이며 TASKS.md의 새 작업 시작 지시문을 따른다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
 
 ## T03 저장 구현
 
@@ -294,16 +294,12 @@ T18A-2 통합 당시 다음은 고성능 Work의 T18A-3(원격 삭제·별칭/�
 
 PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까지 문서 4개만 변경됐음을 확인했다. 다음은 TASKS.md 지시문의 T18A-4다. 실제 NAS/RaiDrive·로그오프 미검증, T11 파일 선택창 복원 1회 재실행 이력과 기존 수동 미검증/승인 생략은 유지한다. T18A-4·UNC UI·배포는 시작하지 않았다.
 
-## T18A-4 PR #26 병합 전 보완 대기
-
-PR 헤드 `e025220`, 검증 코드 `9862d87`의 Windows 영향 CI 7개 성공을 확인했다. 준비 후 파일별 접근 재확인 실패의 세션 억제 누락과 비동기 seek의 동일 완료 위치 처리 회귀를 코드에서 확인하여 병합을 보류한다. 이번 검토에서 Windows 재현을 직접 수행한 것은 아니다. 기존 T18A-4 Work에서 TASKS.md의 보완 지시문을 수행한다. 제품 코드·상세 검증은 PR #26에만 있고 main 미통합이며 T18A-5는 보완 검증·통합 후 시작한다. 실제 NAS/RaiDrive 및 기존 수동 미검증은 유지한다.
-
 ## T18A-4 감상 연결 최초 제출 (보완 결과는 아래)
 
-`task/t18a-4-network-viewing`에서 연결/바인딩 일시 후보 제외, 세션 실패 집합, 열기 전후 바인딩 확인과 live 삭제 격리, ZIP/영상/자막 실제 IO drain을 구현했다. 기존 Pending/기록/삭제/숨김·복원 의미를 보존한다. 검증 코드 `9862d87`은 Windows x64 Release 경고·오류 0개 및 영향 CI 7개가 모두 통과했다. 실제 NAS/RaiDrive는 미검증이다. 상세 검사와 제한은 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. PR 병합 전이며 T18A-5/6·배포는 미착수다.
+`task/t18a-4-network-viewing`에서 연결/바인딩 일시 후보 제외, 세션 실패 집합, 열기 전후 바인딩 확인과 live 삭제 격리, ZIP/영상/자막 실제 IO drain을 구현했다. 기존 Pending/기록/삭제/숨김·복원 의미를 보존한다. 검증 코드 `9862d87`은 Windows x64 Release 경고·오류 0개 및 영향 CI 7개가 모두 통과했다. 실제 NAS/RaiDrive는 미검증이다. 상세 검사와 제한은 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. PR #26 main 통합 완료이며 T18A-5/6·배포는 미착수다.
 
 ## T18A-4 PR #26 보완 결과
 
 최신 main `f44ed67`의 검토 지시 전체를 기존 `task/t18a-4-network-viewing`에 반영했다. 수정 전 회귀 검사 `ff61649`에서 준비 후 파일 재확인 실패의 다음 랜덤 재시도와 완료 위치 SeekAsync의 native seek 발행을 Windows에서 각각 재현했다. `ccb982a`는 재확인 false/예외의 세션 실패 억제를 추가하고 취소/Closing을 제외하며, 동일 완료 위치 비동기 seek의 native 발행을 생략한다. 늦은 Ready 실제 해제·Pending/cursor/Forward/Seen/기록, 완료 진행·처음부터 PlayAsync·다른 위치 seek·privacy mute·IO/drain을 검증한다.
 
-최종 코드·테스트 `ccb982a497328ca61a4e30f0f981a2ed32506295`의 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401 Release 빌드 경고 0·오류 0 및 T03/T05/T06/T07/T09/T10/T11 영향 CI 7개가 모두 통과했다(해당 SHA 재실행 없음). 재현/수정 전후 근거는 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. 실제 NAS/RaiDrive·기존 수동 미검증·T11 재실행 이력·AVI 조사 보류를 유지한다. PR #26 미병합이며 후속 기준은 PR 통합 이후 최신 main이다. T18A-5/6·배포는 시작하지 않았다.
+최종 코드·테스트 `ccb982a497328ca61a4e30f0f981a2ed32506295`의 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401 Release 빌드 경고 0·오류 0 및 T03/T05/T06/T07/T09/T10/T11 영향 CI 7개가 모두 통과했다(해당 SHA 재실행 없음). 재현/수정 전후 근거는 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. 실제 NAS/RaiDrive·기존 수동 미검증·T11 재실행 이력·AVI 조사 보류를 유지한다. PR #26을 `863c86d`로 main에 통합했다. 검증 코드 이후 `1813d67`까지 문서 3개만 변경됐다. 다음은 TASKS.md의 T18A-5 지시문이다. T18A-5/6·배포는 시작하지 않았다.
