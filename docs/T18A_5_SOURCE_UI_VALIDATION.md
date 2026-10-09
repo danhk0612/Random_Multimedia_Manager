@@ -18,8 +18,8 @@
 - `T18A5SourceUiVerification`: UNC 소스 저장, 예약 정책 저장, 원격 Events 거부, 실패 후 이전 정책/감지 상태 복원, 명시적 UNC 바인딩 확인, 확인된 Local 기본값을 검사한다.
 - Scanner `unc` 시나리오: 한글·공백·슬래시·dot segment 정규화, 공유 루트 허용, UNC 공유 경계 탈출 거부를 검사한다.
 - T17 WPF 브라우저 회귀: 한글/공백 UNC 호환 인수 구성, 접근 검증 중 선택 변경 시 Explorer 호출 억제, DB 인덱싱 이후 제거 파일 거부를 검사한다.
-- GitHub Actions에서 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401로 Release 검증했다. 코드 검증 커밋 `3a21a121e21eb92540fea2d9c081de72319d5ba8` 기준 T03, T05, T09, T11 네 workflow가 모두 통과했다. T05에서 UNC 정규화와 소스 정책/명시 확인 시나리오가 통과했고 T11에서 WPF Explorer 회귀를 포함한 감상 테스트가 통과했다. Release 빌드는 경고 0, 오류 0이다.
-- Actions: [T03 #37905046752](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046752), [T05 #37905046702](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046702), [T09 #37905046768](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046768), [T11 #37905046688](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046688).
+- GitHub Actions에서 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401로 Release 검증했다. 코드 검증 커밋 `f509d2bc3325ab43df62c539662f74f2af647946` 기준 T03, T05, T09, T11 네 workflow가 모두 통과했다. T05에서 UNC 정규화, 소스 정책/명시 확인과 저장 경합 시 최신 완료 시각 보존 시나리오가 통과했고 T11에서 WPF Explorer 회귀를 포함한 감상 테스트가 통과했다. Release 빌드는 경고 0, 오류 0이다.
+- Actions: [T03 #37906240757](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240757), [T05 #37906240777](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240777), [T09 #37906240746](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240746), [T11 #37906240732](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240732).
 
 ## 실제 환경에서 확인할 항목
 
