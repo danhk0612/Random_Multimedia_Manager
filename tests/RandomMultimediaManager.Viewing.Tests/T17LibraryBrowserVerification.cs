@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Diagnostics;
 using System.IO;
 using RandomMultimediaManager.App.Data;
-using RandomMultimediaManager.App.Viewing;
+using RandomMultimediaManager.App.Sessions;
 using RandomMultimediaManager.App.ViewModels;
 using RandomMultimediaManager.App.Views;
 using RandomMultimediaManager.Core;
