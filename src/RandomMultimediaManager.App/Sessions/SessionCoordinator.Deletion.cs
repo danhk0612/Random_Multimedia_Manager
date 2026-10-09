@@ -72,10 +72,16 @@ public sealed partial class SessionCoordinator
         ISessionMedia? media = null;
         try
         {
+            if (exitRequested) return "종료 중입니다. 기존 Pending과 진행을 보존합니다.";
+            var ticket = access is null ? null : await access.CheckAsync(releasedItem.Path, CancellationToken.None);
+            if (database.IsDeletionBlocked(releasedItem.PathKey)) return "삭제 격리를 유지합니다.";
             var result = await preparer.PrepareAsync(releasedItem, latestProgress, token, CancellationToken.None);
             media = result.Media;
             if (result.Status != PreparationStatus.Ready || media is null || result.Token != token)
                 return result.Error ?? "같은 방문을 다시 열지 못했습니다. 진행과 Pending은 보존됩니다.";
+            if (exitRequested || database.IsDeletionBlocked(releasedItem.PathKey)
+                || (ticket is not null && !await access!.RecheckAsync(releasedItem.Path, ticket, CancellationToken.None)))
+                return "연결 확인이 만료됐습니다. 기존 Pending과 진행을 보존합니다.";
             activeToken = token with { VisitId = path.Pending.VisitId };
             current = media; media = null;
             current.Activate(activeToken);

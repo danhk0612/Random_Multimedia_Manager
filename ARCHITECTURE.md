@@ -108,3 +108,7 @@ T18A-2에서 `MainWindow.Scans`가 단일 `ScanCoordinator`를 소유한다. `Wi
 ## T18A-3 삭제 연결 (PR #25)
 
 삭제 서비스는 감상 창 전체의 scan exclusive lease와 기존 SessionCoordinator 명령 소유권을 사용한다. OS 바인딩 근거 수집은 worker에서, 검증된 별칭의 대상 캡처/격리는 DB 경계에서 수행한다. 새 v2 Prepared 이전 OS 호출은 없으며 v1/v2 복구는 저장된 집합의 DB 정리만 수행한다. 원격/Unknown 광역 격리와 대상별 원자 ApplyDeletion/AppliedDeletion은 데이터 계약 T18A §5/7을 따른다. Closing의 실제 삭제 IO drain과 실패 복귀 바인딩 확인을 연결하며 기존 Pending/숨김·복원 정책은 유지한다. 실제 원격 backend의 휴지통은 미검증으로 Unknown/차단하고 영구삭제로 자동 전환하지 않는다. 감상 후보/미디어 IO·설정 UI·배포는 후속 Task다.
+
+## T18A-4 감상 연결 (PR #26 재검토 대기)
+
+감상 창은 기존 scan exclusive lease 안에서 `ViewingAccess`를 소유해 소스 접근과 루트 바인딩을 확인한다. 세션의 일시 열기 실패는 DB/Seen과 분리하며, ZIP 페이지 및 영상 Play/seek/자막 작업은 실제 완료/해제까지 소유한다. HWND와 상태 변경은 Dispatcher에 유지하고 파일/native IO는 worker로 보낸다. 실제 API와 제한은 DATA_AND_RANDOM_POLICY T18A §7, Windows 자동 검증과 실물 미검증은 T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. 설정 UI/배포는 후속 Task다.

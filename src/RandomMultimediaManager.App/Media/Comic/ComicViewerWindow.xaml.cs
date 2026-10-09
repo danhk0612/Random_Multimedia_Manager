@@ -439,7 +439,7 @@ public partial class ComicViewerWindow : Window
         try { await openingTask; await WhenIdleAsync(); }
         catch (OperationCanceledException) { }
         _operation?.Dispose(); _operation = null;
-        _viewModel.Dispose();
+        await _viewModel.DisposeAsync();
         _surface = null; _pixelBuffer = null; Canvas.Source = null;
         allowClose = true;
         Close();

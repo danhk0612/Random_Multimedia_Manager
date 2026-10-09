@@ -48,7 +48,7 @@ public sealed class ComicViewerViewModel : IDisposable
             ComicPrepareResult result = await PreparedComic.PrepareAsync(path, progress, linked.Token);
             if (generation != Volatile.Read(ref _prepareGeneration) || linked.IsCancellationRequested)
             {
-                result.Comic?.Dispose();
+                if (result.Comic is not null) await result.Comic.DisposeAsync();
                 return new(ComicPrepareStatus.Cancelled);
             }
             return result;
@@ -186,6 +186,16 @@ public sealed class ComicViewerViewModel : IDisposable
         Interlocked.Exchange(ref _activeComic, null)?.Dispose();
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        Interlocked.Increment(ref _prepareGeneration);
+        var prepare = Interlocked.Exchange(ref _prepareCancellation, null);
+        prepare?.Cancel();
+        var comic = Interlocked.Exchange(ref _activeComic, null);
+        if (comic is not null) await comic.DisposeAsync();
+        prepare?.Dispose();
+    }
+
     private void ResetTransform()
     {
         Zoom = 1.0;
@@ -200,7 +210,7 @@ public sealed class ComicViewerViewModel : IDisposable
     }
 }
 
-public sealed class PreparedComic : IDisposable
+public sealed class PreparedComic : IDisposable, IAsyncDisposable
 {
     public const int PreloadBefore = 1;
     public const int PreloadAfter = 2;
@@ -212,13 +222,19 @@ public sealed class PreparedComic : IDisposable
     private readonly Dictionary<int, CacheEntry> _cache = [];
     private readonly LinkedList<int> _lru = [];
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly HashSet<Task> _reads = [];
+    private readonly Dictionary<int, Task<bool>> _pageReads = [];
+    private readonly Func<int, CancellationToken, Task>? _beforeRead;
+    private Task? _disposal;
+    private bool _closing;
     private long _cacheBytes;
     private bool _disposed;
 
-    private PreparedComic(string path, ComicArchive archive)
+    private PreparedComic(string path, ComicArchive archive, Func<int, CancellationToken, Task>? beforeRead)
     {
         Path = path;
         _archive = archive;
+        _beforeRead = beforeRead;
     }
 
     public string Path { get; }
@@ -227,7 +243,8 @@ public sealed class PreparedComic : IDisposable
     public static async Task<ComicPrepareResult> PrepareAsync(
         string path,
         PlaybackProgress? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<int, CancellationToken, Task>? beforeRead = null)
     {
         ComicArchiveOpenResult open;
         try
@@ -244,7 +261,7 @@ public sealed class PreparedComic : IDisposable
         if (open.Status != ComicArchiveOpenStatus.Opened || open.Archive is null)
             return new(ComicPrepareStatus.ArchiveFailed, Error: open.Error ?? open.Status.ToString());
 
-        var prepared = new PreparedComic(path, open.Archive);
+        var prepared = new PreparedComic(path, open.Archive, beforeRead);
         int startPage = progress?.MediaType == MediaType.Comic && progress.ComicPageIndex is int page
             ? Math.Clamp(page, 0, prepared.PageCount - 1)
             : 0;
@@ -253,15 +270,20 @@ public sealed class PreparedComic : IDisposable
         {
             if (!await prepared.EnsurePageAsync(startPage, cancellationToken))
             {
-                prepared.Dispose();
+                await prepared.DisposeAsync();
                 return new(ComicPrepareStatus.DecodeFailed, Error: $"페이지 {startPage + 1} 디코딩에 실패했습니다.");
             }
             return new(ComicPrepareStatus.Ready, prepared);
         }
         catch (OperationCanceledException)
         {
-            prepared.Dispose();
+            await prepared.DisposeAsync();
             return new(ComicPrepareStatus.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            await prepared.DisposeAsync();
+            return new(ComicPrepareStatus.DecodeFailed, Error: ex.Message);
         }
     }
 
@@ -276,7 +298,28 @@ public sealed class PreparedComic : IDisposable
         }
     }
 
-    public async Task<bool> EnsurePageAsync(int index, CancellationToken cancellationToken = default)
+    public Task<bool> EnsurePageAsync(int index, CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            if (_closing || _disposed) return Task.FromResult(false);
+            if (_pageReads.TryGetValue(index, out var existing)) return existing;
+            var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _reads.Add(completion.Task);
+            _pageReads.Add(index, completion.Task);
+            _ = Run();
+            return completion.Task;
+            async Task Run()
+            {
+                try { completion.TrySetResult(await ReadPageAsync(index, cancellationToken)); }
+                catch (OperationCanceledException) { completion.TrySetCanceled(); }
+                catch (Exception ex) { completion.TrySetException(ex); }
+                finally { lock (_sync) { _reads.Remove(completion.Task); _pageReads.Remove(index); } }
+            }
+        }
+    }
+
+    private async Task<bool> ReadPageAsync(int index, CancellationToken cancellationToken)
     {
         if ((uint)index >= (uint)PageCount)
             return false;
@@ -292,6 +335,7 @@ public sealed class PreparedComic : IDisposable
         }
 
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
+        if (_beforeRead is not null) await _beforeRead(index, linked.Token);
         SKBitmap? bitmap = await Task.Run(() => Decode(index, linked.Token), linked.Token);
         if (bitmap is null)
             return false;
@@ -325,7 +369,11 @@ public sealed class PreparedComic : IDisposable
         {
             if (i < 0 || i >= PageCount || i == currentPage)
                 continue;
-            _ = PreloadSafeAsync(i);
+            lock (_sync)
+            {
+                if (_closing || _disposed || _reads.Count >= PreloadBefore + PreloadAfter) continue;
+                _ = PreloadSafeAsync(i);
+            }
         }
     }
 
@@ -351,6 +399,19 @@ public sealed class PreparedComic : IDisposable
             _archive.Dispose();
 
         _lifetime.Dispose();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_sync) return new(_disposal ??= DrainAndDisposeAsync());
+    }
+    private async Task DrainAndDisposeAsync()
+    {
+        Task[] reads;
+        lock (_sync) { _closing = true; _lifetime.Cancel(); reads = _reads.ToArray(); }
+        try { await Task.WhenAll(reads); }
+        catch { /* Page errors belong to the read; actual archive release must still complete. */ }
+        await Task.Run(Dispose);
     }
 
     private async Task PreloadSafeAsync(int index)

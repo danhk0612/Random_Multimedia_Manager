@@ -1,0 +1,269 @@
+using System.IO;
+using RandomMultimediaManager.App.Data;
+using RandomMultimediaManager.App.Sessions;
+using RandomMultimediaManager.Core;
+
+internal static class T18A4Verification
+{
+    static void Check(bool ok, string message) { if (!ok) throw new Exception(message); }
+    static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+    static async Task Scenario(string name, Func<Fixture, Task> test)
+    { using var f = new Fixture(); await test(f); Console.WriteLine("PASS T18A-4 " + name); }
+    public static async Task RunAsync()
+    {
+        await Scenario("N06 source overlap, binding mismatch and independent failed-open set", async f =>
+        {
+            f.Unavailable.Add(f.Source.RootPath);
+            var nested = new CategorySource(Guid.NewGuid(), f.Category.Id, @"Z:\media\nested", @"Z:\MEDIA\NESTED");
+            f.Db.AddSource(nested);
+            var available = await f.Access.AvailableSourcesAsync(f.Db.GetSessionSnapshot().Sources, CancellationToken.None);
+            Check(!available.Contains(f.Source.Id) && available.Contains(nested.Id), "one accessible nested source survives sibling failure");
+            f.Db.RemoveSource(nested.Id);
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.ConnectionUnavailable, "connection exhaustion separate from period exhaustion");
+            Check(f.P.Calls == 0 && f.C.View.Seen.Count == 0, "no media open or Seen mutation");
+            f.Unavailable.Clear();
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.Completed, "one draw succeeds");
+            var prior = f.C.View;
+            f.P.Fail = true;
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Failed && f.P.Calls == 2, "one failing candidate only");
+            Check(f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor && f.C.View.Seen.SetEquals(prior.Seen), "Pending/cursor/Seen unchanged");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == 2, "failed candidate not drawn again");
+            Check(f.Db.GetItems(f.Category.Id).All(i => !i.IsMissing && !i.IsRandomExcluded) && f.Db.GetHistory(f.B.Id).Count == 0, "no persistent flags/history");
+            int attempts = f.P.Calls;
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.Failed, "failed restart preserves previous session");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == attempts + 1,
+                "failed restart does not clear old failed-open suppression");
+            f.P.Fail = false;
+            Check((await f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id)).Status == SessionStatus.Completed, "manual retry clears failed item");
+            var current = f.C.View;
+            f.Evidence = StorageObservation.Classify(f.A.Path, MappingLookup.Mapped, @"\\other\share");
+            Check((await f.C.PreviousAsync(Guid.NewGuid())).Status == SessionStatus.Failed, "Back binding recheck");
+            Check(f.C.View.Pending == current.Pending && f.C.View.Cursor == current.Cursor, "failed Back leaves Forward/Pending intact");
+            f.Evidence = f.Original;
+            Check((await f.C.PreviousAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "restored binding explicit Back");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "Forward preserved");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
+        await Scenario("N06 post-prepare file access failure suppresses next draw and drains Ready", async f =>
+        {
+            await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            var prior = f.C.View;
+            f.P.ReadyEntered = Signal(); f.P.ReadyRelease = Signal();
+            f.P.DisposeEntered = Signal(); f.P.DisposeRelease = Signal();
+            var command = f.C.NextAsync(Guid.NewGuid());
+            await f.P.ReadyEntered.Task;
+            f.Unavailable.Add(f.B.Path); // Source root and binding remain accessible.
+            f.P.ReadyRelease.SetResult();
+            await f.P.DisposeEntered.Task;
+            Check(!command.IsCompleted && !f.C.WhenIdleAsync().IsCompleted, "failed post-check retains Ready ownership until actual disposal");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Busy, "one candidate per command, no parallel redraw");
+            Check(f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor
+                && f.C.View.Seen.SetEquals(prior.Seen) && f.C.View.Slots.SequenceEqual(prior.Slots), "old visit and Forward slots retained before drain");
+            f.P.DisposeRelease.SetResult();
+            Check((await command).Status == SessionStatus.Failed && f.P.Releases == 1 && f.P.Activations == 1, "post-check failure releases unactivated Ready");
+            f.Unavailable.Clear();
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == 2,
+                "post-prepare failed file is not retried by next random after root recovery");
+            Check(f.Db.GetItems(f.Category.Id).All(i => !i.IsMissing && !i.IsRandomExcluded)
+                && f.Db.GetHistory(f.A.Id).Count == 0 && f.Db.GetHistory(f.B.Id).Count == 0, "no flags or history changed by post-check failure");
+            Check((await f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id)).Status == SessionStatus.Completed, "explicit recheck opens suppressed file");
+            Check((await f.C.PreviousAsync(Guid.NewGuid())).Status == SessionStatus.Completed
+                && (await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "Back and Forward retained after recovery");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
+        await Scenario("N06 stale binding false result suppresses candidate until new session", async f =>
+        {
+            await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            var prior = f.C.View;
+            f.P.ReadyEntered = Signal(); f.P.ReadyRelease = Signal();
+            var command = f.C.NextAsync(Guid.NewGuid());
+            await f.P.ReadyEntered.Task;
+            var binding = f.Db.GetStorageBinding(f.B.Path)!;
+            f.Db.ConfirmStorageBinding(f.B.Path, binding.Revision, f.Original, true);
+            f.P.ReadyRelease.SetResult();
+            Check((await command).Status == SessionStatus.Failed && f.P.Releases == 1, "false stale ticket rejects and actually releases Ready");
+            Check(f.C.View.Pending == prior.Pending && f.C.View.Seen.SetEquals(prior.Seen), "false result preserves visit and Seen");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == 2, "stale Ready cannot be redrawn in same session");
+            f.Db.SaveSettings(new AppSettings(0));
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.Completed
+                && (await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "new session releases post-check suppression");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
+        foreach (string mode in new[] { "cancel", "closing", "cancel-exception" })
+            await Scenario("N11 post-check " + mode + " is not a file failure", async f =>
+            {
+                await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+                var prior = f.C.View;
+                var entered = Signal(); var release = Signal(); int checks = 0;
+                f.FileAccess = async (p, _) =>
+                {
+                    if (p != f.B.Path || ++checks != 2) return;
+                    entered.SetResult(); await release.Task;
+                    if (mode == "cancel-exception") throw new OperationCanceledException();
+                    throw new IOException("late metadata failure after cancellation");
+                };
+                var command = f.C.NextAsync(Guid.NewGuid());
+                await entered.Task;
+                if (mode == "closing") f.C.SetExitRequested(true);
+                else if (mode == "cancel")
+                {
+                    var token = f.C.PreparingToken!;
+                    Check(f.C.CancelOpening(token.SessionId, token.OperationId), "opening cancelled at post-check");
+                }
+                Check(!command.IsCompleted && !f.C.WhenIdleAsync().IsCompleted, "cancelled metadata still owned");
+                release.SetResult();
+                Check((await command).Status == SessionStatus.Cancelled && f.P.Releases == 1
+                    && f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor, "cancellation preserves visit and releases Ready");
+                f.C.SetExitRequested(false); f.FileAccess = null;
+                Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed && f.P.Calls == 3,
+                    "cancelled post-check did not suppress next candidate");
+                await f.C.LeaveAsync(Guid.NewGuid());
+            });
+        await Scenario("N06 failed post-check preserves an existing Forward path", async f =>
+        {
+            await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            await f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id);
+            await f.C.PreviousAsync(Guid.NewGuid());
+            var prior = f.C.View; int history = f.Db.GetHistory(f.A.Id).Count;
+            int checks = 0;
+            f.FileAccess = (p, _) => p == f.B.Path && ++checks == 2
+                ? Task.FromException(new IOException("post-prepare only")) : Task.CompletedTask;
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Failed, "Forward post-check failure");
+            Check(f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor
+                && f.C.View.Slots.SequenceEqual(prior.Slots) && f.C.View.Seen.SetEquals(prior.Seen)
+                && f.Db.GetHistory(f.A.Id).Count == history, "existing Forward, Pending, cursor, Seen and history unchanged");
+            f.FileAccess = null;
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "explicit Forward recheck succeeds despite failure suppression");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
+        await Scenario("N06 source batch has no per-source binding SQL", async f =>
+        {
+            foreach (int count in new[] { 1, 48 })
+            {
+                var sources = Enumerable.Range(0, count).Select(i => new CategorySource(Guid.NewGuid(),
+                    f.Category.Id, $@"Z:\media\source{i}", $@"Z:\MEDIA\SOURCE{i}")).ToArray();
+                var queries = new List<string>(); f.Db.QueryObserver = queries.Add;
+                var available = await f.Access.AvailableSourcesAsync(sources, CancellationToken.None);
+                f.Db.QueryObserver = null;
+                Check(available.Count == count && queries.Count == 3, "one binding set + root pre/post queries for any source count");
+            }
+        });
+        await Scenario("N06 Unknown disconnection requires a new process confirmation", async f =>
+        {
+            var category = new Category(Guid.NewGuid(), "unknown", MediaType.Video); f.Db.SaveCategory(category);
+            var source = f.Db.AddSource(new(Guid.NewGuid(), category.Id, @"R:\media", @"R:\MEDIA"));
+            var evidence = StorageObservation.Classify(source.RootPath, MappingLookup.Failed, provider: "virtual");
+            var binding = f.Db.ConfirmStorageBinding(source.RootPath, 0, evidence, true);
+            long? generation = null; bool offline = false;
+            var access = new ViewingAccess(f.Db, _ => generation, observe: (_, _) => Task.FromResult(evidence),
+                accessible: (_, _) => offline ? Task.FromException(new IOException("disconnected")) : Task.CompletedTask);
+            async Task<bool> Available() => (await access.AvailableSourcesAsync([source], CancellationToken.None)).Contains(source.Id);
+            Check(!await Available(), "durable user confirmation alone is insufficient at process start");
+            generation = 1; Check(await Available(), "explicit process confirmation accepted");
+            offline = true; Check(!await Available(), "disconnect invalidates generation");
+            offline = false; Check(!await Available(), "same confirmation cannot approve observed reconnection");
+            generation = 2; Check(await Available(), "new explicit confirmation releases connection suppression");
+        });
+        await Scenario("N09 late Ready discarded; actual release keeps Busy and shutdown drain", async f =>
+        {
+            await f.C.OpenManualAsync(Guid.NewGuid(), f.A.Id);
+            var prior = f.C.View;
+            f.P.ReadyEntered = Signal(); f.P.ReadyRelease = Signal();
+            f.P.DisposeEntered = Signal(); f.P.DisposeRelease = Signal();
+            var command = f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id);
+            await f.P.ReadyEntered.Task;
+            f.Evidence = StorageObservation.Classify(f.B.Path, MappingLookup.Mapped, @"\\other\share");
+            f.P.ReadyRelease.SetResult();
+            await f.P.DisposeEntered.Task;
+            Check(!command.IsCompleted && !f.C.WhenIdleAsync().IsCompleted, "late media still owned during release");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Busy, "no second IO admission");
+            Check(f.C.View.Pending == prior.Pending && f.Db.GetHistory(f.A.Id).Count == 0, "no visit commit before safe Ready");
+            f.C.SetExitRequested(true);
+            f.P.DisposeRelease.SetResult();
+            Check((await command).Status == SessionStatus.Failed, "changed late Ready rejected");
+            Check(f.P.Activations == 1 && f.P.Releases == 1 && f.C.View.Pending == prior.Pending, "candidate released only, old visit preserved");
+            Check((await f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id)).Status == SessionStatus.Cancelled, "Closing opens zero new media");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
+        await Scenario("N11 source probe cancellation waits for actual IO", async f =>
+        {
+            var entered = Signal(); var release = Signal();
+            f.Probe = async () => { entered.SetResult(); await release.Task; };
+            var start = f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            await entered.Task;
+            f.C.SetExitRequested(true);
+            Check(!start.IsCompleted && !f.C.WhenIdleAsync().IsCompleted, "cancel is not completion");
+            release.SetResult();
+            Check((await start).Status == SessionStatus.Cancelled && f.P.Calls == 0, "no media after Closing during metadata");
+            Check(!f.Db.IsDisposed, "DB remains owned through drain");
+        });
+        await Scenario("N03 revision change during Ready rejects same target old generation", async f =>
+        {
+            f.P.ReadyEntered = Signal(); f.P.ReadyRelease = Signal();
+            var command = f.C.OpenManualAsync(Guid.NewGuid(), f.A.Id);
+            await f.P.ReadyEntered.Task;
+            var binding = f.Db.GetStorageBinding(f.A.Path)!;
+            f.Db.ConfirmStorageBinding(f.A.Path, binding.Revision, f.Original, true);
+            f.P.ReadyRelease.SetResult();
+            Check((await command).Status == SessionStatus.Failed && f.P.Releases == 1 && f.C.View.Pending is null, "revision protects late Ready");
+        });
+        await Scenario("N06 new session releases suppression without relaxing history", async f =>
+        {
+            await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            f.P.Fail = true; await f.C.NextAsync(Guid.NewGuid()); f.P.Fail = false;
+            f.Db.SaveSettings(new AppSettings(0));
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.Completed, "fresh session resets failures");
+            await f.C.LeaveAsync(Guid.NewGuid());
+            f.Db.SaveSettings(new AppSettings(7));
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.Completed, "unviewed B remains eligible");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.NoCandidates, "seen/period exhaustion retains original status");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
+    }
+    sealed class Fixture : IDisposable
+    {
+        readonly string root = Path.Combine(Path.GetTempPath(), "rmm-t18a4-" + Guid.NewGuid());
+        public LibraryDatabase Db; public Category Category; public CategorySource Source; public MediaItem A, B;
+        public StorageObservation Original, Evidence; public ViewingAccess Access; public SessionCoordinator C;
+        public readonly Preparer P = new(); public HashSet<string> Unavailable = []; public Func<Task>? Probe;
+        public Func<string, CancellationToken, Task>? FileAccess;
+        public Fixture()
+        {
+            Directory.CreateDirectory(root); Db = LibraryDatabase.Open(Path.Combine(root, "db.sqlite"));
+            Category = new(Guid.NewGuid(), "network", MediaType.Video); Db.SaveCategory(Category);
+            Source = Db.AddSource(new(Guid.NewGuid(), Category.Id, @"Z:\media", @"Z:\MEDIA"));
+            Original = Evidence = StorageObservation.Classify(Source.RootPath, MappingLookup.Mapped, @"\\server\share");
+            Db.ConfirmStorageBinding(Source.RootPath, 0, Original, true);
+            A = new(Guid.Parse("00000000-0000-0000-0000-000000000001"), Category.Id, MediaType.Video, @"Z:\media\a.mp4", @"Z:\MEDIA\A.MP4", 1, 1);
+            B = new(Guid.Parse("00000000-0000-0000-0000-000000000002"), Category.Id, MediaType.Video, @"Z:\media\b.mp4", @"Z:\MEDIA\B.MP4", 1, 1);
+            Db.ApplyObservedItems([A, B], []);
+            Access = new(Db, observe: async (_, _) => { if (Probe is { } p) await p(); return Evidence; },
+                accessible: (p, ct) => FileAccess is { } check ? check(p, ct)
+                    : Unavailable.Contains(p) ? Task.FromException(new IOException("offline")) : Task.CompletedTask);
+            C = new(Db, P, clock: () => 2000, draw: _ => 0, access: Access);
+        }
+        public void Dispose() { Db.Dispose(); Directory.Delete(root, true); }
+    }
+    sealed class Preparer : ISessionMediaPreparer
+    {
+        public int Calls, Activations, Releases; public bool Fail;
+        public TaskCompletionSource? ReadyEntered, ReadyRelease, DisposeEntered, DisposeRelease;
+        public async Task<SessionPreparation> PrepareAsync(MediaItem item, PlaybackProgress? progress, SessionToken token, CancellationToken ct)
+        {
+            Calls++; if (Fail) return new(PreparationStatus.Failed, token, Error: "open failure");
+            if (ReadyRelease is { } release) { ReadyEntered!.TrySetResult(); await release.Task; ReadyRelease = null; }
+            return new(PreparationStatus.Ready, token, new Media(this));
+        }
+    }
+    sealed class Media(Preparer p) : ISessionMedia
+    {
+        public void Activate(SessionToken t) { p.Activations++; }
+        public void Resume(SessionToken t) { }
+        public PlaybackProgress PauseAndCapture(SessionToken t) => PlaybackProgress.Video(123);
+        public async ValueTask DisposeAsync()
+        {
+            if (p.DisposeRelease is { } release) { p.DisposeEntered!.TrySetResult(); await release.Task; p.DisposeRelease = null; }
+            p.Releases++;
+        }
+    }
+}

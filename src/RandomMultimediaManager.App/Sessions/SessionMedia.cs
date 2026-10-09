@@ -22,7 +22,7 @@ public interface ISessionMediaPreparer
 }
 public enum SessionStatus
 {
-    Completed, NoOp, NoCandidates, NoPrevious, SelectionRequired, SessionLimit,
+    Completed, NoOp, NoCandidates, ConnectionUnavailable, NoPrevious, SelectionRequired, SessionLimit,
     Busy, Stale, Failed, Cancelled, SaveFailed, CommitUnknown
 }
 public enum SessionPhase { Empty, Active, Opening, Saving, SaveFailed, Deleting }

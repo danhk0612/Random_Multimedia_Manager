@@ -265,3 +265,5 @@ await T17Verification.RunAsync();
 
 await T18A1Verification.RunAsync();
 await T18A3Verification.RunAsync();
+
+await T18A4Verification.RunAsync();

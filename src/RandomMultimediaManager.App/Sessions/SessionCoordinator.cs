@@ -11,6 +11,9 @@ public sealed partial class SessionCoordinator
     private readonly object gate = new();
     private readonly LibraryDatabase database;
     private readonly ISessionMediaPreparer preparer;
+    private readonly ViewingAccess? access;
+    private readonly HashSet<string> failedOpens = new(StringComparer.Ordinal);
+    private Guid failureSession;
     private readonly Func<long> clock;
     private readonly Func<int, int> draw;
     private readonly Func<VisitCommitRequest, CommitResult> commit;
@@ -58,10 +61,11 @@ public sealed partial class SessionCoordinator
 
     public SessionCoordinator(LibraryDatabase database, ISessionMediaPreparer preparer,
         Func<long>? clock = null, Func<int, int>? draw = null,
-        Func<VisitCommitRequest, CommitResult>? commitVisit = null)
+        Func<VisitCommitRequest, CommitResult>? commitVisit = null, ViewingAccess? access = null)
     {
         this.database = database;
         this.preparer = preparer;
+        this.access = access;
         this.clock = clock ?? (() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
         this.draw = draw ?? Random.Shared.Next;
         commit = commitVisit ?? database.CommitVisit;
@@ -130,7 +134,19 @@ public sealed partial class SessionCoordinator
     public Task<SessionResult> StartRandomAsync(Guid commandId, IEnumerable<Guid> categories)
     {
         var selection = categories.ToHashSet();
-        return Command(commandId, () => ChooseRandom(new SessionPath(selection)));
+        return Command(commandId, async () =>
+        {
+            var destination = new SessionPath(selection);
+            var previousFailures = failedOpens.ToArray();
+            var previousSession = failureSession;
+            try { return await ChooseRandom(destination); }
+            finally
+            {
+                // A failed restart must not clear the still-active session's suppression.
+                if (path is not null && path.SessionId != destination.SessionId)
+                { failedOpens.Clear(); failedOpens.UnionWith(previousFailures); failureSession = previousSession; }
+            }
+        });
     }
     public Task<SessionResult> NextAsync(Guid commandId) => Command(commandId, async () =>
     {
@@ -168,12 +184,39 @@ public sealed partial class SessionCoordinator
         long now = clock();
         snapshot ??= await Task.Run(database.GetSessionSnapshot);
         var settings = await Task.Run(database.GetSettings);
-        var isolation = database.GetDeletionIsolationSnapshot();
+        var isolation = await Task.Run(() => database.GetDeletionIsolationSnapshot());
         if (isolation.GloballyBlocked) return new(SessionStatus.CommitUnknown, "삭제 복구 확인이 필요합니다.");
         var candidates = CandidatePolicy.GetCandidates(snapshot, destination.Selected, destination.Seen,
             quarantined.Concat(isolation.Paths).ToHashSet(), now, settings.HistoryExclusionDays);
         candidates = candidates.Where(i => !isolation.IsBlocked(i.PathKey)).ToArray();
         if (candidates.Count == 0) return new(SessionStatus.NoCandidates);
+        if (failureSession != destination.SessionId)
+        { failedOpens.Clear(); failureSession = destination.SessionId; }
+        if (exitRequested) return new(SessionStatus.Cancelled);
+        if (access is not null)
+        {
+            lock (gate)
+            {
+                phase = SessionPhase.Opening; cancelled = false;
+                opening = new();
+                preparationToken = new(destination.SessionId, Guid.NewGuid(), Guid.Empty);
+            }
+            try
+            {
+                var available = await access.AvailableSourcesAsync(snapshot.Sources.Where(s => destination.Selected.Contains(s.CategoryId)), opening.Token);
+                candidates = candidates.Where(i => snapshot.Sources.Any(s => available.Contains(s.Id)
+                    && s.CategoryId == i.CategoryId && CandidatePolicy.Includes(s, i.PathKey))).ToArray();
+                if (cancelled || exitRequested) return new(SessionStatus.Cancelled);
+            }
+            catch (OperationCanceledException) { return new(SessionStatus.Cancelled); }
+            finally
+            {
+                lock (gate) { opening.Dispose(); opening = null; preparationToken = null; phase = RestingPhase; }
+            }
+        }
+        candidates = candidates.Where(i => !failedOpens.Contains(i.PathKey)).ToArray();
+        if (candidates.Count == 0) return new(SessionStatus.ConnectionUnavailable,
+            "연결 문제 또는 이번 세션의 열기 실패로 후보가 일시 제외됐습니다. 수동 열기로 재확인하거나 새 감상 세션을 시작하세요.");
         return await Move(new(destination, candidates[draw(candidates.Count)], VisitOrigin.Random));
     }
 
@@ -224,6 +267,7 @@ public sealed partial class SessionCoordinator
                 return new(SessionStatus.CommitUnknown, "Resolve the current path deletion before saving its visit.");
             var item = transition.Item;
             SessionToken? targetToken = null;
+            ViewingAccess.Ticket? bindingTicket = null;
             if (item is not null)
             {
                 if (item.IsMissing || quarantined.Contains(item.PathKey) || database.IsDeletionBlocked(item.PathKey))
@@ -240,9 +284,44 @@ public sealed partial class SessionCoordinator
                     targetToken = preparationToken = new(transition.Destination.SessionId, Guid.NewGuid(), item.Id);
                 }
                 SessionPreparation result;
-                try { result = await preparer.PrepareAsync(item, progress, targetToken, opening.Token); }
+                try
+                {
+                    if (access is not null) bindingTicket = await access.CheckAsync(item.Path, opening.Token);
+                    // Keep the live isolation check after metadata IO, even with batch filtering.
+                    if (database.IsDeletionBlocked(item.PathKey)) return new(SessionStatus.CommitUnknown);
+                    result = await preparer.PrepareAsync(item, progress, targetToken, opening.Token);
+                }
                 catch (OperationCanceledException) { return new(SessionStatus.Cancelled); }
+                catch (Exception ex)
+                {
+                    if (cancelled || exitRequested || opening.IsCancellationRequested) return new(SessionStatus.Cancelled);
+                    RememberOpenFailure(transition); return new(SessionStatus.Failed, ex.Message);
+                }
                 ready = result.Media;
+                if (cancelled || exitRequested || result.Token != targetToken || result.Status == PreparationStatus.Cancelled)
+                    return new(SessionStatus.Cancelled);
+                if (result.Status == PreparationStatus.Failed) RememberOpenFailure(transition);
+                if (ready is not null && bindingTicket is not null && access is not null)
+                {
+                    try
+                    {
+                        bool currentBinding = await access.RecheckAsync(item.Path, bindingTicket, opening.Token);
+                        if (cancelled || exitRequested || opening.IsCancellationRequested) return new(SessionStatus.Cancelled);
+                        if (!currentBinding)
+                        {
+                            RememberOpenFailure(transition);
+                            return new(SessionStatus.Failed, "준비 중 연결 대상이 변경됐습니다.");
+                        }
+                    }
+                    catch (OperationCanceledException) { return new(SessionStatus.Cancelled); }
+                    catch (Exception ex)
+                    {
+                        if (cancelled || exitRequested || opening.IsCancellationRequested) return new(SessionStatus.Cancelled);
+                        RememberOpenFailure(transition);
+                        return new(SessionStatus.Failed, ex.Message);
+                    }
+                }
+                if (database.IsDeletionBlocked(item.PathKey)) return new(SessionStatus.CommitUnknown);
                 lock (gate)
                 {
                     if (cancelled || result.Token != targetToken || result.Status == PreparationStatus.Cancelled)
@@ -274,6 +353,9 @@ public sealed partial class SessionCoordinator
             }
             // No awaits between committing the pure state and logical activation. A decoder error
             // from Activate belongs to the new visit; it must never resurrect the committed visit.
+            if (bindingTicket is not null && access is not null && !access.IsCurrent(bindingTicket))
+                return new(frozen is null ? SessionStatus.Failed : SessionStatus.SaveFailed,
+                    "연결 결과가 만료됐습니다. 기존 방문과 저장 검증값을 보존합니다.");
             var old = current;
             string? activationError = null;
             lock (gate)
@@ -288,6 +370,7 @@ public sealed partial class SessionCoordinator
                     transition.Destination.Activate(item, transition.Origin, clock(), transition.Index);
                     path = transition.Destination;
                     activeToken = targetToken! with { VisitId = path.Pending!.VisitId };
+                    if (transition.Origin != VisitOrigin.Random) failedOpens.Remove(item.PathKey);
                     current = ready;
                     ready = null;
                     latestProgress = item.MediaType == MediaType.Comic ? PlaybackProgress.Comic(0) : PlaybackProgress.Video(0);
@@ -316,6 +399,13 @@ public sealed partial class SessionCoordinator
                 }
             }
         }
+    }
+
+    private void RememberOpenFailure(Transition transition)
+    {
+        if (failureSession != transition.Destination.SessionId)
+        { failedOpens.Clear(); failureSession = transition.Destination.SessionId; }
+        failedOpens.Add(transition.Item!.PathKey);
     }
 
     private async Task<SessionResult> SaveFrozen()

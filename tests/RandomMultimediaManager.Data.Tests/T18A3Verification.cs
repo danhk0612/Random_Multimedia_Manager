@@ -64,7 +64,10 @@ internal static class T18A3Verification
                 var selected = await session.StartRandomAsync(Guid.NewGuid(), [f.Local.CategoryId, f.RemoteCategory.Id]);
                 Check(selected.Status == SessionStatus.Completed, "local random candidate selected: " + selected.Status + " " + selected.Error);
                 Check(sql.Count(q => q.Contains("SELECT RootKey FROM StorageBinding")) == 1, "candidate batch reads binding set once");
-                Check(sql.Count(q => q.Contains("FROM StorageBinding WHERE RootKey=")) <= 1, "no binding query per candidate");
+                // Only the drawn item receives live isolation checks before and after preparation.
+                // The same bound and total query count must hold at 100 and 10,000 candidates.
+                Check(sql.Count(q => q.Contains("FROM StorageBinding WHERE RootKey=")) <= 3,
+                    "fixed selected-item live checks, no binding query per candidate");
                 if (randomQueries is { } old) Check(sql.Count == old, "random SQL count independent of 100/10000 items");
                 randomQueries = sql.Count;
                 f.Db.QueryObserver = null;

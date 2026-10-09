@@ -479,6 +479,13 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 - `BeginClosing`은 sticky 신규 삭제 IO 차단, `DrainAsync`는 실제 준비/probe/삭제/복귀 확인 worker 완료 대기다. 실행 중 성공/실패 확인이나 같은 record의 OS 재실행으로 격리를 풀 수 없다. 기존 viewing 명령/복구 완료 대기를 합쳐 DB 해제 순서를 유지한다. Quick Hide/mute·복원 키·ExitBlocked 정책과 Pending/기록 의미는 유지한다.
 - N07~N09 오류 주입, Windows 로컬 실파일/네이티브 회귀와 NAS/RaiDrive 미검증은 `T18A_3_NETWORK_DELETION_VALIDATION.md`를 따른다. T18A-4~6·배포는 미착수다.
 
+#### T18A-4 감상 연결 API (PR #26 구현·Windows 검증 완료/재검토 대기)
+
+- `ViewingAccess`는 한 감상 창의 scan exclusive lease 안에서 소스 메타데이터 가용성·루트 근거를 확인한다. `GetStorageBindings`는 후보 판정당 집합 조회이며 항목별 SQL/미디어 본문 읽기는 없다. 바인딩 최초 채택은 검증된 Local만 허용하고 원격/Unknown은 T18A-2의 명시 프로세스 확인을 따른다. 관찰된 Unknown 접근 실패 이후 이전 확인은 재사용하지 않는다.
+- `SessionCoordinator`의 실패 집합은 세션 메모리이며 기존 Seen/영구 제외/Missing/기록과 분리한다. 후보 없음은 기존 NoCandidates, 연결/실패 일시 억제는 ConnectionUnavailable이다. 수동/Back/Forward 성공 및 새 세션으로 억제를 해제하며 실패 시 cursor/Forward/Pending을 보존한다. 열기 전후 Ticket(binding revision/generation) 및 live 삭제 격리를 검사한다. 늦은 Ready는 실제 해제까지 Busy를 유지한다. 삭제 실패 복귀도 같은 검사를 추가하되 새 방문을 만들지 않는다.
+- ZIP `DisposeAsync`는 프리로드 포함 실제 읽기 drain 후 압축 리소스를 worker에서 해제한다. 영상 `PlayAsync`/`SeekAsync`/자막/Stop은 소유 Task를 등록하며 `DisposeAsync`는 늦은 결과 정리까지 기다린다. WPF HWND 수명은 Dispatcher에 남는다. 자막 접근 실패는 빈 목록/영상 실패와 분리하며 Closing 뒤 후속 자막/미디어 IO를 시작하지 않고 이미 발행한 작업과 실제 해제를 기다린다.
+- 세부 오류 주입·Windows 실파일/native 회귀와 NAS/RaiDrive 미검증은 `T18A_4_NETWORK_VIEWING_VALIDATION.md`를 따른다. 기존 scan/삭제 저널/Pending/숨김·복원 계약은 유지하며 UI·배포는 후속 Task다.
+
 ### 8. 지원·검증 기준 (T18A-1~3 자동 검증, 실물/후속 검증 대기)
 
 | 환경 | 목표 지원 | 제약 / 반드시 실제 확인 |

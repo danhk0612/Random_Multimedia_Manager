@@ -48,7 +48,7 @@ public static class ExternalSubtitleService
 
         string? directory = System.IO.Path.GetDirectoryName(videoPath);
         string videoName = System.IO.Path.GetFileNameWithoutExtension(videoPath);
-        if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(videoName) || !Directory.Exists(directory))
+        if (string.IsNullOrEmpty(directory) || string.IsNullOrEmpty(videoName))
             return Array.Empty<ExternalSubtitleCandidate>();
 
         var candidates = new List<ExternalSubtitleCandidate>();
@@ -135,7 +135,7 @@ public static class ExternalSubtitleService
 
     private static string ValidateSubtitlePath(string path, out ExternalSubtitleFormat format)
     {
-        if (!System.IO.Path.IsPathFullyQualified(path) || !File.Exists(path))
+        if (!System.IO.Path.IsPathFullyQualified(path))
             throw new FileNotFoundException("외부 자막 파일을 찾을 수 없습니다.", path);
 
         string extension = System.IO.Path.GetExtension(path);

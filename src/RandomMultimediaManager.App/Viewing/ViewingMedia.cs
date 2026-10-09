@@ -74,7 +74,7 @@ public sealed class ViewingMedia : ISessionMedia, IDeletionMediaState
     {
         if (disposed || token != Token) throw new InvalidOperationException("현재 감상 토큰이 아닙니다.");
     }
-    public Task WhenIdleAsync() => comicWindow?.WhenIdleAsync() ?? Task.CompletedTask;
+    public Task WhenIdleAsync() => comicWindow?.WhenIdleAsync() ?? Video?.WhenIdleAsync() ?? Task.CompletedTask;
 
     public PlaybackProgress Capture(SessionToken token)
     {
@@ -123,7 +123,8 @@ public sealed class ViewingMedia : ISessionMedia, IDeletionMediaState
     {
         disposed = true;
         released(this);
-        comic?.Dispose(); comic = null;
+        if (comic is not null) await comic.DisposeAsync();
+        comic = null;
         if (comicWindow is not null) await comicWindow.ShutdownAsync();
         comicWindow = null;
         if (Video is not null) await Video.DisposeAsync();

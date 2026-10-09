@@ -148,11 +148,35 @@ internal static class Program
                         try { candidate.Play(endVisit with { VisitId = Guid.NewGuid() }); }
                         catch (InvalidOperationException) { rejected = true; }
                         Check(rejected && candidate.RestoredCompleted, "stale visit cannot restart completed video");
-                        candidate.Play(endVisit);
+                        int nativeSeeks = 0;
+                        typeof(PreparedVideo).GetProperty("BeforeIo", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                            .SetValue(candidate, (Func<string, Task>)(name => { if (name == "seek") nativeSeeks++; return Task.CompletedTask; }));
+                        Check(await candidate.SeekAsync(endVisit, duration), "async same completed position accepted");
+                        Check(nativeSeeks == 0 && candidate.RestoredCompleted && candidate.CaptureProgress(endVisit).VideoPositionMs == duration,
+                            "async same completed position emits zero native seeks and retains progress");
+                        await candidate.PlayAsync(endVisit);
                         await Task.Delay(250);
                         Check(candidate.Snapshot(endVisit).State == VLCState.Playing &&
                             candidate.CaptureProgress(endVisit).VideoPositionMs < 1500,
                             "explicit replay starts from beginning with same visit");
+                        await candidate.DisposeAsync();
+                        candidate = null;
+                        var otherToken = Operation();
+                        var other = await PreparedVideo.PrepareAsync(surface, otherToken, copy,
+                            PlaybackProgress.Video(duration), false, CancellationToken.None);
+                        Check(other.Status == VideoPreparationStatus.Ready, "different-position completed restore Ready");
+                        candidate = other.Video!;
+                        var otherVisit = new VideoVisit(otherToken, Guid.NewGuid());
+                        candidate.Activate(otherVisit, 50, false);
+                        nativeSeeks = 0;
+                        typeof(PreparedVideo).GetProperty("BeforeIo", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                            .SetValue(candidate, (Func<string, Task>)(name => { if (name == "seek") nativeSeeks++; return Task.CompletedTask; }));
+                        PreparedVideo.SetPrivacyMuted(true);
+                        Check(await candidate.SeekAsync(otherVisit, 1000) && nativeSeeks == 1 && !candidate.RestoredCompleted,
+                            "async different completed position performs one native seek and clears completed state");
+                        Check(PreparedVideo.PrivacyMuted && candidate.Snapshot(otherVisit).Visit == otherVisit,
+                            "different-position seek preserves privacy mute intent and visit");
+                        PreparedVideo.SetPrivacyMuted(false);
                         await candidate.DisposeAsync();
                         candidate = null;
                     }

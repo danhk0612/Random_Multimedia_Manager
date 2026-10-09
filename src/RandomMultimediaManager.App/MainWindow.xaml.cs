@@ -98,7 +98,8 @@ public partial class MainWindow : Window
             if (!Scans.Completion.IsCompleted) ShowLifecycleError("진행 중인 스캔 IO 완료를 기다리고 있습니다.");
             using var admission = await Scans.EnterExclusiveAsync();
             if (admission is null || exitRequested || Scans.IsClosing || Lifecycle?.BlocksNewCommands == true) return;
-            Viewing = new Viewing.ViewingWindow(database, deletions, itemId) { Owner = this };
+            Viewing = new Viewing.ViewingWindow(database, deletions, itemId,
+                new Sessions.ViewingAccess(database, Scans.ConfirmedDeletionGeneration, () => Scans.IsClosing)) { Owner = this };
             try { Viewing.ShowDialog(); }
             finally { Viewing = null; }
         }
