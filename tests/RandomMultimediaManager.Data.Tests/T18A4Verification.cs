@@ -71,6 +71,71 @@ internal static class T18A4Verification
                 && (await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "Back and Forward retained after recovery");
             await f.C.LeaveAsync(Guid.NewGuid());
         });
+        await Scenario("N06 stale binding false result suppresses candidate until new session", async f =>
+        {
+            await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            var prior = f.C.View;
+            f.P.ReadyEntered = Signal(); f.P.ReadyRelease = Signal();
+            var command = f.C.NextAsync(Guid.NewGuid());
+            await f.P.ReadyEntered.Task;
+            var binding = f.Db.GetStorageBinding(f.B.Path)!;
+            f.Db.ConfirmStorageBinding(f.B.Path, binding.Revision, f.Original, true);
+            f.P.ReadyRelease.SetResult();
+            Check((await command).Status == SessionStatus.Failed && f.P.Releases == 1, "false stale ticket rejects and actually releases Ready");
+            Check(f.C.View.Pending == prior.Pending && f.C.View.Seen.SetEquals(prior.Seen), "false result preserves visit and Seen");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == 2, "stale Ready cannot be redrawn in same session");
+            f.Db.SaveSettings(new AppSettings(0));
+            Check((await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id])).Status == SessionStatus.Completed
+                && (await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "new session releases post-check suppression");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
+        foreach (string mode in new[] { "cancel", "closing", "cancel-exception" })
+            await Scenario("N11 post-check " + mode + " is not a file failure", async f =>
+            {
+                await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+                var prior = f.C.View;
+                var entered = Signal(); var release = Signal(); int checks = 0;
+                f.FileAccess = async (p, _) =>
+                {
+                    if (p != f.B.Path || ++checks != 2) return;
+                    entered.SetResult(); await release.Task;
+                    if (mode == "cancel-exception") throw new OperationCanceledException();
+                    throw new IOException("late metadata failure after cancellation");
+                };
+                var command = f.C.NextAsync(Guid.NewGuid());
+                await entered.Task;
+                if (mode == "closing") f.C.SetExitRequested(true);
+                else if (mode == "cancel")
+                {
+                    var token = f.C.PreparingToken!;
+                    Check(f.C.CancelOpening(token.SessionId, token.OperationId), "opening cancelled at post-check");
+                }
+                Check(!command.IsCompleted && !f.C.WhenIdleAsync().IsCompleted, "cancelled metadata still owned");
+                release.SetResult();
+                Check((await command).Status == SessionStatus.Cancelled && f.P.Releases == 1
+                    && f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor, "cancellation preserves visit and releases Ready");
+                f.C.SetExitRequested(false); f.FileAccess = null;
+                Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed && f.P.Calls == 3,
+                    "cancelled post-check did not suppress next candidate");
+                await f.C.LeaveAsync(Guid.NewGuid());
+            });
+        await Scenario("N06 failed post-check preserves an existing Forward path", async f =>
+        {
+            await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            await f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id);
+            await f.C.PreviousAsync(Guid.NewGuid());
+            var prior = f.C.View; int history = f.Db.GetHistory(f.A.Id).Count;
+            int checks = 0;
+            f.FileAccess = (p, _) => p == f.B.Path && ++checks == 2
+                ? Task.FromException(new IOException("post-prepare only")) : Task.CompletedTask;
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Failed, "Forward post-check failure");
+            Check(f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor
+                && f.C.View.Slots.SequenceEqual(prior.Slots) && f.C.View.Seen.SetEquals(prior.Seen)
+                && f.Db.GetHistory(f.A.Id).Count == history, "existing Forward, Pending, cursor, Seen and history unchanged");
+            f.FileAccess = null;
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "explicit Forward recheck succeeds despite failure suppression");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
         await Scenario("N06 source batch has no per-source binding SQL", async f =>
         {
             foreach (int count in new[] { 1, 48 })
@@ -161,6 +226,7 @@ internal static class T18A4Verification
         public LibraryDatabase Db; public Category Category; public CategorySource Source; public MediaItem A, B;
         public StorageObservation Original, Evidence; public ViewingAccess Access; public SessionCoordinator C;
         public readonly Preparer P = new(); public HashSet<string> Unavailable = []; public Func<Task>? Probe;
+        public Func<string, CancellationToken, Task>? FileAccess;
         public Fixture()
         {
             Directory.CreateDirectory(root); Db = LibraryDatabase.Open(Path.Combine(root, "db.sqlite"));
@@ -172,7 +238,8 @@ internal static class T18A4Verification
             B = new(Guid.Parse("00000000-0000-0000-0000-000000000002"), Category.Id, MediaType.Video, @"Z:\media\b.mp4", @"Z:\MEDIA\B.MP4", 1, 1);
             Db.ApplyObservedItems([A, B], []);
             Access = new(Db, observe: async (_, _) => { if (Probe is { } p) await p(); return Evidence; },
-                accessible: (p, _) => Unavailable.Contains(p) ? Task.FromException(new IOException("offline")) : Task.CompletedTask);
+                accessible: (p, ct) => FileAccess is { } check ? check(p, ct)
+                    : Unavailable.Contains(p) ? Task.FromException(new IOException("offline")) : Task.CompletedTask);
             C = new(Db, P, clock: () => 2000, draw: _ => 0, access: Access);
         }
         public void Dispose() { Db.Dispose(); Directory.Delete(root, true); }

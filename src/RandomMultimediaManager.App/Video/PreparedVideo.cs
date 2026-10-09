@@ -456,6 +456,9 @@ public sealed class PreparedVideo : IAsyncDisposable
         RequireVisit(token);
         if (!player.IsSeekable) return false;
         long target = player.Length > 0 ? Math.Clamp(milliseconds, 0, player.Length) : Math.Max(0, milliseconds);
+        // The decoder is already paused at the beginning for explicit replay. Keep the
+        // logical completed position without moving that prepared decoder back to the end.
+        if (RestoredCompleted && target == completedPosition) return true;
         await NativeAsync("seek", () => { player.Time = target; return true; });
         RequireVisit(token);
         if (RestoredCompleted && target != completedPosition)

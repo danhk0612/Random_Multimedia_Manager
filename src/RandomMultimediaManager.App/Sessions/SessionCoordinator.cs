@@ -293,7 +293,10 @@ public sealed partial class SessionCoordinator
                 }
                 catch (OperationCanceledException) { return new(SessionStatus.Cancelled); }
                 catch (Exception ex)
-                { RememberOpenFailure(transition); return new(SessionStatus.Failed, ex.Message); }
+                {
+                    if (cancelled || exitRequested || opening.IsCancellationRequested) return new(SessionStatus.Cancelled);
+                    RememberOpenFailure(transition); return new(SessionStatus.Failed, ex.Message);
+                }
                 ready = result.Media;
                 if (cancelled || exitRequested || result.Token != targetToken || result.Status == PreparationStatus.Cancelled)
                     return new(SessionStatus.Cancelled);
@@ -302,11 +305,21 @@ public sealed partial class SessionCoordinator
                 {
                     try
                     {
-                        if (!await access.RecheckAsync(item.Path, bindingTicket, opening.Token))
+                        bool currentBinding = await access.RecheckAsync(item.Path, bindingTicket, opening.Token);
+                        if (cancelled || exitRequested || opening.IsCancellationRequested) return new(SessionStatus.Cancelled);
+                        if (!currentBinding)
+                        {
+                            RememberOpenFailure(transition);
                             return new(SessionStatus.Failed, "준비 중 연결 대상이 변경됐습니다.");
+                        }
                     }
                     catch (OperationCanceledException) { return new(SessionStatus.Cancelled); }
-                    catch (Exception ex) { return new(SessionStatus.Failed, ex.Message); }
+                    catch (Exception ex)
+                    {
+                        if (cancelled || exitRequested || opening.IsCancellationRequested) return new(SessionStatus.Cancelled);
+                        RememberOpenFailure(transition);
+                        return new(SessionStatus.Failed, ex.Message);
+                    }
                 }
                 if (database.IsDeletionBlocked(item.PathKey)) return new(SessionStatus.CommitUnknown);
                 lock (gate)

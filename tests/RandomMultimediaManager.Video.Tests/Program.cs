@@ -161,6 +161,24 @@ internal static class Program
                             "explicit replay starts from beginning with same visit");
                         await candidate.DisposeAsync();
                         candidate = null;
+                        var otherToken = Operation();
+                        var other = await PreparedVideo.PrepareAsync(surface, otherToken, copy,
+                            PlaybackProgress.Video(duration), false, CancellationToken.None);
+                        Check(other.Status == VideoPreparationStatus.Ready, "different-position completed restore Ready");
+                        candidate = other.Video!;
+                        var otherVisit = new VideoVisit(otherToken, Guid.NewGuid());
+                        candidate.Activate(otherVisit, 50, false);
+                        nativeSeeks = 0;
+                        typeof(PreparedVideo).GetProperty("BeforeIo", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
+                            .SetValue(candidate, (Func<string, Task>)(name => { if (name == "seek") nativeSeeks++; return Task.CompletedTask; }));
+                        PreparedVideo.SetPrivacyMuted(true);
+                        Check(await candidate.SeekAsync(otherVisit, 1000) && nativeSeeks == 1 && !candidate.RestoredCompleted,
+                            "async different completed position performs one native seek and clears completed state");
+                        Check(PreparedVideo.PrivacyMuted && candidate.Snapshot(otherVisit).Visit == otherVisit,
+                            "different-position seek preserves privacy mute intent and visit");
+                        PreparedVideo.SetPrivacyMuted(false);
+                        await candidate.DisposeAsync();
+                        candidate = null;
                     }
                     await current.DisposeAsync();
                     await current.DisposeAsync();
