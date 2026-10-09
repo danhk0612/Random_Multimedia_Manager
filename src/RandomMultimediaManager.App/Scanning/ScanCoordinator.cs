@@ -78,7 +78,10 @@ public sealed class ScanCoordinator
 
     public bool IsClosing { get { lock (gate) return closing; } }
     public Task Completion { get { lock (gate) return running; } }
-    public SourceAccessState GetAccess(Guid id) { lock (gate) return sources[id].Access; }
+    public SourceAccessState GetAccess(Guid id)
+    {
+        lock (gate) return sources.TryGetValue(id, out var state) ? state.Access : SourceAccessState.Unknown;
+    }
     public event Action<Guid, SourceAccessState>? SourceAccessChanged;
     private void NotifyAccessChanged(Guid sourceId, SourceAccessState access) => SourceAccessChanged?.Invoke(sourceId, access);
 
@@ -294,7 +297,9 @@ public sealed class ScanCoordinator
         lock (gate)
         {
             if (closing) throw new InvalidOperationException("종료 중입니다.");
-            var state = sources[sourceId];
+            Reload();
+            if (!sources.TryGetValue(sourceId, out var state))
+                throw new InvalidOperationException("저장된 소스를 찾을 수 없습니다.");
             var expected = database.GetStorageBinding(state.Source.RootPath)!;
             version = generation;
             cancellation = new();
