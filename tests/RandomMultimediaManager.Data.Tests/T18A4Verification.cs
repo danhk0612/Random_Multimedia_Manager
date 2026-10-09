@@ -44,6 +44,33 @@ internal static class T18A4Verification
             Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "Forward preserved");
             await f.C.LeaveAsync(Guid.NewGuid());
         });
+        await Scenario("N06 post-prepare file access failure suppresses next draw and drains Ready", async f =>
+        {
+            await f.C.StartRandomAsync(Guid.NewGuid(), [f.Category.Id]);
+            var prior = f.C.View;
+            f.P.ReadyEntered = Signal(); f.P.ReadyRelease = Signal();
+            f.P.DisposeEntered = Signal(); f.P.DisposeRelease = Signal();
+            var command = f.C.NextAsync(Guid.NewGuid());
+            await f.P.ReadyEntered.Task;
+            f.Unavailable.Add(f.B.Path); // Source root and binding remain accessible.
+            f.P.ReadyRelease.SetResult();
+            await f.P.DisposeEntered.Task;
+            Check(!command.IsCompleted && !f.C.WhenIdleAsync().IsCompleted, "failed post-check retains Ready ownership until actual disposal");
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Busy, "one candidate per command, no parallel redraw");
+            Check(f.C.View.Pending == prior.Pending && f.C.View.Cursor == prior.Cursor
+                && f.C.View.Seen.SetEquals(prior.Seen) && f.C.View.Slots.SequenceEqual(prior.Slots), "old visit and Forward slots retained before drain");
+            f.P.DisposeRelease.SetResult();
+            Check((await command).Status == SessionStatus.Failed && f.P.Releases == 1 && f.P.Activations == 1, "post-check failure releases unactivated Ready");
+            f.Unavailable.Clear();
+            Check((await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.ConnectionUnavailable && f.P.Calls == 2,
+                "post-prepare failed file is not retried by next random after root recovery");
+            Check(f.Db.GetItems(f.Category.Id).All(i => !i.IsMissing && !i.IsRandomExcluded)
+                && f.Db.GetHistory(f.A.Id).Count == 0 && f.Db.GetHistory(f.B.Id).Count == 0, "no flags or history changed by post-check failure");
+            Check((await f.C.OpenManualAsync(Guid.NewGuid(), f.B.Id)).Status == SessionStatus.Completed, "explicit recheck opens suppressed file");
+            Check((await f.C.PreviousAsync(Guid.NewGuid())).Status == SessionStatus.Completed
+                && (await f.C.NextAsync(Guid.NewGuid())).Status == SessionStatus.Completed, "Back and Forward retained after recovery");
+            await f.C.LeaveAsync(Guid.NewGuid());
+        });
         await Scenario("N06 source batch has no per-source binding SQL", async f =>
         {
             foreach (int count in new[] { 1, 48 })
