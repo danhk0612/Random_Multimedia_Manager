@@ -69,7 +69,7 @@ public sealed class LibraryBrowserViewModel : INotifyPropertyChanged
     private LibraryBooleanFilter selectedHistoryFilter = historyFilters[0];
     private string statusMessage = "분류를 선택하세요.";
     private int loadVersion;
-    private bool exitRequested;
+    private volatile bool exitRequested;
 
     public LibraryBrowserViewModel(LibraryDatabase database) => this.database = database;
 
@@ -104,11 +104,13 @@ public sealed class LibraryBrowserViewModel : INotifyPropertyChanged
             SelectedProgressText = value is null ? "파일을 선택하세요." : "불러오는 중입니다.";
             OnPropertyChanged(nameof(HasSelectedItem));
             OnPropertyChanged(nameof(CanOpenSelected));
+            OnPropertyChanged(nameof(CanShowSelectedInExplorer));
         }
     }
 
     public bool HasSelectedItem => SelectedItem is not null;
     public bool CanOpenSelected => SelectedItem?.CanOpen == true;
+    public bool CanShowSelectedInExplorer => SelectedItem is { Item.IsMissing: false } && !exitRequested;
     public string SelectedProgressText { get => selectedProgressText; private set => Set(ref selectedProgressText, value); }
 
     public string SearchText
@@ -230,6 +232,15 @@ public sealed class LibraryBrowserViewModel : INotifyPropertyChanged
     }
 
     public void ReportMessage(string message) => StatusMessage = message;
+
+    public Task<bool> IsCurrentItemExplorerEligibleAsync(LibraryFileRow row) => Task.Run(() =>
+        !exitRequested && !row.Item.IsMissing && !database.IsDisposed
+        && !database.IsDeletionBlocked(row.Item.PathKey)
+        && !database.GetDeletionIsolationSnapshot(includeCategories: true).IsCategoryBlocked(row.Item.CategoryId)
+        && database.GetItems(row.Item.CategoryId).Any(item => item.Id == row.Item.Id
+            && item.Path == row.Item.Path && !item.IsMissing));
+
+    public Task TrackOperation(Task operation) => TrackRead(operation);
 
     public void SetExitRequested(bool value)
     {

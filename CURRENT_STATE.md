@@ -62,7 +62,7 @@
 
 ## 다음 작업과 차단
 
-T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증을 확인하고 `7437e9d`로 main 통합했다. T18A-4 PR #26은 구현·보완 검증을 확인하고 `863c86d`로 main 통합했다. T18A-5/6·T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 다음은 저성능 Work의 T18A-5이며 TASKS.md의 새 작업 시작 지시문을 따른다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
+T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현·보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main에 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증 후 `7437e9d`로, T18A-4 PR #26은 보완 검증 후 `863c86d`로 main에 통합했다. T18A-5는 `task/t18a-5-source-ui`에서 구현 중이며 T18A-6·T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
 
 ## T03 저장 구현
 
@@ -303,3 +303,10 @@ PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까�
 최신 main `f44ed67`의 검토 지시 전체를 기존 `task/t18a-4-network-viewing`에 반영했다. 수정 전 회귀 검사 `ff61649`에서 준비 후 파일 재확인 실패의 다음 랜덤 재시도와 완료 위치 SeekAsync의 native seek 발행을 Windows에서 각각 재현했다. `ccb982a`는 재확인 false/예외의 세션 실패 억제를 추가하고 취소/Closing을 제외하며, 동일 완료 위치 비동기 seek의 native 발행을 생략한다. 늦은 Ready 실제 해제·Pending/cursor/Forward/Seen/기록, 완료 진행·처음부터 PlayAsync·다른 위치 seek·privacy mute·IO/drain을 검증한다.
 
 최종 코드·테스트 `ccb982a497328ca61a4e30f0f981a2ed32506295`의 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401 Release 빌드 경고 0·오류 0 및 T03/T05/T06/T07/T09/T10/T11 영향 CI 7개가 모두 통과했다(해당 SHA 재실행 없음). 재현/수정 전후 근거는 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. 실제 NAS/RaiDrive·기존 수동 미검증·T11 재실행 이력·AVI 조사 보류를 유지한다. PR #26을 `863c86d`로 main에 통합했다. 검증 코드 이후 `1813d67`까지 문서 3개만 변경됐다. 다음은 TASKS.md의 T18A-5 지시문이다. T18A-5/6·배포는 시작하지 않았다.
+
+## T18A-5 소스 설정 UI와 Explorer 연결 (진행 중)
+
+- 최신 기준 main `91778a4`와 T18A-1~4 통합을 확인한 뒤 `task/t18a-5-source-ui`에서 진행한다.
+- UNC/로컬 입력 정규화, source별 정책 및 연결 상태/명시 확인 UI, DB 목록 기반 비동기 Explorer 연결을 기존 API에 연결했다. 저장 실패 복원, 선택 변경/닫힘 뒤 지연 결과 억제, Explorer 접근 확인의 pending read drain 검증을 추가했다.
+- 검증 시나리오 및 실물 미검증 구분은 [T18A-5 검증 문서](docs/T18A_5_SOURCE_UI_VALIDATION.md)를 따른다. 현재 Windows Release 및 CI 결과는 원격 PR 검증 완료 뒤 기록한다. Linux 로컬 환경 결과를 Windows 검증으로 간주하지 않는다.
+- DB/감상/삭제/숨김·종료 정책과 항목 식별자는 변경하지 않는다. 실 NAS/RaiDrive와 실제 Explorer 창 표시는 미검증이다. PR 제출 전이며 T18A-6·배포는 시작하지 않았다.

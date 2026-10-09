@@ -9,7 +9,7 @@ if (!OperatingSystem.IsWindows())
     Console.WriteLine("SKIP: T05 scanner verification requires Windows.");
     return;
 }
-if (args.Length != 1) throw new ArgumentException("Specify one scenario: basic, state, cancel, access, reparse, case.");
+if (args.Length != 1) throw new ArgumentException("Specify one scenario: basic, state, cancel, access, reparse, case, unc.");
 
 switch (args[0].ToLowerInvariant())
 {
@@ -20,6 +20,8 @@ switch (args[0].ToLowerInvariant())
     case "access": Run("access denial", VerifyAccessFailure); break;
     case "reparse": Run("reparse partial success", VerifyReparse); break;
     case "case": Run("case-sensitive directory rejection", VerifyCaseSensitive); break;
+    case "unc": VerifyUncPathUiContract(); break;
+    case "t18a5": await T18A5SourceUiVerification.Run(); break;
     default: throw new ArgumentException("Unknown T05 scenario: " + args[0]);
 }
 
@@ -269,9 +271,25 @@ static Category SaveCategory(LibraryDatabase db, string name, MediaType type)
 
 static CategorySource AddSource(LibraryDatabase db, Category category, string path, bool recursive, bool enabled)
 {
-    var normalized = SourcePathRules.NormalizeLocalFolder(path);
+    var normalized = SourcePathRules.NormalizeFolder(path);
     return db.AddSource(new CategorySource(Guid.NewGuid(), category.Id, normalized.Path, normalized.PathKey,
         recursive, enabled));
+}
+
+static void VerifyUncPathUiContract()
+{
+    var normalized = SourcePathRules.NormalizeFolder(@"\\MediaServer\Share\한글 folder/child/../Title");
+    Check(normalized.Path == @"\\MediaServer\Share\한글 folder\Title"
+        && normalized.PathKey == normalized.Path.ToUpperInvariant(),
+        "T18A-5 source path input normalizes UNC separators, dot segments, Korean and case-preserving display path");
+    var share = SourcePathRules.NormalizeFolder(@"\\MediaServer\Share\");
+    Check(share.Path == @"\\MediaServer\Share\" && share.PathKey == share.Path.ToUpperInvariant(),
+        "T18A-5 allows a UNC share root");
+    bool escaped = false;
+    try { SourcePathRules.NormalizeFolder(@"\\MediaServer\Share\..\Other"); }
+    catch (ArgumentException) { escaped = true; }
+    Check(escaped, "T18A-5 rejects UNC paths escaping the share root");
+    Console.WriteLine("PASS: UNC source path normalization");
 }
 
 static LibraryScanResult Scan(LibraryScanner scanner, Category category) =>

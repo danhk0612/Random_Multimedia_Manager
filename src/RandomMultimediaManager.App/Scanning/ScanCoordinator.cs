@@ -79,6 +79,8 @@ public sealed class ScanCoordinator
     public bool IsClosing { get { lock (gate) return closing; } }
     public Task Completion { get { lock (gate) return running; } }
     public SourceAccessState GetAccess(Guid id) { lock (gate) return sources[id].Access; }
+    public event Action<Guid, SourceAccessState>? SourceAccessChanged;
+    private void NotifyAccessChanged(Guid sourceId, SourceAccessState access) => SourceAccessChanged?.Invoke(sourceId, access);
 
     public void Start()
     {
@@ -253,6 +255,11 @@ public sealed class ScanCoordinator
             if (exclusions == 0) throw new InvalidOperationException("편집 admission이 필요합니다.");
             generation++;
             foreach (var binding in bindings.Values) binding.Invalidate();
+            foreach (var state in sources.Values)
+            {
+                state.Access = SourceAccessState.Unconfirmed;
+                NotifyAccessChanged(state.Source.Id, state.Access);
+            }
             Reload();
         }
     }
@@ -283,12 +290,13 @@ public sealed class ScanCoordinator
         using var lease = await EnterExclusiveAsync().ConfigureAwait(false)
             ?? throw new InvalidOperationException("종료 중입니다.");
         Task work;
+        long version;
         lock (gate)
         {
             if (closing) throw new InvalidOperationException("종료 중입니다.");
             var state = sources[sourceId];
             var expected = database.GetStorageBinding(state.Source.RootPath)!;
-            long version = generation;
+            version = generation;
             cancellation = new();
             var token = cancellation.Token;
             work = Task.Run(async () =>
@@ -303,6 +311,9 @@ public sealed class ScanCoordinator
                     verification.Observe(verification.Generation, evidence, true);
                     bindings[updated.RootKey] = verification;
                     state.Suppressed = false;
+                    state.Access = verification.Access == BindingAccess.Available
+                        ? SourceAccessState.Available : SourceAccessState.Unconfirmed;
+                    NotifyAccessChanged(state.Source.Id, state.Access);
                     Reload();
                 }
             });
@@ -310,6 +321,23 @@ public sealed class ScanCoordinator
                 TaskContinuationOptions.None, TaskScheduler.Default);
         }
         try { await work.ConfigureAwait(false); }
+        catch (Exception ex)
+        {
+            lock (gate)
+                if (!closing && version == generation && sources.TryGetValue(sourceId, out var state))
+                {
+                    if (bindings.TryGetValue(WindowsPath.Normalize(state.Source.RootPath).RootKey, out var verification))
+                        verification.Invalidate();
+                    state.Access = ex is UnauthorizedAccessException or System.Security.SecurityException
+                        or Win32Exception { NativeErrorCode: 5 } ? SourceAccessState.AccessDenied
+                        : ex is InvalidOperationException { Message: var message }
+                            && message.Contains("BindingChanged", StringComparison.Ordinal)
+                            ? SourceAccessState.BindingChanged : SourceAccessState.Unavailable;
+                    state.Suppressed = true;
+                    NotifyAccessChanged(state.Source.Id, state.Access);
+                }
+            throw;
+        }
         finally { lock (gate) { cancellation?.Dispose(); cancellation = null; } }
     }
 
@@ -436,6 +464,7 @@ public sealed class ScanCoordinator
                 if (result.Status == LibraryScanStatus.Cancelled && !closing && !state.Suppressed)
                 { state.Discovery |= discovery; state.Startup |= startup; }
                 cancellation?.Dispose(); cancellation = null; state.Collecting = false; state.AcceptsManual = false; runningSource = null;
+                NotifyAccessChanged(state.Source.Id, state.Access);
             }
         });
         // Only scheduling continuation; running is the actual worker, never a timeout proxy.
