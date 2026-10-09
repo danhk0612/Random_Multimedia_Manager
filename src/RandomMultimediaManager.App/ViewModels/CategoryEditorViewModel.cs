@@ -219,7 +219,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         try
         {
             await Scans.SavePolicyAsync(source.Id, policy);
-            loadedSourcePolicy = policy;
+            loadedSourcePolicy = database.GetEffectiveSourceRefreshPolicy(source.Id);
             if (uiAttached && SelectedSource?.Id == source.Id)
             {
                 RefreshSelectedSourceStatus();
