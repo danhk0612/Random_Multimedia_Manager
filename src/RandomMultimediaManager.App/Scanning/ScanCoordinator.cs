@@ -273,7 +273,8 @@ public sealed class ScanCoordinator
         lock (gate)
         {
             if (closing) throw new InvalidOperationException("종료 중입니다.");
-            database.SaveSourceRefreshPolicy(sourceId, policy);
+            var latest = database.GetEffectiveSourceRefreshPolicy(sourceId);
+            database.SaveSourceRefreshPolicy(sourceId, policy with { LastCompletedAtUtc = latest.LastCompletedAtUtc });
             ConfigurationChanged();
         }
     }
