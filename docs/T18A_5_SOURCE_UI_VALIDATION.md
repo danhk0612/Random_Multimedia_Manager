@@ -18,12 +18,14 @@
 - `T18A5SourceUiVerification`: UNC 소스 저장, 예약 정책 저장, 원격 Events 거부, 실패 후 이전 정책/감지 상태 복원, 명시적 UNC 바인딩 확인, 확인된 Local 기본값을 검사한다.
 - Scanner `unc` 시나리오: 한글·공백·슬래시·dot segment 정규화, 공유 루트 허용, UNC 공유 경계 탈출 거부를 검사한다.
 - T17 WPF 브라우저 회귀: 한글/공백 UNC 호환 인수 구성, 접근 검증 중 선택 변경 시 Explorer 호출 억제, DB 인덱싱 이후 제거 파일 거부를 검사한다.
-- Windows x64 Release 빌드와 해당 영향 CI 결과는 PR Actions 완료 후 이 문서에 기록한다. 현재 로컬 실행 환경은 Linux이며 Windows 빌드/실행 결과로 간주하지 않는다.
+- GitHub Actions에서 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401로 Release 검증했다. 코드 검증 커밋 `3a21a121e21eb92540fea2d9c081de72319d5ba8` 기준 T03, T05, T09, T11 네 workflow가 모두 통과했다. T05에서 UNC 정규화와 소스 정책/명시 확인 시나리오가 통과했고 T11에서 WPF Explorer 회귀를 포함한 감상 테스트가 통과했다. Release 빌드는 경고 0, 오류 0이다.
+- Actions: [T03 #37905046752](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046752), [T05 #37905046702](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046702), [T09 #37905046768](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046768), [T11 #37905046688](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37905046688).
 
 ## 실제 환경에서 확인할 항목
 
 - 실제 NAS/RaiDrive 연결, 대상 재매핑, 연결 끊김/재연결 및 provider 캐시 동작은 별도 실물 검증이다.
 - 자동 테스트의 Explorer 시작 대리자는 실제 Explorer 창을 표시하지 않는다. UNC·한글·공백 경로의 실제 Explorer UI 표시는 실물 확인 전까지 미검증이다.
+- 자동 검증은 Windows runner의 합성 경로/가짜 관찰을 사용한다. 실 NAS/RaiDrive backend에 대한 연결 성공 근거가 아니다.
 - 실제 연결의 원격 휴지통 동작, 로그인/API, 같은 루트의 새 대상 수용은 범위 밖이다.
 
 기존 T18A-1~4 검증 문서의 실물 미검증, T11 재실행 이력, 다른 Task 수동 미검증/승인 생략, AVI 조사 보류는 변경하지 않는다.
