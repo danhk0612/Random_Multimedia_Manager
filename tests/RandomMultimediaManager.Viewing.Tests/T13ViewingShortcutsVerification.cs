@@ -219,7 +219,14 @@ internal static class T13ViewingShortcutsVerification
             Check(window.WindowStyle == WindowStyle.None && window.WindowState == WindowState.Maximized,
                 "T13 F11 enters borderless fullscreen");
             var toolbar = FindElement<Border>(comicContent, control => control.Name == "Toolbar");
-            await Task.Delay(TimeSpan.FromMilliseconds(3500));
+            Check(GetField<DispatcherTimer>(window, "fullscreenControlsTimer").Interval == TimeSpan.FromSeconds(3),
+                "T13 fullscreen inactivity interval remains three seconds");
+            // Fullscreen layout can deliver a late mouse activity event on a CI desktop.
+            // Observe the actual transition while retaining the exact interval assertion.
+            var idleDeadline = DateTime.UtcNow.AddSeconds(8);
+            while ((((FrameworkElement)window.FindName("TopChrome")).Visibility != Visibility.Collapsed
+                || toolbar.Visibility != Visibility.Collapsed) && DateTime.UtcNow < idleDeadline)
+                await Task.Delay(25);
             Check(((FrameworkElement)window.FindName("TopChrome")).Visibility == Visibility.Collapsed
                 && toolbar.Visibility == Visibility.Collapsed,
                 "T13 fullscreen auto-hides common and comic controls after three idle seconds");
@@ -329,7 +336,14 @@ internal static class T13ViewingShortcutsVerification
 
             var videoControls = (FrameworkElement)window.FindName("VideoControls");
             PressKey(window, Key.F11);
-            await Task.Delay(TimeSpan.FromMilliseconds(3500));
+            Check(GetField<DispatcherTimer>(window, "fullscreenControlsTimer").Interval == TimeSpan.FromSeconds(3),
+                "T13 fullscreen inactivity interval remains three seconds");
+            // Fullscreen layout can deliver a late mouse activity event on a CI desktop.
+            // Observe the actual transition while retaining the exact interval assertion.
+            var idleDeadline = DateTime.UtcNow.AddSeconds(8);
+            while ((((FrameworkElement)window.FindName("TopChrome")).Visibility != Visibility.Collapsed
+                || toolbar.Visibility != Visibility.Collapsed) && DateTime.UtcNow < idleDeadline)
+                await Task.Delay(25);
             Check(((FrameworkElement)window.FindName("TopChrome")).Visibility == Visibility.Collapsed
                 && videoControls.Visibility == Visibility.Collapsed,
                 "T13 fullscreen auto-hides video controls");

@@ -96,6 +96,9 @@ internal static class Program
             db.ApplyObservedItems([absent],[]);
             Check((await session.OpenManualAsync(Guid.NewGuid(),absent.Id)).Status==SessionStatus.Failed && session.View.ActiveToken==videoToken,"failed video preparation preserves active visit");
             Check(current.Video.Snapshot(current.VideoVisit).State==prior.State,"failed preparation preserves pause");
+            // Failure suppression belongs to this session, not the later T17 random session.
+            // Keep the failure assertions above; exclude only this synthetic fixture afterward.
+            db.SetRandomExcluded(absent.Id, true);
             fail=true;
             Check((await session.PreviousAsync(Guid.NewGuid())).Status==SessionStatus.SaveFailed,"actual adapters preserve frozen save failure");
             var frozen=session.View.FrozenCommit;
@@ -173,6 +176,9 @@ internal static class Program
                 secondVideoFile.FullName, secondVideoFile.FullName.ToUpperInvariant(), secondVideoFile.Length,
                 secondVideoFile.LastWriteTimeUtc.Ticks);
             db.ApplyObservedItems([secondVideo], []);
+            Check(db.GetItems(videoCategory.Id).Where(item => !item.IsMissing && !item.IsRandomExcluded)
+                .Select(item => item.Id).ToHashSet().SetEquals(new[] { video.Id, secondVideo.Id }),
+                "T17 random fixture contains exactly two real videos, excluding the earlier absent failure fixture");
             var browserSession = new ViewingWindow(db);
             browserSession.Show();
             await Wait(() => ((ListBox)browserSession.FindName("Categories")).Items.Count == 2
