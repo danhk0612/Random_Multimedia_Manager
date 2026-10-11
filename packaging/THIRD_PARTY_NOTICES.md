@@ -25,3 +25,7 @@ libVLC는 수정 없이 외부 DLL/plugins 폴더로 유지하며 단일 exe에 
 - VideoLAN 법률/모듈 안내 및 정확한 native NuGet 버전 페이지는 이번 웹 접근 일부 실패. 실패한 페이지를 검토 완료 근거로 사용하지 않으며 정확한 NuGet archive의 metadata/고지로 보완한다.
 
 앱 자체 라이선스 선택과 위 재배포 미확정 사항은 공개 배포 판단의 차단 항목이다. 공개 Release/tag는 발행하지 않는다.
+
+## exact NuGet archive 대조
+
+첫 검토 artifact에서 모든 wrapper/native NuGet nuspec의 버전·license expression을 직접 확인했다. LibVLCSharp/WPF 및 VideoLAN.LibVLC.Windows는 LGPL-2.1-or-later, Microsoft.Data.Sqlite/Core와 SkiaSharp/NativeAssets는 MIT, SQLitePCLRaw 4개는 Apache-2.0이다. Skia Win32의 LICENSE/THIRD-PARTY-NOTICES 원문은 포함된다. VideoLAN NuGet에는 license expression/URL만 있고 COPYING 원문이 없어 `licenses/LGPL-2.1-or-later.txt`를 별도 제공한다(SPDX license-list-data 원문 blob `c6487f4fdf701640ac0f559eb0130cdf76c5d3f4`). Microsoft.Data.Sqlite 고지는 dotnet/efcore `v10.0.8`의 LICENSE.txt 원문(blob `a616ed188dfce68ee308f674350ad242d8588c2b`)으로 보완한다. runtime pack의 LICENSE/THIRD-PARTY-NOTICES도 package cache에서 수집한다. corresponding source/플러그인별 최종 검토 미완료는 유지한다.

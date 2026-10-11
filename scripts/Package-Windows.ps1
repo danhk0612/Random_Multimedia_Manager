@@ -24,6 +24,7 @@ foreach ($required in @('RandomMultimediaManager.App.exe', 'RandomMultimediaMana
 if (@(Get-ChildItem "$package/libvlc/win-x64/plugins" -Recurse -Filter '*.dll').Count -eq 0) { throw 'VLC plugins missing.' }
 Copy-Item packaging/USER_GUIDE.md "$package/USER_GUIDE.md"
 Copy-Item packaging/THIRD_PARTY_NOTICES.md "$package/THIRD_PARTY_NOTICES.md"
+Copy-Item packaging/licenses "$package/licenses" -Recurse
 $assets = Get-Content 'src/RandomMultimediaManager.App/obj/project.assets.json' -Raw | ConvertFrom-Json -AsHashtable
 $licenses = Join-Path $package 'dependency-notices'
 New-Item -ItemType Directory $licenses | Out-Null

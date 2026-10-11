@@ -32,7 +32,7 @@ jobs:
           Write-Output "Global VLC installed: $(Test-Path 'C:/Program Files/VideoLAN/VLC/vlc.exe')"
       - name: Publish folder and review ZIP
         shell: pwsh
-        run: ./scripts/Package-Windows.ps1 -BootstrapLock
+        run: ./scripts/Package-Windows.ps1
       - name: Repeat packaging with the resolved lock
         shell: pwsh
         run: |
