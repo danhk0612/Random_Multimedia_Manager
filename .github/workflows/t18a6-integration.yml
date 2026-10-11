@@ -1,0 +1,97 @@
+name: T18A-6 Windows integration verification
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'RandomMultimediaManager.sln'
+      - '.github/workflows/t18a6-integration.yml'
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Exact head and Windows x64 environment
+        shell: pwsh
+        run: |
+          git rev-parse HEAD
+          git rev-parse HEAD:src HEAD:tests
+          [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
+          [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+          if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne 'X64') { throw 'Windows x64 required.' }
+          dotnet --info
+      - name: Restore and Release build
+        shell: pwsh
+        run: |
+          dotnet restore RandomMultimediaManager.sln
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet build RandomMultimediaManager.sln -c Release --no-restore
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($suite in @('Scanner', 'Video', 'Subtitle', 'Viewing')) {
+            $project = "tests/RandomMultimediaManager.$suite.Tests"
+            dotnet restore $project
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            dotnet build $project -c Release --no-restore
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: T03 and T06 storage, session, T18A-1/3/4 and T12/15/17
+        shell: pwsh
+        run: |
+          foreach ($suite in @('Core', 'Data')) {
+            dotnet run --project "tests/RandomMultimediaManager.$suite.Tests" -c Release --no-build
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: T05 source UI, scanner, lifecycle and locked-body integration
+        shell: pwsh
+        run: |
+          foreach ($scenario in @('basic', 'state', 'cancel', 'access', 'reparse', 'case', 'unc', 't18a5', 'lifecycle', 't18a6')) {
+            dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-build -- $scenario
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: T07 ZIP pages and real IO drain
+        run: dotnet run --project tests/RandomMultimediaManager.Comic.Tests -c Release --no-build
+      - name: T09 video native lifecycle and completed async seek
+        run: dotnet run --project tests/RandomMultimediaManager.Video.Tests -c Release --no-build
+      - name: T10 external subtitles
+        run: dotnet run --project tests/RandomMultimediaManager.Subtitle.Tests -c Release --no-build
+      - name: T11 WPF integration including T12 through T17 and T18A-2/4
+        run: dotnet run --project tests/RandomMultimediaManager.Viewing.Tests -c Release --no-build
+      - name: Open and gracefully exit WPF shell twice
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName UIAutomationClient
+          Add-Type -AssemblyName UIAutomationTypes
+          $exe = Resolve-Path 'src/RandomMultimediaManager.App/bin/Release/net10.0-windows/RandomMultimediaManager.App.exe'
+          1..2 | ForEach-Object {
+            $process = Start-Process $exe -PassThru
+            try {
+              $deadline = (Get-Date).AddSeconds(30)
+              do {
+                Start-Sleep -Milliseconds 200
+                $process.Refresh()
+                if ($process.HasExited) { throw 'App exited before showing its window.' }
+              } while ($process.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline)
+              if ($process.MainWindowHandle -eq 0) { throw 'No WPF main window.' }
+              if ($process.MainWindowTitle -ne 'Random Multimedia Manager') { throw 'Unexpected window title.' }
+              $window = [System.Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
+              $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, '종료')
+              $quit = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+              if ($null -eq $quit) { throw 'Graceful exit button missing.' }
+              $invoke = $quit.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+              $invoke.Invoke()
+              if (-not $process.WaitForExit(10000)) { throw 'App did not exit.' }
+              if ($process.ExitCode -ne 0) { throw 'App exited with an error.' }
+            } finally {
+              if (-not $process.HasExited) { $process.Kill() }
+              $process.Dispose()
+            }
+          }
+          if (-not (Test-Path "$env:LOCALAPPDATA/RandomMultimediaManager/library.db")) { throw 'DB missing.' }
