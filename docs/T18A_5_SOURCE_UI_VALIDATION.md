@@ -21,6 +21,13 @@
 - GitHub Actions에서 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401로 Release 검증했다. 코드 검증 커밋 `f509d2bc3325ab43df62c539662f74f2af647946` 기준 T03, T05, T09, T11 네 workflow가 모두 통과했다. T05에서 UNC 정규화, 소스 정책/명시 확인과 저장 경합 시 최신 완료 시각 보존 시나리오가 통과했고 T11에서 WPF Explorer 회귀를 포함한 감상 테스트가 통과했다. Release 빌드는 경고 0, 오류 0이다.
 - Actions: [T03 #37906240757](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240757), [T05 #37906240777](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240777), [T09 #37906240746](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240746), [T11 #37906240732](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/37906240732).
 
+## 문서 복원 점검
+
+- 기준 문서는 main commit `91778a48e66cc4bdedcdebf1a3f87a41109aae4c`의 `docs/DATA_AND_RANDOM_POLICY.md` 원문(blob `9cf72fe423cb5d10b99b5bfea6f30a9fbf77eda7`, 523행)에서 복원했다. T12 구현 API와 T18A 도입부·§1~9 전체, 표/정책을 유지했다.
+- main 대비 문서 diff에서 T12 및 T18A 계약 누락·출력 잘림을 검사했다. TASKS.md와 CURRENT_STATE.md는 최신 main 원문에서 현재 상태만 갱신했다.
+- 코드 `f509d2bc3325ab43df62c539662f74f2af647946`, LastCompletedAtUtc 경합 수정 및 기존 T03/T05/T09/T11 Windows CI 4개 통과 기록을 유지했다. 문서 전용 수정이라 workflow 재실행은 하지 않았다.
+- PR #27은 문서 복원·재검토 대기 중이며 미병합이다. 실제 NAS/RaiDrive, Explorer 창 표시 및 provider 재매핑/캐시는 미검증이다. T18A-6/배포는 시작하지 않았다.
+
 ## 실제 환경에서 확인할 항목
 
 - 실제 NAS/RaiDrive 연결, 대상 재매핑, 연결 끊김/재연결 및 provider 캐시 동작은 별도 실물 검증이다.
