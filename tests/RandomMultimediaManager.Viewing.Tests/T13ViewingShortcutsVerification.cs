@@ -340,9 +340,9 @@ internal static class T13ViewingShortcutsVerification
                 "T13 fullscreen inactivity interval remains three seconds");
             // Fullscreen layout can deliver a late mouse activity event on a CI desktop.
             // Observe the actual transition while retaining the exact interval assertion.
-            var idleDeadline = DateTime.UtcNow.AddSeconds(8);
+            var videoIdleDeadline = DateTime.UtcNow.AddSeconds(8);
             while ((((FrameworkElement)window.FindName("TopChrome")).Visibility != Visibility.Collapsed
-                || toolbar.Visibility != Visibility.Collapsed) && DateTime.UtcNow < idleDeadline)
+                || videoControls.Visibility != Visibility.Collapsed) && DateTime.UtcNow < videoIdleDeadline)
                 await Task.Delay(25);
             Check(((FrameworkElement)window.FindName("TopChrome")).Visibility == Visibility.Collapsed
                 && videoControls.Visibility == Visibility.Collapsed,
