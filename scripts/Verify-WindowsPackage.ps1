@@ -80,7 +80,7 @@ try {
         $scenarios = if ($suite -eq 'Scanner') { @('basic','state','cancel','access','reparse','case','unc','t18a5','lifecycle','t18a6') } else { @('') }
         foreach ($scenario in $scenarios) {
             $label = "$suite-$scenario".TrimEnd('-')
-            $args = @{ FilePath = "$probeRoot/RandomMultimediaManager.$suite.Tests.exe"; WorkingDirectory = $probeRoot; PassThru = $true; RedirectStandardOutput = "$out/$label.stdout.log"; RedirectStandardError = "$out/$label.stderr.log" }
+            $args = @{ FilePath = "$probeRoot/RandomMultimediaManager.$suite.Tests.exe"; WorkingDirectory = $probeRoot; NoNewWindow = $true; PassThru = $true; RedirectStandardOutput = "$out/$label.stdout.log"; RedirectStandardError = "$out/$label.stderr.log" }
             if ($scenario) { $args.ArgumentList = $scenario }
             $process = Start-Process @args
             try {
