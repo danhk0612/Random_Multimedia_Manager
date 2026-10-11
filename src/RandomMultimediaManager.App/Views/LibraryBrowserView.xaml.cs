@@ -4,6 +4,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using RandomMultimediaManager.App.ViewModels;
+using RandomMultimediaManager.App.Scanning;
+using RandomMultimediaManager.App.Sessions;
 
 namespace RandomMultimediaManager.App.Views;
 
@@ -11,6 +13,10 @@ public partial class LibraryBrowserView : UserControl
 {
     private readonly Action<ProcessStartInfo> startExplorer;
     private bool initializing;
+    private long explorerRequest;
+    private bool explorerBusy;
+    public ScanCoordinator? Scans { get; set; }
+    public ViewingAccess? Access { get; set; }
 
     public LibraryBrowserView() : this(start => Process.Start(start)) { }
 
@@ -36,6 +42,8 @@ public partial class LibraryBrowserView : UserControl
         finally { initializing = false; }
     }
 
+    private void OnUnloaded(object sender, RoutedEventArgs e) => Interlocked.Increment(ref explorerRequest);
+
     private async void CategorySelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (initializing || !IsLoaded || DataContext is not LibraryBrowserViewModel viewModel) return;
@@ -53,7 +61,7 @@ public partial class LibraryBrowserView : UserControl
         await viewModel.LoadSelectedProgressAsync();
         if (!IsLoaded) return;
         ManualOpenButton.IsEnabled = viewModel.CanOpenSelected;
-        ExplorerButton.IsEnabled = viewModel.HasSelectedItem;
+        ExplorerButton.IsEnabled = viewModel.CanShowSelectedInExplorer && !explorerBusy;
     }
 
     private void OpenManual_Click(object sender, RoutedEventArgs e)
@@ -62,27 +70,70 @@ public partial class LibraryBrowserView : UserControl
             ManualOpenRequested?.Invoke(selected.Item.Id);
     }
 
-    private void ShowInExplorer_Click(object sender, RoutedEventArgs e)
+    private async void ShowInExplorer_Click(object sender, RoutedEventArgs e)
     {
-        if (DataContext is not LibraryBrowserViewModel { SelectedItem: { } selected } viewModel) return;
-        if (selected.Item.IsMissing || !File.Exists(selected.Item.Path))
-        {
-            viewModel.ReportMessage("파일이 현재 경로에 없습니다. 위치 열기를 취소했습니다.");
-            return;
-        }
+        if (DataContext is not LibraryBrowserViewModel { SelectedItem: { } selected } viewModel || explorerBusy) return;
+        Task operation = ShowInExplorerAsync(viewModel, selected, Interlocked.Increment(ref explorerRequest));
+        await viewModel.TrackOperation(operation);
+    }
+
+    private async Task ShowInExplorerAsync(LibraryBrowserViewModel viewModel,
+        LibraryFileRow selected, long request)
+    {
+        IDisposable? admission = null;
+        explorerBusy = true;
+        ExplorerButton.IsEnabled = false;
         try
         {
-            var start = new ProcessStartInfo("explorer.exe")
+            if (Scans is not null)
             {
-                UseShellExecute = true
-            };
+                admission = await Scans.EnterExclusiveAsync();
+                if (admission is null) throw new OperationCanceledException("종료 중이거나 다른 작업에서 접근 중입니다.");
+            }
+            var access = Access
+                ?? throw new InvalidOperationException("연결 확인과 IO admission을 사용할 수 없습니다.");
+            if (!IsCurrentRequest(request, viewModel, selected)) return;
+            if (!await viewModel.IsCurrentItemExplorerEligibleAsync(selected))
+                throw new IOException("파일이 삭제 격리 중이거나 DB 목록에서 변경되어 위치 열기를 취소했습니다.");
+
+            // CheckAsync observes the binding and probes file access off the UI thread.
+            var ticket = await Task.Run(() => access.CheckAsync(selected.Item.Path, CancellationToken.None));
+            bool currentTicket = await Task.Run(() => access.RecheckAsync(selected.Item.Path, ticket, CancellationToken.None));
+            bool eligible = await viewModel.IsCurrentItemExplorerEligibleAsync(selected);
+            if (!currentTicket || !IsCurrentRequest(request, viewModel, selected) || !eligible)
+                throw new IOException("연결 상태 또는 선택 항목이 바뀌어 위치 열기를 취소했습니다.");
+
+            var start = new ProcessStartInfo("explorer.exe") { UseShellExecute = true };
             start.ArgumentList.Add($"/select,{selected.Item.Path}");
             startExplorer(start);
-            viewModel.ReportMessage("탐색기에서 파일 위치를 열었습니다.");
+            viewModel.ReportMessage("현재 연결 대상과 접근을 확인하고 탐색기에서 위치를 열었습니다.");
         }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ArgumentException)
+        catch (OperationCanceledException ex)
         {
-            viewModel.ReportMessage($"탐색기에서 파일 위치를 열지 못했습니다: {ex.Message}");
+            if (IsCurrentRequest(request, viewModel, selected))
+                viewModel.ReportMessage($"탐색기 위치 열기를 취소했습니다: {ex.Message}");
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ArgumentException
+            or UnauthorizedAccessException or NotSupportedException)
+        {
+            if (IsCurrentRequest(request, viewModel, selected))
+                viewModel.ReportMessage($"탐색기에서 위치를 열지 못했습니다: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            if (IsCurrentRequest(request, viewModel, selected)) viewModel.ReportMessage(ex.Message);
+        }
+        finally
+        {
+            admission?.Dispose();
+            explorerBusy = false;
+            if (IsLoaded && DataContext == viewModel)
+                ExplorerButton.IsEnabled = viewModel.CanShowSelectedInExplorer;
         }
     }
+
+    private bool IsCurrentRequest(long request, LibraryBrowserViewModel viewModel, LibraryFileRow selected) =>
+        request == Volatile.Read(ref explorerRequest) && IsLoaded && DataContext == viewModel
+        && ReferenceEquals(viewModel.SelectedItem, selected)
+        && Scans?.IsClosing != true;
 }

@@ -210,7 +210,7 @@ public partial class ViewingWindow : Window
     private async void BrowseLibrary(object s, RoutedEventArgs e) => await Run(async () =>
     {
         var viewModel = new LibraryBrowserViewModel(database);
-        var browser = new LibraryBrowserView { DataContext = viewModel };
+        var browser = new LibraryBrowserView { DataContext = viewModel, Access = viewingAccess };
         var dialog = new Window
         {
             Title = "라이브러리에서 파일 선택",

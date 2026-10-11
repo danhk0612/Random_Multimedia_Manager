@@ -26,9 +26,16 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
     private string sourcePath = string.Empty;
     private bool sourceIncludeSubdirectories = true;
     private bool sourceIsEnabled = true;
+    private bool sourceScanOnStartup;
+    private SourceRefreshMode sourceRefreshMode = SourceRefreshMode.Manual;
+    private int? sourceIntervalHours;
+    private SourceRefreshPolicy loadedSourcePolicy = new();
     private string statusMessage = string.Empty;
+    private string selectedSourceBindingMessage = "소스를 선택하세요.";
+    private string selectedSourceAccessMessage = string.Empty;
     private string scanProgressMessage = string.Empty;
     private bool isScanning;
+    private volatile bool uiAttached = true;
 
     public CategoryEditorViewModel(LibraryDatabase database, ScanCoordinator? scans = null)
     {
@@ -41,6 +48,11 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
     public ObservableCollection<Category> Categories { get; } = new();
     public ObservableCollection<CategorySource> Sources { get; } = new();
     public IReadOnlyList<MediaType> MediaTypes { get; } = Enum.GetValues<MediaType>();
+    public IReadOnlyList<SourceRefreshMode> RefreshModes => SelectedSource is not null
+        && database.GetStorageBinding(SelectedSource.RootPath) is { Kind: StorageKind.Local, RequiresConfirmation: false }
+            ? Enum.GetValues<SourceRefreshMode>()
+            : [SourceRefreshMode.Manual, SourceRefreshMode.Scheduled];
+    public IReadOnlyList<int> RefreshIntervalHours { get; } = Enumerable.Range(1, 168).ToArray();
 
     public Category? SelectedCategory
     {
@@ -63,7 +75,10 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
             if (selectedSource?.Id == value?.Id) return;
             selectedSource = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsSelectedSource));
             LoadSourceDraft(value);
+            RefreshSelectedSourceStatus();
+            OnPropertyChanged(nameof(RefreshModes));
         }
     }
 
@@ -73,6 +88,22 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
     public string SourcePath { get => sourcePath; set => Set(ref sourcePath, value); }
     public bool SourceIncludeSubdirectories { get => sourceIncludeSubdirectories; set => Set(ref sourceIncludeSubdirectories, value); }
     public bool SourceIsEnabled { get => sourceIsEnabled; set => Set(ref sourceIsEnabled, value); }
+    public bool SourceScanOnStartup { get => sourceScanOnStartup; set => Set(ref sourceScanOnStartup, value); }
+    public SourceRefreshMode SelectedSourceRefreshMode
+    {
+        get => sourceRefreshMode;
+        set
+        {
+            if (!Set(ref sourceRefreshMode, value)) return;
+            OnPropertyChanged(nameof(CanEditSourceInterval));
+        }
+    }
+    public int? SourceIntervalHours { get => sourceIntervalHours; set => Set(ref sourceIntervalHours, value); }
+    public string SelectedSourceBindingMessage { get => selectedSourceBindingMessage; private set => Set(ref selectedSourceBindingMessage, value); }
+    public string SelectedSourceAccessMessage { get => selectedSourceAccessMessage; private set => Set(ref selectedSourceAccessMessage, value); }
+    public bool IsSelectedSource => SelectedSource is not null;
+    public bool CanEditSourceInterval => SelectedSourceRefreshMode != SourceRefreshMode.Manual;
+    public void SetUiAttached(bool value) => uiAttached = value;
     public string StatusMessage { get => statusMessage; private set => Set(ref statusMessage, value); }
     public string ScanProgressMessage { get => scanProgressMessage; private set => Set(ref scanProgressMessage, value); }
     public bool IsScanning { get => isScanning; private set => Set(ref isScanning, value); }
@@ -131,7 +162,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
 
         try
         {
-            var (path, key) = SourcePathRules.NormalizeLocalFolder(SourcePath);
+            var (path, key) = SourcePathRules.NormalizeFolder(SourcePath);
             var candidate = new CategorySource(sourceDraftId, SelectedCategory.Id, path, key,
                 SourceIncludeSubdirectories, SourceIsEnabled);
 
@@ -170,6 +201,95 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         catch (Exception ex) when (IsExpectedSaveFailure(ex))
         {
             return SetResult(false, $"소스 폴더 설정을 제거하지 못했습니다: {ex.Message}");
+        }
+    }
+
+    public async Task<EditorResult> SaveSelectedSourcePolicyAsync()
+    {
+        if (SelectedSource is null)
+            return SetResult(false, "갱신 정책을 저장할 소스를 선택하세요.");
+        if (Scans is null)
+            return SetResult(false, "소스 갱신 조정자를 사용할 수 없습니다.");
+
+        var source = SelectedSource;
+        var policy = new SourceRefreshPolicy(SourceScanOnStartup, SelectedSourceRefreshMode,
+            SelectedSourceRefreshMode == SourceRefreshMode.Manual ? null : SourceIntervalHours ?? 24,
+            LastCompletedAtUtc: null);
+        try
+        {
+            await Scans.SavePolicyAsync(source.Id, policy);
+            loadedSourcePolicy = database.GetEffectiveSourceRefreshPolicy(source.Id);
+            if (uiAttached && SelectedSource?.Id == source.Id)
+            {
+                RefreshSelectedSourceStatus();
+                OnPropertyChanged(nameof(RefreshModes));
+            }
+            return uiAttached ? SetResult(true, "소스 갱신 정책을 저장했습니다.")
+                : new EditorResult(true, "소스 갱신 정책을 저장했습니다.");
+        }
+        catch (Exception ex) when (IsExpectedSaveFailure(ex) || ex is IOException or UnauthorizedAccessException)
+        {
+            // The database/coordinator retain the previous policy and watcher state on failure.
+            if (uiAttached && SelectedSource?.Id == source.Id && MatchesPolicy(policy)) LoadSourcePolicy(source.Id);
+            if (uiAttached) RefreshSelectedSourceStatus();
+            string message = $"소스 갱신 정책을 저장하지 못했습니다. 기존 설정을 유지합니다: {ex.Message}";
+            return uiAttached ? SetResult(false, message) : new EditorResult(false, message);
+        }
+    }
+
+    public async Task<EditorResult> ConfirmSelectedBindingAsync()
+    {
+        if (SelectedSource is null)
+            return SetResult(false, "확인할 소스를 선택하세요.");
+        if (Scans is null)
+            return SetResult(false, "연결 확인 조정자를 사용할 수 없습니다.");
+        var source = SelectedSource;
+        try
+        {
+            await Scans.ConfirmBindingAsync(source.Id);
+            if (uiAttached && SelectedSource?.Id == source.Id)
+            {
+                LoadSourcePolicy(source.Id);
+                RefreshSelectedSourceStatus();
+            }
+            return uiAttached ? SetResult(true, "현재 연결 대상을 관찰하고 이 실행에서 명시적으로 확인했습니다.")
+                : new EditorResult(true, "현재 연결 대상을 관찰하고 이 실행에서 명시적으로 확인했습니다.");
+        }
+        catch (Exception ex) when (IsExpectedSaveFailure(ex) || ex is IOException or UnauthorizedAccessException
+            or System.ComponentModel.Win32Exception or OperationCanceledException)
+        {
+            if (uiAttached && SelectedSource?.Id == source.Id) RefreshSelectedSourceStatus();
+            string message = $"연결 대상을 확인하지 못했습니다. 기존 확인과 감지 상태를 유지합니다: {ex.Message}";
+            return uiAttached ? SetResult(false, message) : new EditorResult(false, message);
+        }
+    }
+
+    public void RefreshSelectedSourceStatus()
+    {
+        if (SelectedSource is null)
+        {
+            SelectedSourceBindingMessage = "소스를 선택하세요.";
+            SelectedSourceAccessMessage = string.Empty;
+            OnPropertyChanged(nameof(RefreshModes));
+            return;
+        }
+
+        try
+        {
+            if (MatchesPolicy(loadedSourcePolicy)) LoadSourcePolicy(SelectedSource.Id);
+            var binding = database.GetStorageBinding(SelectedSource.RootPath);
+            SelectedSourceBindingMessage = binding is null
+                ? "저장된 연결 대상: 없음"
+                : $"저장된 연결 대상: {BindingKindLabel(binding.Kind)} · {binding.ExpectedTarget ?? "대상 정보 미확인"} · revision {binding.Revision}";
+            var access = Scans?.GetAccess(SelectedSource.Id) ?? SourceAccessState.Unknown;
+            SelectedSourceAccessMessage = $"이번 실행의 마지막 관찰/접근 상태: {AccessLabel(access)}";
+            OnPropertyChanged(nameof(RefreshModes));
+        }
+        catch (Exception ex) when (IsExpectedSaveFailure(ex) || ex is ObjectDisposedException)
+        {
+            SelectedSourceBindingMessage = "저장된 연결 대상: 확인할 수 없음";
+            SelectedSourceAccessMessage = "이번 실행의 마지막 관찰/접근 상태: 확인할 수 없음";
+            OnPropertyChanged(nameof(RefreshModes));
         }
     }
 
@@ -212,6 +332,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
             ScanProgressMessage = $"스캔 완료: 미디어 {result.PresentCount}개 반영, Missing {result.MissingCount}개{warning}.";
             if (result.WarningCount != 0)
                 ScanProgressMessage += $" 첫 경고: {result.Warnings[0]}";
+            RefreshSelectedSourceStatus();
             return SetResult(true, ScanProgressMessage);
         }
         catch (Exception ex) when (IsExpectedScanFailure(ex))
@@ -252,6 +373,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
             foreach (var source in database.GetSources(SelectedCategory.Id)) Sources.Add(source);
         selectedSource = null;
         OnPropertyChanged(nameof(SelectedSource));
+        OnPropertyChanged(nameof(IsSelectedSource));
         BeginNewSourceDraft();
     }
 
@@ -285,6 +407,7 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         SourcePath = source.RootPath;
         SourceIncludeSubdirectories = source.IncludeSubdirectories;
         SourceIsEnabled = source.IsEnabled;
+        LoadSourcePolicy(source.Id);
         StatusMessage = string.Empty;
     }
 
@@ -296,7 +419,44 @@ public sealed class CategoryEditorViewModel : INotifyPropertyChanged
         SourcePath = string.Empty;
         SourceIncludeSubdirectories = true;
         SourceIsEnabled = true;
+        SourceScanOnStartup = false;
+        SelectedSourceRefreshMode = SourceRefreshMode.Manual;
+        SourceIntervalHours = 24;
+        loadedSourcePolicy = new();
+        SelectedSourceBindingMessage = "저장 후 연결 대상을 확인할 수 있습니다.";
+        SelectedSourceAccessMessage = "이번 실행의 마지막 관찰/접근 상태: 미관찰";
     }
+
+    private void LoadSourcePolicy(Guid sourceId)
+    {
+        var policy = database.GetEffectiveSourceRefreshPolicy(sourceId);
+        loadedSourcePolicy = policy;
+        SourceScanOnStartup = policy.ScanOnStartup;
+        SelectedSourceRefreshMode = policy.RefreshMode;
+        SourceIntervalHours = policy.IntervalHours ?? 24;
+    }
+
+    private bool MatchesPolicy(SourceRefreshPolicy policy) => SourceScanOnStartup == policy.ScanOnStartup
+        && SelectedSourceRefreshMode == policy.RefreshMode
+        && (policy.RefreshMode == SourceRefreshMode.Manual || SourceIntervalHours == policy.IntervalHours);
+
+    private static string BindingKindLabel(StorageKind kind) => kind switch
+    {
+        StorageKind.Local => "로컬",
+        StorageKind.RemoteMapped => "매핑 드라이브",
+        StorageKind.RemoteUNC => "UNC",
+        _ => "가상/불명"
+    };
+
+    private static string AccessLabel(SourceAccessState state) => state switch
+    {
+        SourceAccessState.Available => "접근 가능",
+        SourceAccessState.Unavailable => "연결 불가",
+        SourceAccessState.AccessDenied => "접근 거부",
+        SourceAccessState.BindingChanged => "연결 대상 변경 감지",
+        SourceAccessState.Unconfirmed => "명시적 확인 필요",
+        _ => "미확인"
+    };
 
     private EditorResult SetResult(bool success, string message)
     {
@@ -333,12 +493,4 @@ public static class SourcePathRules
         return (normalized.Path, normalized.PathKey);
     }
 
-    // T18A-5 connects UNC UI after scanning/deletion/viewing safety gates are integrated.
-    public static (string Path, string PathKey) NormalizeLocalFolder(string path)
-    {
-        var normalized = WindowsPath.Normalize(path);
-        if (normalized.Root.StartsWith(@"\\", StringComparison.Ordinal))
-            throw new ArgumentException("UNC UI 연결은 T18A 후속 작업에서 지원합니다.");
-        return (normalized.Path, normalized.PathKey);
-    }
 }

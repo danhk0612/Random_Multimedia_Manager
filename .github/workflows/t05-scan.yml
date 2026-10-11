@@ -41,6 +41,12 @@ jobs:
       - name: Case-sensitive directory rejection
         timeout-minutes: 2
         run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- case
+      - name: T18A-5 UNC path normalization
+        timeout-minutes: 2
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- unc
+      - name: T18A-5 source policy and explicit binding UI contract
+        timeout-minutes: 3
+        run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- t18a5
       - name: T18A-2 source admission and IO drain
         timeout-minutes: 3
         run: dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-restore -- lifecycle

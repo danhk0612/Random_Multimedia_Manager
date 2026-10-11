@@ -290,11 +290,11 @@ T14에는 숨김/복원·전역 키/트레이·종료 저장 실패 처리의 �
 - AppliedDeletion 표식은 저널 파일 제거 후에도 보존한다. 저널 제거 직후 전원 단절에 따른 파일 재등장에도 기존 멱등 표식을 적용한다. 삭제 저널 파일 자체는 성공 정리 후 제거한다.
 - 구체적인 오류·재시작·사용자 확인 및 검증 범위는 docs/T12_DELETION_VALIDATION.md. T14 생명주기 문서의 최종 연결은 T12 통합 후 대조하며 트레이/빠른 종료를 구현하지 않았다.
 
-## T18A 변경 감지 설계 — T18A-1~3 구현, 후속 연결 대기
+## T18A 변경 감지 설계 — T18A-1~5 구현·Windows 자동 검증, 실물/통합 검토 대기
 
 기준 main `c8252a0`, PR #21 merge `7fb2ad4` 포함. D13은 로컬·매핑/RaiDrive·직접 UNC 지원 목표의 승인이다. 아래는 2026-10-04 사용자가 D10~D12/D14~D16을 승인한 구현 기준이다. 제품 구현/호환성 확인 완료는 아니다. 이전 PR #21의 전역 두 bool 및 10분 전체 검사는 이 절로 대체한다. 제품 정책 결정은 DECISIONS.md D10~D12/D14~D16, 구현 인계는 TASKS.md T18A-1~6을 따른다. T18A-1은 DB v2와 저널 읽기 계약만 구현한다. 기존 식별/기록/진행 의미와 v1 저널 복구는 유지한다.
 
-T18A-2의 소스별 스캔·생명주기 조정자는 PR #24에서 구현·Windows 자동 검증을 완료했다. T18A-3의 원격 삭제/복구는 PR #25에서 연결하며, 감상 엔진·UI 연결은 후속 Task다. 아래 §1 표는 설계 시점 코드 대조이며 현재 API와 인계 경계는 §7을 따른다.
+T18A-2 PR #24, T18A-3 PR #25, T18A-4 PR #26은 main에 통합됐고 Windows 자동 검증을 완료했다. T18A-5 PR #27은 UNC/소스 설정 UI와 Explorer 연결을 구현하고 영향 Windows CI를 통과했으며 병합 재검토 대기다. 아래 §1 표는 설계 시점 코드 대조이며 현재 연결 API와 인계 경계는 §7을 따른다.
 
 ### 1. 설계 시점 코드 대조와 변경 책임
 
@@ -302,7 +302,7 @@ T18A-2의 소스별 스캔·생명주기 조정자는 PR #24에서 구현·Windo
 
 | 실제 코드/계약 | 현재 동작·차이 | 필요한 설계 변경 / 담당 Task |
 |---|---|---|
-| ViewModels/CategoryEditorViewModel.cs, SourcePathRules.NormalizeLocalFolder | UNC 명시 거부, 드라이브 문자 절대 경로 허용 | IO 없는 공통 정규화와 비동기 소스 확인 분리 / 1, 5 |
+| ViewModels/CategoryEditorViewModel.cs, SourcePathRules.NormalizeLocalFolder | 당시 UNC UI 미연결, 드라이브 문자 절대 경로 허용 | T18A-5에서 NormalizeFolder 기반 로컬·매핑·UNC UI 연결; 확인 API는 기존 조정자 사용 |
 | Core/Models.cs, Data/LibraryDatabase.Catalog.cs | PathKey=대문자 Path; (CategoryId,PathKey) 유일, 소스 소속은 경로 포함; DB 검증은 pair만 확인 | 기존 키·ID 보존, 연결 대상 바인딩/정책 별도 저장 / 1 |
 | Scanning/LibraryScanner.cs | 드라이브 루트 길이 3 가정; DriveInfo.IsReady, 상위 reparse/case 검사; NotFound를 부재 prefix로 수집; 수집과 Apply 결합 | UNC 공유 경계, 소스별 수집 및 결과 증거·generation 검사 / 1, 2 |
 | Data/LibraryDatabase.Catalog.cs, ApplyObservedItems | 메타데이터 변화 시 진행 제거, 이력/선호 보존; 격리 포함 시 transaction 실패; 같은 PathKey 모든 분류 Missing | 감상 전체 수명 보류, 소스 간 상충/불확실 관찰 보존 / 2 |
@@ -486,7 +486,19 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 - ZIP `DisposeAsync`는 프리로드 포함 실제 읽기 drain 후 압축 리소스를 worker에서 해제한다. 영상 `PlayAsync`/`SeekAsync`/자막/Stop은 소유 Task를 등록하며 `DisposeAsync`는 늦은 결과 정리까지 기다린다. WPF HWND 수명은 Dispatcher에 남는다. 자막 접근 실패는 빈 목록/영상 실패와 분리하며 Closing 뒤 후속 자막/미디어 IO를 시작하지 않고 이미 발행한 작업과 실제 해제를 기다린다.
 - 세부 오류 주입·Windows 실파일/native 회귀와 NAS/RaiDrive 미검증은 `T18A_4_NETWORK_VIEWING_VALIDATION.md`를 따른다. 기존 scan/삭제 저널/Pending/숨김·복원 계약은 유지하며 UI·배포는 후속 Task다.
 
-### 8. 지원·검증 기준 (T18A-1~3 자동 검증, 실물/후속 검증 대기)
+### 7.1. T18A-5 UI 연결 및 PR #27 검증 상태
+
+T18A-5는 기존 경로·정책·스캔 조정자·감상 접근 API를 CategoryEditor와 LibraryBrowser에 연결한다. 소스 입력은 IO 없는 `SourcePathRules.NormalizeFolder`를 사용해 로컬·매핑·직접 UNC를 정규화한다. DB 스키마, CategorySource/MediaItem ID, PathKey, 항목별 기록·진행 및 삭제 의미는 바꾸지 않는다.
+
+소스별 시작 검사, `Manual/Events/Scheduled`, 1~168시간 예약을 편집한다. Events는 확인된 Local에만 허용하며 Remote/Unknown은 수동 기본, 시작 검사는 끔, 예약은 명시 선택이다. 정책 저장은 `ScanCoordinator.SavePolicyAsync`의 배타 admission을 사용해 실패 시 이전 정책·마지막 완료 시각·감지 상태를 보존한다.
+
+UI는 저장된 binding 종류·대상·revision과 현재 실행에서 관찰한 마지막 접근 상태를 구분해 표시한다. 명시 확인은 기존 `ConfirmBindingAsync` 경로를 사용하며, 저장된 확인만으로 현재 프로세스의 원격 접근을 승인하지 않는다. 재매핑·불확실 상태의 결과는 기존 generation/revision 확인으로 폐기한다.
+
+LibraryBrowser는 DB 색인 목록을 먼저 표시하고 Explorer 실행 요청 때 worker에서 기존 `ViewingAccess.CheckAsync`/`RecheckAsync`를 사용한다. 기존 admission/drain, 최신 DB 경로, Missing/삭제 격리, Closing, 요청 세대 및 선택을 재확인한다. UNC·한글·공백 경로는 `/select,<path>` 한 인수로 전달한다. 저장 데이터·감상 Pending·삭제 격리·숨김/복원·정상/빠른 종료 계약은 유지한다.
+
+코드 검증 SHA `f509d2bc3325ab43df62c539662f74f2af647946`의 T03/T05/T09/T11 Windows workflow 4개가 통과했다. T05 정책 저장과 `LastCompletedAtUtc` 경합 보존 회귀 및 T11 Explorer UI 회귀도 포함한다. 실제 NAS/RaiDrive, 실제 Explorer 창 표시, provider 재매핑/캐시는 미검증이며 T18A-6에서 별도 검토한다.
+
+### 8. 지원·검증 기준 (T18A-1~5 자동 검증, 실물/통합 검토 대기)
 
 | 환경 | 목표 지원 | 제약 / 반드시 실제 확인 |
 |---|---|---|
