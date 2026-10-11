@@ -26,7 +26,7 @@
 - 기준 문서는 main commit `91778a48e66cc4bdedcdebf1a3f87a41109aae4c`의 `docs/DATA_AND_RANDOM_POLICY.md` 원문(blob `9cf72fe423cb5d10b99b5bfea6f30a9fbf77eda7`, 523행)에서 복원했다. T12 구현 API와 T18A 도입부·§1~9 전체, 표/정책을 유지했다.
 - main 대비 문서 diff에서 T12 및 T18A 계약 누락·출력 잘림을 검사했다. TASKS.md와 CURRENT_STATE.md는 최신 main 원문에서 현재 상태만 갱신했다.
 - 코드 `f509d2bc3325ab43df62c539662f74f2af647946`, LastCompletedAtUtc 경합 수정 및 기존 T03/T05/T09/T11 Windows CI 4개 통과 기록을 유지했다. 문서 전용 수정이라 workflow 재실행은 하지 않았다.
-- PR #27은 문서 복원·재검토 대기 중이며 미병합이다. 실제 NAS/RaiDrive, Explorer 창 표시 및 provider 재매핑/캐시는 미검증이다. T18A-6/배포는 시작하지 않았다.
+- PR #27은 문서 복원·diff 재검토 후 0629106으로 main에 통합됐다. 검증 코드 이후 복원 head 4c5d93e까지 문서 4개만 변경됐으며 main 충돌 정리(fc4c172)에서도 제품 코드는 변경하지 않았다. 실제 NAS/RaiDrive, Explorer 창 표시 및 provider 재매핑/캐시는 미검증이다. T18A-6/배포는 시작하지 않았다.
 
 ## 실제 환경에서 확인할 항목
 

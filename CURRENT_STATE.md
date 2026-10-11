@@ -62,7 +62,7 @@
 
 ## 다음 작업과 차단
 
-T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증을 확인하고 `7437e9d`로 main 통합했다. T18A-4 PR #26은 구현·보완 검증을 확인하고 `863c86d`로 main 통합했다. T18A-5 PR #27의 구현·영향 Windows CI 4개 통과와 기준 문서 복원을 완료했고, 문서 diff 재검토 대기다. T18A-6·T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 다음은 PR #27 문서 복원을 반영한 최종 diff 재검토이며 TASKS.md의 보완 결과를 따른다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
+T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증을 확인하고 `7437e9d`로 main 통합했다. T18A-4 PR #26은 구현·보완 검증을 확인하고 `863c86d`로 main 통합했다. T18A-5 PR #27의 구현·영향 Windows CI 4개 통과와 기준 문서 복원을 확인하고 0629106으로 main에 통합했다. T18A-6·T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 다음은 고성능 Work의 T18A-6 통합 검증이며 TASKS.md의 새 작업 시작 지시문을 따른다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
 
 ## T03 저장 구현
 
@@ -302,12 +302,12 @@ PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까�
 
 최신 main `f44ed67`의 검토 지시 전체를 기존 `task/t18a-4-network-viewing`에 반영했다. 수정 전 회귀 검사 `ff61649`에서 준비 후 파일 재확인 실패의 다음 랜덤 재시도와 완료 위치 SeekAsync의 native seek 발행을 Windows에서 각각 재현했다. `ccb982a`는 재확인 false/예외의 세션 실패 억제를 추가하고 취소/Closing을 제외하며, 동일 완료 위치 비동기 seek의 native 발행을 생략한다. 늦은 Ready 실제 해제·Pending/cursor/Forward/Seen/기록, 완료 진행·처음부터 PlayAsync·다른 위치 seek·privacy mute·IO/drain을 검증한다.
 
-최종 코드·테스트 `ccb982a497328ca61a4e30f0f981a2ed32506295`의 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401 Release 빌드 경고 0·오류 0 및 T03/T05/T06/T07/T09/T10/T11 영향 CI 7개가 모두 통과했다(해당 SHA 재실행 없음). 재현/수정 전후 근거는 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. 실제 NAS/RaiDrive·기존 수동 미검증·T11 재실행 이력·AVI 조사 보류를 유지한다. PR #26을 `863c86d`로 main에 통합했다. 검증 코드 이후 `1813d67`까지 문서 3개만 변경됐다. 다음은 TASKS.md의 T18A-5 지시문이다. T18A-5 구현·자동 검증과 문서 복원을 완료하고 병합 재검토 대기 중이다. T18A-6/배포는 시작하지 않았다.
+최종 코드·테스트 `ccb982a497328ca61a4e30f0f981a2ed32506295`의 Windows x64 / OS 10.0.26100 / .NET SDK 10.0.401 Release 빌드 경고 0·오류 0 및 T03/T05/T06/T07/T09/T10/T11 영향 CI 7개가 모두 통과했다(해당 SHA 재실행 없음). 재현/수정 전후 근거는 docs/T18A_4_NETWORK_VIEWING_VALIDATION.md를 따른다. 실제 NAS/RaiDrive·기존 수동 미검증·T11 재실행 이력·AVI 조사 보류를 유지한다. PR #26을 `863c86d`로 main에 통합했다. 검증 코드 이후 `1813d67`까지 문서 3개만 변경됐다. 다음은 TASKS.md의 T18A-5 지시문이다. T18A-5 구현·자동 검증과 문서 복원을 확인하고 main에 통합했다. T18A-6/배포는 시작하지 않았다.
 
-## T18A-5 PR #27 병합 재검토 — 문서 복원 완료
+## T18A-5 PR #27 — main 통합 완료 (0629106)
 
 - 복원 전 PR head는 `fab801e10b63d300930e18ccf67e97dd38f66f7f`였다. docs/DATA_AND_RANDOM_POLICY.md를 main 기준 commit `91778a48e66cc4bdedcdebf1a3f87a41109aae4c`의 전체 Git 원문(blob `9cf72fe423cb5d10b99b5bfea6f30a9fbf77eda7`, 523행)에서 복원했다.
 - 복원 원문에 T12 구현 API/복구 연결 전체와 T18A 도입부, §1~9 및 설계 표·정책을 보존했다. 정상 T18A-5 설명과 PR #23~26 통합 상태만 반영했다.
 - TASKS.md와 CURRENT_STATE.md도 최신 main 원문에서 시작해 현재 상태를 반영했다. T18A-5 검증 문서를 전체 확인하고 문서 복원 결과를 기록했다. 변경 문서에 잘린 덤프 텍스트나 잘못된 완료 상태가 남지 않았음을 확인했다.
 - 코드 `f509d2bc3325ab43df62c539662f74f2af647946` 및 LastCompletedAtUtc 경합 수정은 보존했다. T03/T05/T09/T11 Windows CI 4개는 모두 통과된 기존 검증을 유지하며 문서만 변경해 재실행하지 않았다.
-- 실제 NAS/RaiDrive, 실제 Explorer 창 표시, provider 재매핑·캐시는 미검증이다. PR #27은 미병합·병합 재검토 대기 상태다. T18A-6과 배포는 시작하지 않았다.
+- 실제 NAS/RaiDrive, 실제 Explorer 창 표시, provider 재매핑·캐시는 미검증이다. 복원 head 4c5d93e를 검토했고, main의 보완 지시와 충돌하는 상태 문서는 복원 완료 내용으로 통합했다(fc4c172, 제품 코드 변경 없음). PR #27은 0629106으로 main 통합 완료다. 다음은 T18A-6 통합 검증이다. T18A-6과 배포는 시작하지 않았다.
