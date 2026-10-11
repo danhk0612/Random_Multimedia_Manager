@@ -47,6 +47,25 @@ $dependencies = foreach ($key in ($assets.libraries.Keys | Sort-Object)) {
     }
     [ordered]@{ package = $key; sha512 = $lib.sha512; noticeFiles = @($noticeFiles | ForEach-Object { [IO.Path]::GetRelativePath($cache, $_.FullName).Replace('\','/') }) }
 }
+# Runtime packs are download dependencies, not always listed in assets.libraries.
+foreach ($id in @('microsoft.netcore.app.runtime.win-x64', 'microsoft.windowsdesktop.app.runtime.win-x64')) {
+    $cache = $null
+    foreach ($folder in $assets.packageFolders.Keys) {
+        $candidate = Join-Path $folder "$id/10.0.12"
+        if (Test-Path $candidate) { $cache = $candidate; break }
+    }
+    if ($null -eq $cache) { throw "Runtime package cache missing: $id" }
+    $dest = Join-Path $licenses "$id/10.0.12"
+    New-Item -ItemType Directory $dest -Force | Out-Null
+    $noticeFiles = @(Get-ChildItem $cache -Recurse -File | Where-Object { $_.Name -match '(?i)license|copying|notice|copyright|\.nuspec$|\.nupkg\.sha512$' })
+    if (-not @($noticeFiles | Where-Object { $_.Name -match '(?i)license' }).Count) { throw "Runtime license missing: $id" }
+    foreach ($file in $noticeFiles) {
+        $target = Join-Path $dest ([IO.Path]::GetRelativePath($cache, $file.FullName))
+        New-Item -ItemType Directory (Split-Path $target -Parent) -Force | Out-Null
+        Copy-Item $file.FullName $target -Force
+    }
+    $dependencies += [ordered]@{ package = "$id/10.0.12"; sha512 = (Get-Content "$cache/$id.10.0.12.nupkg.sha512" -Raw).Trim(); noticeFiles = @($noticeFiles | ForEach-Object { [IO.Path]::GetRelativePath($cache, $_.FullName).Replace('\','/') }) }
+}
 $dependencies | ConvertTo-Json -Depth 10 | Set-Content "$package/dependencies.json" -Encoding utf8NoBOM
 Copy-Item 'src/RandomMultimediaManager.App/packages.lock.json' "$package/packages.lock.json"
 [ordered]@{ commit = $sha; sdk = '10.0.401'; runtime = '10.0.12'; rid = 'win-x64'; selfContained = $true; singleFile = $false; publicReleaseApproved = $false } | ConvertTo-Json | Set-Content "$package/build-info.json" -Encoding utf8NoBOM

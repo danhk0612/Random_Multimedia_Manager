@@ -24,16 +24,16 @@ function Observe-Native($process, $root) {
     } catch [System.ComponentModel.Win32Exception] { } # Process can exit during enumeration.
 }
 # No dotnet host or globally installed VLC is used by the launched processes.
-$savedLocal = $env:LOCALAPPDATA; $savedPath = $env:PATH; $savedRoot = $env:DOTNET_ROOT
-$env:LOCALAPPDATA = Join-Path $out 'isolated-user'
+$savedPath = $env:PATH; $savedRoot = $env:DOTNET_ROOT
+$dataRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'RandomMultimediaManager'
+if (Test-Path $dataRoot) { throw 'Use a fresh disposable Windows account: existing app data must not be touched.' }
 $env:DOTNET_ROOT = Join-Path $out 'no-global-runtime'
 $env:DOTNET_MULTILEVEL_LOOKUP = '0'
 $env:PATH = "$env:SystemRoot/System32;$env:SystemRoot"
-New-Item -ItemType Directory $env:LOCALAPPDATA -Force | Out-Null
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
 try {
-    $db = Join-Path $env:LOCALAPPDATA 'RandomMultimediaManager/library.db'
+    $db = Join-Path $dataRoot 'library.db'
     1..2 | ForEach-Object {
         $process = Start-Process "$package/RandomMultimediaManager.App.exe" -WorkingDirectory $package -PassThru
         try {
@@ -50,11 +50,11 @@ try {
             if ($null -eq $quit) { throw 'Graceful exit button missing.' }
             $quit.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
             if (-not $process.WaitForExit(15000) -or $process.ExitCode -ne 0) { throw 'Extracted app normal exit failed.' }
-            if (-not (Test-Path $db)) { throw 'Isolated LocalAppData DB missing.' }
+            if (-not (Test-Path $db)) { throw 'Fresh-profile LocalAppData DB missing.' }
             Write-Output "PASS extracted shell start/normal exit/reopen $_"
         } finally { if (-not $process.HasExited) { $process.Kill() }; $process.Dispose() }
     }
-} finally { $env:LOCALAPPDATA = $savedLocal; $env:PATH = $savedPath; $env:DOTNET_ROOT = $savedRoot }
+} finally { $env:PATH = $savedPath; $env:DOTNET_ROOT = $savedRoot }
 # Build harnesses separately, then copy ONLY their entry assemblies/config/fixtures
 # onto another extracted ZIP. All product/native/runtime files remain ZIP bytes.
 $probe = Join-Path $out 'package-probes'

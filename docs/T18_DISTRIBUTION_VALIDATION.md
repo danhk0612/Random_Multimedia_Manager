@@ -18,7 +18,7 @@ Windows x64, PowerShell 7, SDK **10.0.401**, runtime **10.0.12**, NuGet.org 단�
 
 ## 검증 설계와 판정 경계
 
-- ZIP을 별도 한글/공백 폴더에 풀고 모든 파일의 hash를 대조한다. isolated LocalAppData에서 앱 exe를 직접 실행→정상 종료→재시작하며 실제 DB 생성과 bundled coreclr/SQLite load 경로를 확인한다. 사용자 DB는 사용하지 않는다.
+- ZIP을 별도 한글/공백 폴더에 풀고 모든 파일의 hash를 대조한다. 기존 앱 데이터 폴더가 없는 폐기 가능한 Windows 계정의 실제 LocalAppData에서 앱 exe를 직접 실행→정상 종료→재시작하며 실제 DB 생성과 bundled coreclr/SQLite load 경로를 확인한다. 기존 데이터 폴더가 있으면 검증을 시작하지 않는다. 앱은 Windows Known Folder API를 사용하므로 LOCALAPPDATA 환경변수 변경으로 격리를 주장하지 않는다. 사용자 DB는 사용하지 않는다.
 - 별도 ZIP 복사본에 기존 테스트 harness entry assemblies/config/fixtures만 추가한다. 원래 패키지 파일 hash는 모두 유지되어야 한다. 기존 Core/Data/Comic/Scanner(10 시나리오)/Video/Subtitle/Viewing 전체 검사를 **ZIP dependencies**로 실행한다. 테스트 앱은 exe 직접 실행, PATH에서 SDK/VLC 경로 제외·DOTNET_ROOT를 빈 위치로 둔다. coreclr/SQLite/Skia/libVLC/core 실제 모듈 load 경로가 해당 ZIP 복사본 아래인지 확인한다.
 - 만화/영상/자막·랜덤→감상→정리·실패 보존·DB 재열기·삭제/저널·숨김/정상 종료는 기존 검사 내용을 유지한다. 제품 exe의 실제 사용자 클릭/물리 키/청취 전체 수동 시나리오와 동일하다고 표시하지 않는다. 테스트 harness에서 쓰는 fixture는 운영 데이터가 아닌 임시 복사본이다.
 - CI에는 SDK/런타임이 설치되어 있다. packaged host/runtime 실제 경로와 직접 실행은 별도 설치에 의존하지 않는 증거지만 **사전 설치가 전혀 없는 깨끗한 사용자 Windows PC 검사**를 대체하지 않는다. 실제 Windows 10/11 사용자 PC, NAS/RaiDrive/Explorer/로그오프/원격 휴지통/단절/캐시는 미실시다.
