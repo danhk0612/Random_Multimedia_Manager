@@ -466,7 +466,7 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 - `CloseAsync`는 sticky Closing, timer/watcher 폐기, queued 요청 취소와 실제 worker drain을 제공한다. Restore는 이를 해제하지 않는다. 기존 MainWindow/AppLifecycle의 저장·복구·목록 읽기 drain 다음 DB를 해제한다. 숨김은 Closing이 아니며 유휴 자동 검사가 UI를 노출하지 않는다. `App.RequestShutdownAsync`는 시작 실패를 포함한 앱 내부 종료 요청을 같은 AppLifecycle 종료 작업으로 연결한다. Scans 시작 뒤 WPF SessionEnding은 Cancel을 동기 설정한 후 이 비동기 경계로 들어간다. OnExit에서 async 대기하거나 Dispatcher를 막지 않는다. OS 요청은 거부될 수 있어 앱 종료 후 사용자가 로그오프/시스템 종료를 다시 요청해야 할 수 있으며 강제 OS 종료/프로세스 제거는 정상 저장·drain을 보장하지 않는다.
 - 실제 원격 삭제/v2 복구·별칭 격리는 아래 T18A-3에서 연결한다. 감상 후보/엔진 IO, UNC·정책 UI는 T18A-4~5에 남긴다. 검증 범위와 실물 미검증은 `T18A_2_SCAN_LIFECYCLE_VALIDATION.md`를 따른다.
 
-#### T18A-3 삭제 API와 인계 경계 (PR #25, main 미통합)
+#### T18A-3 삭제 API와 인계 경계 (PR #25 main 통합)
 
 - `DeletionService.PrepareAsync`는 worker에서 `WindowsStorageProbe`의 현재 루트 근거를 모은다. 실행 루트는 확인 필수이며 실패/미확인/재매핑된 다른 루트는 별칭 집합에 추정 추가하지 않는다. 현재 OS의 정확한 UNC 대상 이름+상대 경로만 `DeletionSafety.AliasKey`로 비교한다. DB writer에서 네트워크 조회를 하지 않는다. 캡처 전 재관찰, `CaptureDeletion(pathKey, keys, bindings, remoteAndUnknown)`의 revision 검증, 격리, v2 durable Prepared 순서다. 검증된 로컬 최초 근거는 기존 DB 확인 API로 채택하되 원격/Unknown 최초 확인은 암묵 승인하지 않는다.
 - Unknown의 사용자 확인은 `ScanCoordinator.ConfirmedDeletionGeneration`에서 같은 viewing exclusive lease의 기존 process confirmation만 받아 재검증한다. 소스 밖 과거 항목도 루트 바인딩을 확인한다. 영속 `UserConfirmation` 자체로 이번 실행을 승인하지 않는다. UI 확인/UNC 입력 연결은 T18A-5에 남는다. OS가 숨기는 대상 교체 및 최종 검사와 실제 IO 사이 경합의 기존 한계는 유지한다.
@@ -477,14 +477,14 @@ migration 전체 rollback·재실행·상위 버전 거부·손상 표/설정 �
 - `ApplyDeletion(operationId, targets)`는 target별 ItemId/PathKey를 확인해 모든 Missing·기록/진행/VisitCommit 정리와 AppliedDeletion을 한 transaction으로 수행한다. 원래 v1 단일 key overload도 유지한다. v2 저널은 다른 대상/불명 광역 누락을 검증하며 검증된 별칭이 아닌 target 또는 손상 scope는 전역 차단한다. size/time은 캡처 증거이며 복구에서 새 OS 파일을 조회하지 않는다.
 - `InitializeAsync`/`CompleteAsync`/`ConfirmAsync`는 v1/v2의 저장된 집합만 사용하고 OS 삭제나 새 별칭 탐색을 하지 않는다. v1 원격 가능성은 alias 증거 부재로 광역 격리하되 v1 파일을 자동 보강/재작성하지 않는다. 손상 v2/알 수 없는 버전은 전역 차단하며 성공 대상 추측을 거부한다. AppliedDeletion을 저널 제거 뒤에도 보존해 오래된 저널 재등장이 새 방문을 지우지 않는다.
 - `BeginClosing`은 sticky 신규 삭제 IO 차단, `DrainAsync`는 실제 준비/probe/삭제/복귀 확인 worker 완료 대기다. 실행 중 성공/실패 확인이나 같은 record의 OS 재실행으로 격리를 풀 수 없다. 기존 viewing 명령/복구 완료 대기를 합쳐 DB 해제 순서를 유지한다. Quick Hide/mute·복원 키·ExitBlocked 정책과 Pending/기록 의미는 유지한다.
-- N07~N09 오류 주입, Windows 로컬 실파일/네이티브 회귀와 NAS/RaiDrive 미검증은 `T18A_3_NETWORK_DELETION_VALIDATION.md`를 따른다. T18A-4~6·배포는 미착수다.
+- N07~N09 오류 주입, Windows 로컬 실파일/네이티브 회귀와 NAS/RaiDrive 미검증은 `T18A_3_NETWORK_DELETION_VALIDATION.md`를 따른다. T18A-4~5도 main 통합됐으며 최신 통합 검증/실물 인계는 `T18A_6_INTEGRATION_VALIDATION.md`를 따른다. 배포는 미착수다.
 
-#### T18A-4 감상 연결 API (PR #26 구현·Windows 검증 완료/재검토 대기)
+#### T18A-4 감상 연결 API (PR #26 보완·Windows 검증 완료/main 통합)
 
 - `ViewingAccess`는 한 감상 창의 scan exclusive lease 안에서 소스 메타데이터 가용성·루트 근거를 확인한다. `GetStorageBindings`는 후보 판정당 집합 조회이며 항목별 SQL/미디어 본문 읽기는 없다. 바인딩 최초 채택은 검증된 Local만 허용하고 원격/Unknown은 T18A-2의 명시 프로세스 확인을 따른다. 관찰된 Unknown 접근 실패 이후 이전 확인은 재사용하지 않는다.
 - `SessionCoordinator`의 실패 집합은 세션 메모리이며 기존 Seen/영구 제외/Missing/기록과 분리한다. 후보 없음은 기존 NoCandidates, 연결/실패 일시 억제는 ConnectionUnavailable이다. 수동/Back/Forward 성공 및 새 세션으로 억제를 해제하며 실패 시 cursor/Forward/Pending을 보존한다. 열기 전후 Ticket(binding revision/generation) 및 live 삭제 격리를 검사한다. 늦은 Ready는 실제 해제까지 Busy를 유지한다. 삭제 실패 복귀도 같은 검사를 추가하되 새 방문을 만들지 않는다.
 - ZIP `DisposeAsync`는 프리로드 포함 실제 읽기 drain 후 압축 리소스를 worker에서 해제한다. 영상 `PlayAsync`/`SeekAsync`/자막/Stop은 소유 Task를 등록하며 `DisposeAsync`는 늦은 결과 정리까지 기다린다. WPF HWND 수명은 Dispatcher에 남는다. 자막 접근 실패는 빈 목록/영상 실패와 분리하며 Closing 뒤 후속 자막/미디어 IO를 시작하지 않고 이미 발행한 작업과 실제 해제를 기다린다.
-- 세부 오류 주입·Windows 실파일/native 회귀와 NAS/RaiDrive 미검증은 `T18A_4_NETWORK_VIEWING_VALIDATION.md`를 따른다. 기존 scan/삭제 저널/Pending/숨김·복원 계약은 유지하며 UI·배포는 후속 Task다.
+- 세부 오류 주입·Windows 실파일/native 회귀와 NAS/RaiDrive 미검증은 `T18A_4_NETWORK_VIEWING_VALIDATION.md`를 따른다. 기존 scan/삭제 저널/Pending/숨김·복원 계약은 유지하며 UI는 아래 T18A-5에서 연결했다. 배포는 후속 Task다.
 
 ### 7.1. T18A-5 UI 연결 및 PR #27 검증 상태
 
@@ -523,6 +523,8 @@ LibraryBrowser는 DB 색인 목록을 먼저 표시하고 Explorer 실행 요청
 | N12 | 색인 미디어 본문 open 0, T17 필터/선택 보존·늦은 읽기 차단 | provider 전송량/seek/cache와 실제 ZIP/영상/자막·Explorer |
 
 T18A-6에서 Windows x64/.NET 10 Release 및 기존 T03/T05/T06/T07/T09/T10/T11(T12~17 포함) 중 영향 회귀를 수행한다. 오류 주입 통과가 NAS/RaiDrive 실물 통과를 대신하지 않는다. 외부 삭제 시험은 새 테스트 복사본만 사용한다. 실물 환경이 없으면 환경·backend/version과 미검증 항목을 적고 사용자 실사용 확인으로 넘긴다. 기존 수동 미검증·승인 생략·AVI 조사 보류는 유지한다.
+
+T18A-6의 최신 통합 CI, N01~N12 증거/환경 대조와 사용자 실사용 점검표는 [T18A_6_INTEGRATION_VALIDATION.md](T18A_6_INTEGRATION_VALIDATION.md)를 단일 기준으로 한다. 실제 NAS/RaiDrive 통과로 승격하지 않으며 T18 착수는 결과 검토 후 판단한다.
 
 ### 9. 확인한 기술 근거
 

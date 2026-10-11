@@ -22,6 +22,7 @@ switch (args[0].ToLowerInvariant())
     case "case": Run("case-sensitive directory rejection", VerifyCaseSensitive); break;
     case "unc": VerifyUncPathUiContract(); break;
     case "t18a5": await T18A5SourceUiVerification.Run(); break;
+    case "t18a6": await T18A6IntegrationVerification.Run(); break;
     default: throw new ArgumentException("Unknown T05 scenario: " + args[0]);
 }
 
