@@ -28,7 +28,7 @@
 
 ## 바로 다음 작업
 
-T18A 네트워크 보완 설계 및 아래 T18A-1~6 구현 인계를 작성했다. D13 지원 목표는 사용자 확정이며 현재 코드의 네트워크 지원 완료를 뜻하지 않는다. 설계 PR #22는 `2959391`로 main에 통합했다. DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. T18A-2 PR #24는 `d2848f5`로 main 통합 완료했다. T18A-3 PR #25는 성능 보완·Windows 검증을 확인하고 `7437e9d`로 main에 통합했다. T18A-4 PR #26도 `863c86d`로 main에 통합했다. 바로 다음은 저성능 Work의 T18A-5이며 아래 새 작업 시작 지시문을 따른다. 이전 전역 두 bool·10분 전체 검사는 구현 기준이 아니다.
+T18A 네트워크 보완 설계 및 아래 T18A-1~6 구현 인계를 작성했다. D13 지원 목표는 사용자 확정이며 현재 코드의 네트워크 지원 완료를 뜻하지 않는다. 설계 PR #22는 `2959391`로 main에 통합했다. DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. T18A-2 PR #24는 `d2848f5`로 main 통합 완료했다. T18A-3 PR #25는 성능 보완·Windows 검증을 확인하고 `7437e9d`로 main에 통합했다. T18A-4 PR #26도 `863c86d`로 main에 통합했다. 바로 다음은 기존 저성능 Work의 T18A-5 PR #27 문서 복원 보완이다. 아래 보완 지시문을 우선 적용한다. PR은 구현·영향 Windows CI 통과 상태이나 기준 문서 손상으로 병합 보류다. 이전 전역 두 bool·10분 전체 검사는 구현 기준이 아니다.
 
 T18 배포와 제품 구현을 병렬 진행하지 않는다. 기존 수동 미검증/승인 생략 및 AVI 무음 조사 보류는 유지한다.
 
@@ -293,7 +293,35 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 
 병렬 가능한 범위는 1의 API/fixture 계약 통합 후 **NAS/RaiDrive 테스트 환경 준비·테스트 복사본/시나리오 준비·문서 검토**뿐이다. 해당 작업은 제품 파일/공유 tests entry point/상태 문서를 동시에 수정하지 않는다. 실제 통합 검증은 6에서 한다. 구현 중 API/파일 소유권을 더 세분화해 독립성이 증명되면 Astra가 TASKS를 먼저 갱신하고 병렬 구현을 재배정한다. 이는 이번 설계 작업에서 별도 에이전트 실행을 요구하지 않는다.
 
-### 새 작업 시작 지시문 — T18A-5
+### T18A-5 PR #27 보완 지시문 — 현재 우선 작업
+
+```text
+Random_Multimedia_Manager의 기존 task/t18a-5-source-ui / PR #27을 보완해.
+최신 main의 AI_WORKFLOW.md, PROJECT.md, CURRENT_STATE.md, TASKS.md와 관련 기준 문서를 먼저 읽어.
+
+PR head fab801e10b63d300930e18ccf67e97dd38f66f7f의
+docs/DATA_AND_RANDOM_POLICY.md에 실제 출력 잘림 문구가 저장돼 있다.
+문서 선두의 Warning: truncated output / Total output lines 및
+SessionCoordinator.DeleteCurrentAsync 문장 중간의 tokens truncated 문구 때문에
+T12 API 설명과 T18A 도입부·§1 책임·§2 경로/바인딩·§3 갱신 정책 일부가 소실됐다.
+
+1. main 91778a48e66cc4bdedcdebf1a3f87a41109aae4c의 완전한 Git 원문을 복원 기준으로 사용해.
+   잘린 화면 출력에서 복사하거나 기억으로 정책을 재작성하지 마.
+2. 기존 계약 전체를 복원한 뒤 PR의 정상적인 T18A-5 설명과 통합 상태 수정만 다시 적용해.
+3. PR에서 변경한 모든 문서를 검사해 출력 잘림 표식·누락·잘못된 완료 상태가 없는지 확인해.
+4. main 대비 최종 diff를 검토해 T12 및 T18A 전체 절/표/계약 보존을 입증해.
+   CURRENT_STATE.md/TASKS.md/검증 문서에는 문서 복원 완료와 병합 재검토 대기를 기록해.
+5. 검증된 제품 코드와 LastCompletedAtUtc 경합 수정은 보존해.
+   문서만 변경하면 Windows CI를 불필요하게 재실행하지 말고 문서 diff 검증을 보고해.
+   제품 코드를 변경해야 한다면 이유와 영향 검증을 별도로 제시해.
+6. 기존 PR에 커밋하고 최종 head, 변경 파일, 복원 검증 결과를 보고해.
+   직접 병합하거나 T18A-6/배포를 시작하지 마.
+
+코드 f509d2b의 T03/T05/T09/T11 Windows CI 4개 통과는 유지한다.
+실제 NAS/RaiDrive·Explorer 창 표시·provider 재매핑/캐시는 미검증이다.
+```
+
+### 최초 작업 범위 — T18A-5 (재착수 시 위 보완 지시문 우선)
 
 ```text
 https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A-5만 진행해.
