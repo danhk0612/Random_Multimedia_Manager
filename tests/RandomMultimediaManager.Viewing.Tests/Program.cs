@@ -96,9 +96,6 @@ internal static class Program
             db.ApplyObservedItems([absent],[]);
             Check((await session.OpenManualAsync(Guid.NewGuid(),absent.Id)).Status==SessionStatus.Failed && session.View.ActiveToken==videoToken,"failed video preparation preserves active visit");
             Check(current.Video.Snapshot(current.VideoVisit).State==prior.State,"failed preparation preserves pause");
-            // Failure suppression belongs to this session, not the later T17 random session.
-            // Keep the failure assertions above; exclude only this synthetic fixture afterward.
-            db.SetRandomExcluded(absent.Id, true);
             fail=true;
             Check((await session.PreviousAsync(Guid.NewGuid())).Status==SessionStatus.SaveFailed,"actual adapters preserve frozen save failure");
             var frozen=session.View.FrozenCommit;
