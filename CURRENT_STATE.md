@@ -335,11 +335,13 @@ main `7c16295`에서 `task/t18-windows-packaging`으로 패키징·고지·실�
 
 검증 SHA `2599f48d96d5ca18ab389b719926424894a999b8`의 T18 ZIP/셸 2회/전체 회귀·native load 경로 검사와 기존 통합/T03/T06/T09/T11 CI 6개가 모두 success다. 파일 목록·hash·artifact·원래 실패와 검증 코드 오류/수정은 [T18_DISTRIBUTION_VALIDATION.md](docs/T18_DISTRIBUTION_VALIDATION.md)를 따른다. 검토 패키지·문서 PR 제출은 완료했지만 앱 라이선스·native 소스 제공/재배포 최종 검토·깨끗한 사용자 PC 실행은 미완료다. 실제 NAS/RaiDrive·기존 수동 미검증과 지원 한계를 유지한다. 공개 Release/tag·직접 병합·VSR은 수행하지 않는다.
 
-## T18 PR #29 검토 — SDK/CI 정합성 보완 대기
+## T18 PR #29 검토 — SDK/CI 정합성 보완 완료·재검토 대기
 
-- 검토 head `5bdf748a51a0f08e52126851323d66434a59b256`. 패키징 SHA `2599f48d96d5ca18ab389b719926424894a999b8`의 [T18 CI 38140925671](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38140925671)는 attempt 1 success다. 이후 head까지 상태/결과 문서 5개만 변경됐다.
+- 보완 전 검토 head `5bdf748a51a0f08e52126851323d66434a59b256`. 패키징 SHA `2599f48d96d5ca18ab389b719926424894a999b8`의 [T18 CI 38140925671](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38140925671)는 attempt 1 success다. 이후 head까지 상태/결과 문서 5개만 변경됐다.
 - 잠금 파일 누락 지적은 App/Core packages.lock.json 및 CI 기본 locked restore로 해소됐다.
-- 병합 차단: global.json은 SDK 10.0.401만 허용하지만 기존 CI는 10.0.x를 설치한다. SDK 갱신 시 기존 검증이 시작되지 않을 수 있어 모든 dotnet workflow 설치 기준과 관련 paths 필터를 정렬한다. TASKS.md 보완 지시를 따른다.
+- 최신 main `8628e81`의 보완 지시를 반영했다. 수정 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`에서 dotnet workflow 9개의 setup-dotnet을 `global-json-file: global.json`으로 통일하고 공통 SDK/NuGet/솔루션/project/lock paths를 보완했다. SDK 버전·기존 suite 명령/조건·제품 및 패키지 입력은 변경하지 않았다.
+- 정확한 수정 SHA에서 9개 CI의 checkout SHA / SDK 10.0.401 비교와 restore/build·영향 회귀를 확인했다. T03/T05/T06/T07/T09/T10/T11/T18은 attempt 1 success, T18A-6은 Viewing 정리의 comic.cbz 파일 잠금으로 attempt 1 실패 후 코드 변경 없는 attempt 2(job `114478797035`) success다. 최초 실패를 보존하며 원인을 SDK 문제로 단정하지 않는다. SDK/CI 정합성 보완은 완료했고 PR #29 재검토 대기다.
+- 새 [T18 CI 38142117345](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38142117345) / artifact `11703665480`(2026-10-25 만료)은 최초 실행 success다. 새 ZIP SHA256 `53f8128461bc3153b84708340b20888d4794672c520ba97e781bde46ee3cb045`, 반복 ZIP byte 일치·압축 해제 실행/재시작·전체 ZIP 의존성 회귀/native 경로 통과. 상세 SHA/job/hash는 검증 문서에 분리했다.
 - 검토 artifact 11703302128은 2026-10-25 만료 예정이며 공개 Release는 아니다. 정확한 ZIP/해시·네이티브 로드 경로·실패 이력은 PR의 T18_DISTRIBUTION_VALIDATION.md를 따른다.
 - 공개 배포는 앱 자체 라이선스 선택, 정확한 native corresponding source 제공/플러그인 조건 검토, SDK/runtime/VLC 사전 설치 없는 사용자 Windows PC 검증이 남아 있다. 이번 검토로 이를 완료 처리하지 않는다.
 - 제품 코드·정책 변경은 하지 않으며 실제 NAS/RaiDrive·기존 수동 미검증/승인 생략·AVI 조사 보류를 유지한다.

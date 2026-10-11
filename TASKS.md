@@ -28,7 +28,7 @@
 
 ## 바로 다음 작업
 
-T18A-1~6 PR #23~28은 main 통합 완료다. PR #28은 반복 스캔 검사 보완과 수정 SHA `387cc495f96ea28d0e1de585d55ca007b31418e9`의 Windows 통합 CI 38120631136 성공을 확인하고 `e850a64`로 병합했다. 현재 T18 PR #29는 검토용 패키지·Windows CI 성공 상태이나 SDK 고정과 기존 CI 설치 버전 불일치로 병합 보류다. 다음은 기존 T18 Work의 아래 보완 지시문이다.
+T18A-1~6 PR #23~28은 main 통합 완료다. PR #28은 반복 스캔 검사 보완과 수정 SHA `387cc495f96ea28d0e1de585d55ca007b31418e9`의 Windows 통합 CI 38120631136 성공을 확인하고 `e850a64`로 병합했다. T18 PR #29의 SDK/CI 정합성 보완을 수정 SHA `61a98bb`에서 완료했다. 모든 dotnet workflow의 SDK 설치와 관련 paths를 정렬했고 영향 CI 9개가 최종 success다(통합은 최초 파일 잠금 실패 후 동일 SHA attempt 2 success). 기존/새 패키지·실패 이력을 보존했으며 현재는 **기존 PR #29 재검토 대기**다. 공개 배포 준비 완료나 다음 Task 착수 승인이 아니다.
 
 실제 NAS/RaiDrive 미검증은 기존 실사용 점검표로 이관한다. 이 제한을 명시하는 패키지 준비는 진행 가능하며 공개 배포 준비 완료 여부는 T18 결과에서 판단한다. 원격 휴지통 Unknown 차단·정상 종료 시간 상한 없음·기존 수동 미검증/승인 생략·AVI 조사 보류를 유지한다.
 
@@ -257,13 +257,15 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18 — Windows 배포 및 통합 검증
 
 - 목적: 재현 가능한 초기 제품 배포.
-- 담당/상태: Astra / PR #29 검토 패키지 제출 완료. 코드 SHA `2599f48`의 T18 및 영향 Windows CI 6개 success. 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md.
+- 담당/상태: Astra / PR #29 검토 패키지 및 SDK/CI 보완 완료·재검토 대기. 최초 SHA `2599f48`의 CI 6개 및 보완 SHA `61a98bb`의 CI 9개 최종 success(통합 attempt 1 실패/2 성공 보존). 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md.
 - 선행: T10~T13/T15~T17/T18A; D08.
 - 범위/수정 영역: 패키징·배포 안내·통합 검증.
 - 완료 조건/검증: 깨끗한 Windows에서 실행, 네이티브 파일 포함/재배포 조건 확인, 전체 랜덤→감상→정리 흐름·파일 실패·DB 재시작 검증, 미구현/제약 명시.
 - 수정하지 말아야 할 영역: 업데이트 서버·백업 기능·범위 확대.
 
 ### T18 PR #29 보완 지시문 — 현재 우선 작업
+
+보완 완료·재검토 대기: 아래 지시문은 수행 근거로 보존한다. 정확한 수정 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`의 SDK 선택/restore/build와 9개 영향 CI, 새 artifact `11703665480` 및 최초 실패/동일 SHA 재실행 결과는 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)를 따른다. 직접 병합·공개 배포·T19 착수는 대기한다.
 
 ```text
 Random_Multimedia_Manager의 기존 task/t18-windows-packaging / PR #29를 보완해.
