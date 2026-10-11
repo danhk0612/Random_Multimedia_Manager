@@ -28,7 +28,7 @@
 
 ## 바로 다음 작업
 
-T18A-1~6 PR #23~28은 main 통합 완료다. PR #28은 반복 스캔 검사 보완과 수정 SHA `387cc495f96ea28d0e1de585d55ca007b31418e9`의 Windows 통합 CI 38120631136 성공을 확인하고 `e850a64`로 병합했다. 다음은 **고성능 Work의 T18 Windows x64 배포 준비**다.
+T18A-1~6 PR #23~28은 main 통합 완료다. PR #28은 반복 스캔 검사 보완과 수정 SHA `387cc495f96ea28d0e1de585d55ca007b31418e9`의 Windows 통합 CI 38120631136 성공을 확인하고 `e850a64`로 병합했다. 현재 T18 PR #29는 검토용 패키지·Windows CI 성공 상태이나 SDK 고정과 기존 CI 설치 버전 불일치로 병합 보류다. 다음은 기존 T18 Work의 아래 보완 지시문이다.
 
 실제 NAS/RaiDrive 미검증은 기존 실사용 점검표로 이관한다. 이 제한을 명시하는 패키지 준비는 진행 가능하며 공개 배포 준비 완료 여부는 T18 결과에서 판단한다. 원격 휴지통 Unknown 차단·정상 종료 시간 상한 없음·기존 수동 미검증/승인 생략·AVI 조사 보류를 유지한다.
 
@@ -263,7 +263,38 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 - 완료 조건/검증: 깨끗한 Windows에서 실행, 네이티브 파일 포함/재배포 조건 확인, 전체 랜덤→감상→정리 흐름·파일 실패·DB 재시작 검증, 미구현/제약 명시.
 - 수정하지 말아야 할 영역: 업데이트 서버·백업 기능·범위 확대.
 
-### 새 작업 시작 지시문 — T18
+### T18 PR #29 보완 지시문 — 현재 우선 작업
+
+```text
+Random_Multimedia_Manager의 기존 task/t18-windows-packaging / PR #29를 보완해.
+최신 main과 AI_WORKFLOW.md, T18 계약 및 검증 문서를 먼저 읽어.
+검토 head는 5bdf748a51a0f08e52126851323d66434a59b256이다.
+
+global.json은 SDK 10.0.401 / rollForward disable을 요구하지만
+기존 T03/T05/T06/T07/T09/T10/T11/T18A-6 workflow는 10.0.x 설치를 사용한다.
+runner의 SDK가 갱신되면 정확한 SDK가 없어 restore 이전에 실패할 수 있다.
+T03 실제 파일과 PR diff에서 불일치를 확인했다.
+
+- 모든 dotnet 사용 workflow를 확인하고 global.json의 SDK를 설치하도록 통일해.
+  setup-dotnet의 global-json-file 사용 등 단일 기준을 우선하며
+  기존의 넓은 dotnet-version 설정이 동시에 남지 않도록 해.
+- SDK 고정 파일 변경이 필요한 영향 CI를 실행하도록 paths 필터도 대조·수정해.
+  검증 suite 자체의 의미/조건은 바꾸지 마.
+- 정확한 수정 SHA에서 SDK 선택과 restore/build 및 영향 CI 결과를 확인해.
+  기존 T18 검증 2599f48 / run 38140925671의 artifact·해시·성공/실패 이력은 보존해.
+  새로운 패키지가 생성되면 새 SHA/artifact/해시와 구분해 기록해.
+- App/Core 잠금 파일은 이미 추적되고 기본 CI는 locked restore다.
+  과거 lock 누락 리뷰를 미해결로 취급하거나 BootstrapLock으로 되돌리지 마.
+- CURRENT_STATE.md/TASKS.md/검증 문서와 기존 PR을 보완 완료·재검토 대기로 갱신해.
+
+제품 코드·DB/공통 API·정책, SDK 버전 자체, 라이브러리 버전은 바꾸지 마.
+앱 라이선스는 임의 선택하지 마. native corresponding source/플러그인 검토와
+깨끗한 사용자 PC 검증은 공개 배포 전 잔여 항목으로 유지해.
+NAS/RaiDrive 미검증·원격 휴지통 차단·기존 수동 생략/AVI 보류를 보존해.
+직접 병합·공개 Release/tag·T19 착수는 하지 마.
+```
+
+### 최초 작업 범위 — T18 (현재 보완 지시문 우선)
 
 ```text
 https://github.com/danhk0612/Random_Multimedia_Manager 의 T18만 고성능 Work로 진행해.
