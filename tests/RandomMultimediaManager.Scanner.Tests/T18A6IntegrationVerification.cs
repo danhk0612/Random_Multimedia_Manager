@@ -51,11 +51,20 @@ internal static class T18A6IntegrationVerification
                     Check(items.Count == expected && items.All(item => !item.IsMissing && item.FileSize > 0),
                         "N12 locked invalid media are indexed from metadata only: " + type);
                     var ids = items.ToDictionary(item => item.PathKey, item => item.Id);
-                    await scans.ScanSourceAsync(source.Id);
-                    Check(database.GetItems(category.Id).All(item => ids[item.PathKey] == item.Id),
-                        "N02/N12 repeated UI-configured scan preserves ItemId: " + type);
                     Check(database.GetEffectiveSourceRefreshPolicy(source.Id).LastCompletedAtUtc is not null,
-                        "N04/N12 completed manual scan persists completion time: " + type);
+                        "N04/N12 first successful manual scan persists completion time: " + type);
+                    var repeatedResult = await scans.ScanSourceAsync(source.Id);
+                    Check(repeatedResult.Status == LibraryScanStatus.Completed && repeatedResult.WarningCount == 0
+                        && repeatedResult.PresentCount == expected && repeatedResult.MissingCount == 0,
+                        "N02/N12 repeated UI-configured scan completes successfully: " + type);
+                    var repeatedItems = database.GetItems(category.Id);
+                    Check(repeatedItems.Count == expected
+                        && repeatedItems.Select(item => (item.PathKey, item.Id)).ToHashSet()
+                            .SetEquals(ids.Select(pair => (pair.Key, pair.Value))),
+                        "N02/N12 repeated UI-configured scan preserves exact count and PathKey/ItemId set: " + type);
+                    // Successful repeat is proven by its result, not by a timestamp that may be unchanged.
+                    Check(database.GetEffectiveSourceRefreshPolicy(source.Id).LastCompletedAtUtc is not null,
+                        "N04/N12 completion time remains stored after verified successful repeated scan: " + type);
                 }
             }
             finally { await scans.CloseAsync(); }

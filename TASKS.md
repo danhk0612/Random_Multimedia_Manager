@@ -22,13 +22,13 @@
 | T15 | 트레이 및 창 동작 | Astra | 구현·Windows 자동 검증 완료 (PR #17 main 통합, 사용자 Windows 확인 대기) | T14; T12 통합 경계 대조 완료 |
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
-| T18A | 변경 감지와 경로 상태 갱신 | Astra | T18A-1~5 PR #23~27 main 통합 완료; T18A-6 PR #28 자동 통합 검증/인계 완료·검토 대기 | T05/T12; T02 식별 계약 |
+| T18A | 변경 감지와 경로 상태 갱신 | Astra | T18A-1~5 PR #23~27 main 통합 완료; T18A-6 PR #28 반복 스캔 검사 보완 대기 | T05/T12; T02 식별 계약 |
 | T18 | Windows 배포 및 통합 검증 | Astra | 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 바로 다음 작업
 
-T18A-1~5 PR #23~27은 main에 통합됐다. T18A-5 PR #27은 문서 복원과 코드 불변을 확인하고 `0629106`으로 병합했다. 현재는 **T18A-6 PR #28 자동 검증/인계 완료·검토 대기**이며 결과와 실물 점검표는 [검증 기록](docs/T18A_6_INTEGRATION_VALIDATION.md)을 따른다. 아래 시작 지시문은 동일 범위의 재개/검토 기준으로 유지한다. 로컬·매핑/RaiDrive·직접 UNC 지원 목표와 D10~D16 정책은 유지하며 실제 원격 호환성은 미검증이다.
+T18A-1~5 PR #23~27은 main에 통합됐다. T18A-5 PR #27은 문서 복원과 코드 불변을 확인하고 `0629106`으로 병합했다. T18A-6 PR #28은 자동 검증/실물 인계 제출 상태이나 반복 스캔 검사의 성공·개수 검증 누락으로 병합 보류다. 바로 다음은 기존 T18A-6 Work의 아래 보완 지시문이다. 로컬·매핑/RaiDrive·직접 UNC 지원 목표와 D10~D16 정책은 유지하며 실제 원격 호환성은 미검증이다.
 
 T18 배포는 T18A-6 결과 검토 후 진행한다. 기존 수동 미검증/승인 생략 및 AVI 무음 조사 보류는 유지한다.
 
@@ -293,7 +293,40 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 
 병렬 가능한 범위는 1의 API/fixture 계약 통합 후 **NAS/RaiDrive 테스트 환경 준비·테스트 복사본/시나리오 준비·문서 검토**뿐이다. 해당 작업은 제품 파일/공유 tests entry point/상태 문서를 동시에 수정하지 않는다. 실제 통합 검증은 6에서 한다. 구현 중 API/파일 소유권을 더 세분화해 독립성이 증명되면 Astra가 TASKS를 먼저 갱신하고 병렬 구현을 재배정한다. 이는 이번 설계 작업에서 별도 에이전트 실행을 요구하지 않는다.
 
-### 새 작업 시작 지시문 — T18A-6
+### T18A-6 PR #28 보완 지시문 — 현재 우선 작업
+
+```text
+Random_Multimedia_Manager의 기존 task/t18a-6-integration / PR #28을 보완해.
+최신 main의 AI_WORKFLOW.md와 기준 문서, 아래 지시를 먼저 확인해.
+PR 검토 head는 56eb75dc9c7ed957316d1cb11e03529411ab0511이다.
+
+대상: tests/RandomMultimediaManager.Scanner.Tests/T18A6IntegrationVerification.cs
+두 번째 ScanSourceAsync의 반환값을 버리고 기존 목록의 All과
+첫 스캔이 기록한 LastCompletedAtUtc만 확인하므로,
+반복 요청이 Cancelled/실패해도 검사에 통과할 수 있다.
+빈 목록 역시 All이 true여서 ID 보존을 입증하지 못한다.
+자동 리뷰 지적을 실제 코드와 대조해 확인한 사항이다.
+
+- 두 번째 스캔 결과를 저장하고 Completed, 경고 0,
+  기대 PresentCount 및 MissingCount 0을 명시적으로 확인해.
+- 두 번째 목록을 한 번 읽어 기대 개수와 기존 PathKey/ItemId 집합의
+  정확한 보존을 확인해. 빈 목록의 All만으로 성공시키지 마.
+- 완료 시각 검사는 첫 값의 존재와 두 번째 성공을 구분해 설명하고
+  시계 해상도에 의존한 불필요한 sleep/엄격 증가 조건은 넣지 마.
+- 수정한 정확한 SHA에서 Windows Scanner t18a6 회귀를 검증해.
+  기존 workflow가 실행되면 결과를 확인하되 같은 SHA 반복 실행이나
+  이미 통과한 무관한 수동 검증을 다시 요구하지 마.
+- 기존 Windows 통합 CI 38119424164의 통과 근거는 보존하고,
+  새 테스트 변경 SHA/실행 결과를 검증 문서에 구분해 기록해.
+- CURRENT_STATE.md/TASKS.md와 T18A_6_INTEGRATION_VALIDATION.md를
+  보완 완료·병합 재검토 대기 상태로 갱신하고 기존 PR에 제출해.
+
+제품 src·DB/공통 API·정책·배포는 변경하지 마.
+실제 NAS/RaiDrive 미검증, 기존 수동 승인 생략 및 AVI 조사 보류를 유지해.
+새 Task를 만들거나 직접 병합하거나 T18/T19를 시작하지 마.
+```
+
+### 최초 작업 범위 — T18A-6 (현재 보완 지시문 우선)
 
 ```text
 https://github.com/danhk0612/Random_Multimedia_Manager 의 T18A-6만 고성능 Work로 진행해.
