@@ -328,3 +328,7 @@ PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까�
 - 검토 지적을 보완했다: 두 번째 ScanSourceAsync의 Completed·경고 0·기대 PresentCount·MissingCount 0, 한 번 읽은 목록의 기대 개수·정확한 PathKey/ItemId 집합 보존을 검사한다. 첫 완료 시각의 존재와 두 번째 결과로 입증한 성공을 구분하며 sleep/엄격 증가 조건은 없다. 제품 결함이 확인된 것은 아니다.
 - 최신 main `f33915d`의 TASKS.md 보완 지시를 기존 PR에 반영했다. 정확한 수정 SHA `387cc495f96ea28d0e1de585d55ca007b31418e9`의 Windows t18a6 결과: [통합 CI 38120631136](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38120631136), job `114414440414`에서 최초 실행 통과(Comic/Video 반복 성공·정확한 개수/ID 집합 PASS). 기존 통합 성공과 보완 후 검증을 구분해 [검증 문서](docs/T18A_6_INTEGRATION_VALIDATION.md)에 기록한다. 제품 src·DB/공통 API·정책·workflow 변경 없음; 문서 확정 이후 검증된 tests/CI는 유지한다.
 - 실제 NAS/SMB/RaiDrive, 사용자 DB 복사본·실제 Explorer/로그오프·원격 삭제/캐시는 미검증이며 PR의 실사용 점검표를 보존한다. 검증 SHA 이후 최종 head 5dcfa60까지 문서 3개만 변경됨을 확인하고 PR #28을 e850a64로 병합했다. 미검증과 지원 한계를 명시하는 T18 패키지 준비는 진행 가능하다. 공개 배포 준비 완료나 원격 호환성 완료를 뜻하지 않는다.
+
+## T18 Windows 검토 패키지
+
+main `7c16295`에서 T18 패키징·고지·사용자 안내 및 ZIP 의존성을 사용하는 기존 Windows 회귀 CI를 준비 중이다. 제품 src/기존 tests·DB/API/정책은 변경하지 않는다. 정확한 검증 결과·artifact·파일 해시·미검증은 [T18_DISTRIBUTION_VALIDATION.md](docs/T18_DISTRIBUTION_VALIDATION.md)를 따른다. 앱 라이선스·native 재배포 최종 검토·깨끗한 사용자 PC 실행은 미완료이며 실제 NAS/RaiDrive와 기존 수동 미검증은 유지한다. 공개 Release/tag·직접 병합·VSR은 수행하지 않는다.
