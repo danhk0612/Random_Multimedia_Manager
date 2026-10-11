@@ -62,7 +62,7 @@
 
 ## 다음 작업과 차단
 
-T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증을 확인하고 `7437e9d`로 main 통합했다. T18A-4 PR #26은 구현·보완 검증을 확인하고 `863c86d`로 main 통합했다. T18A-5 PR #27의 구현·영향 Windows CI 4개 통과와 기준 문서 복원을 확인하고 0629106으로 main에 통합했다. T18A-6 PR #28은 통합 CI 통과·실물 인계 제출 후 반복 스캔 검사 보완 완료·병합 재검토 대기다. T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 다음은 기존 PR #28의 보완 결과 병합 재검토이며 TASKS.md의 보완 결과를 따른다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
+T18A-1 경로·저장 기반 구현과 Windows 자동 검증을 완료했다(PR #23, main 통합 완료). T18A-2 PR #24의 구현 및 병합 전 보완·Windows 자동 재검증을 완료했으며 `d2848f5`로 main 통합했다. T18A-3 PR #25는 구현·성능 보완·Windows 자동 검증을 확인하고 `7437e9d`로 main 통합했다. T18A-4 PR #26은 구현·보완 검증을 확인하고 `863c86d`로 main 통합했다. T18A-5 PR #27의 구현·영향 Windows CI 4개 통과와 기준 문서 복원을 확인하고 0629106으로 main에 통합했다. T18A-6 PR #28은 통합 CI 통과·실물 인계 제출 후 반복 스캔 검사 보완 확인·main 통합 완료 (e850a64)다. T18 배포는 미착수다. 설계 PR #22 main 통합 완료 (`2959391`). DECISIONS.md D10~D12/D14~D16은 2026-10-04 사용자 승인 완료이며 T18A-1 PR #23은 `08adddc`로 main 통합 완료했다. 다음은 고성능 Work의 T18 패키징 준비이며 TASKS.md의 새 작업 시작 지시문을 따른다. D13 지원 목표는 확정이며 원격 호환성 실증은 아직 없다.
 
 ## T03 저장 구현
 
@@ -321,10 +321,10 @@ PR #25를 `7437e9d`로 main에 통합했다. 검증 코드 이후 `04e6408`까�
 - 실제 NAS/RaiDrive backend/version·사용자 DB 복사본·Explorer 창/로그오프·원격 단절/캐시/삭제는 미검증이다. 환경 기록과 N01~N12 재현/기대 결과를 같은 문서의 사용자 실사용 점검표로 이관한다. 삭제/재매핑은 테스트 복사본·별도 연결만 사용한다.
 - 원격 휴지통 Unknown/실행 차단, 정상 종료 시간 상한 없음, 기존 수동 미검증/승인 생략·T11 재실행 이력·AVI 조사 보류를 보존한다. 직접 병합·T18 배포·VSR은 수행하지 않는다.
 
-## T18A-6 PR #28 반복 스캔 검사 보완 완료 — 병합 재검토 대기
+## T18A-6 PR #28 반복 스캔 검사 보완 확인 — main 통합 e850a64
 
 - 검토 head `56eb75dc9c7ed957316d1cb11e03529411ab0511`. 제품 src 변경 없음, tests/CI와 검증 문서 변경이다.
 - 검증 SHA `4bd5f57f983118a10607894d8a9e04841fd60a3c`의 Windows 통합 CI [38119424164](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38119424164), job 114410889495의 Release·전체 영향 suite·셸 시작/정상 종료 2회가 최초 실행 성공했다. 이후 head까지 문서 4개만 변경됐다.
 - 검토 지적을 보완했다: 두 번째 ScanSourceAsync의 Completed·경고 0·기대 PresentCount·MissingCount 0, 한 번 읽은 목록의 기대 개수·정확한 PathKey/ItemId 집합 보존을 검사한다. 첫 완료 시각의 존재와 두 번째 결과로 입증한 성공을 구분하며 sleep/엄격 증가 조건은 없다. 제품 결함이 확인된 것은 아니다.
 - 최신 main `f33915d`의 TASKS.md 보완 지시를 기존 PR에 반영했다. 정확한 수정 SHA `387cc495f96ea28d0e1de585d55ca007b31418e9`의 Windows t18a6 결과: [통합 CI 38120631136](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38120631136), job `114414440414`에서 최초 실행 통과(Comic/Video 반복 성공·정확한 개수/ID 집합 PASS). 기존 통합 성공과 보완 후 검증을 구분해 [검증 문서](docs/T18A_6_INTEGRATION_VALIDATION.md)에 기록한다. 제품 src·DB/공통 API·정책·workflow 변경 없음; 문서 확정 이후 검증된 tests/CI는 유지한다.
-- 실제 NAS/SMB/RaiDrive, 사용자 DB 복사본·실제 Explorer/로그오프·원격 삭제/캐시는 미검증이며 PR의 실사용 점검표를 보존한다. T18 착수는 보완 검토·병합 후 판단한다.
+- 실제 NAS/SMB/RaiDrive, 사용자 DB 복사본·실제 Explorer/로그오프·원격 삭제/캐시는 미검증이며 PR의 실사용 점검표를 보존한다. 검증 SHA 이후 최종 head 5dcfa60까지 문서 3개만 변경됨을 확인하고 PR #28을 e850a64로 병합했다. 미검증과 지원 한계를 명시하는 T18 패키지 준비는 진행 가능하다. 공개 배포 준비 완료나 원격 호환성 완료를 뜻하지 않는다.

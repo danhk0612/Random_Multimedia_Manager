@@ -6,7 +6,7 @@
 - 작업: `task/t18a-6-integration`, PR #28. D10~D16과 DATA_AND_RANDOM_POLICY T18A §1~8을 유지한다. 제품 코드·DB 스키마·패키지·공통 API·삭제/기록 정책 변경은 없다.
 - 최초 Windows 통합 검증 코드/테스트/CI SHA: `4bd5f57f983118a10607894d8a9e04841fd60a3c`. 이 커밋의 `src` tree는 시작 main과 동일한 `ad7ffd93ae3e72c0f820e0ae8147ff9f2a88fb1f`다. T18A-5 검증 SHA `f509d2b`부터 시작 main까지 `src/`, `tests/` diff는 0이다. 반복 스캔 검사의 후속 보완 SHA와 Windows 결과는 아래 별도 절을 따른다.
 - 현재 작업 환경은 Linux x64이며 .NET SDK/Windows GUI/사용자 장비 접근이 없다. Windows 검증은 아래 GitHub Actions에서 수행한다. NAS/SMB 서버·실제 매핑/RaiDrive 계정·backend/version은 **미제공/미검증**이다. Linux 실행을 Windows 성공으로 계산하지 않는다.
-- 최종 자동 검증 결과: **Windows 통합·전체 영향 회귀 최초 실행 통과**. Release 빌드 경고 0·오류 0, 기본 T03/T05도 성공했다. 자동 검증과 실물 미검증 인계는 완료하고 PR #28 검토를 기다린다. T18 착수는 아래 후속 판정을 따르며 이번 작업에서 배포/VSR을 시작하지 않는다.
+- 최종 자동 검증 결과: **Windows 통합·전체 영향 회귀 최초 실행 통과**. Release 빌드 경고 0·오류 0, 기본 T03/T05도 성공했다. 자동 검증과 실물 미검증 인계 및 보완 검토를 완료하고 PR #28을 e850a64로 main에 통합했다. T18 착수는 아래 후속 판정을 따르며 이번 작업에서 배포/VSR을 시작하지 않는다.
 
 ## 기존 증거 대조
 
@@ -116,7 +116,7 @@ R는 N01~N12 모두 미실시다. N02의 실제 사용자 DB, N11의 실제 사�
 - 완료: 최신 통합 코드 Windows x64/.NET 10 restore·Release, T03/05/06/07/09/10/11 영향 회귀, N01~N12 증거 대조, 부족한 N12 직접 검사, 지원 한계·실사용 점검표 및 상태 문서 인계. 제품 통합 결함은 이번 검사에서 발견되지 않아 제품 수정을 하지 않았다.
 - 미검증: 실제 NAS/SMB/RaiDrive의 backend/version별 연결·단절·재매핑·캐시·전송량·원격 삭제, 사용자 DB 복사본·실제 Explorer·로그오프 등 위 점검표 전부. 자동 통과로 대체하지 않는다.
 - 차단: 자동 검증 측 차단은 없다. 실물 장비/계정/권한 미제공은 전체 원격 호환성 선언의 차단이다. 원격 휴지통 Unknown 차단과 정상 종료 시간 상한 없음은 현재 지원 한계다.
-- T18 착수 여부: **현재는 PR #28 검토 대기이며 착수하지 않는다.** PR 결과 검토에서 위 미검증의 실사용 이관 범위·지원 한계를 확인한 뒤 T18 착수를 판단할 수 있다. 실제 원격 호환성 완료를 전제로 배포 범위를 확정하면 실물 결과가 먼저 필요하다. 직접 병합·T18 배포·T19 VSR은 수행하지 않았다.
+- T18 착수 여부: **PR #28 검토·병합을 완료했으며 T18 패키지 준비 착수가 가능하다.** 미검증의 실사용 이관 범위·지원 한계를 배포 안내에 명시한다. 실제 원격 호환성 완료를 전제로 배포 범위를 확정하면 실물 결과가 먼저 필요하다. 직접 병합·T18 배포·T19 VSR은 수행하지 않았다.
 
 전체 NAS/RaiDrive 호환성 완료로 표시하지 않는다. T09~17의 기존 수동 미검증/승인 생략, T11 native dialog 최초 실패/재실행, AVI 음성 조사 보류를 모두 유지하며 이 작업에서 재판정하지 않는다.
 
@@ -134,4 +134,4 @@ R는 N01~N12 모두 미실시다. N02의 실제 사용자 DB, N11의 실제 사�
 - 정확한 테스트 변경/Windows 검증 SHA: `387cc495f96ea28d0e1de585d55ca007b31418e9`. `src` tree는 기존과 같은 `ad7ffd93ae3e72c0f820e0ae8147ff9f2a88fb1f`, `tests` tree는 `96b80bb30c189730d29afe18b87358dacdb663be`다. 기존 workflow를 변경하지 않고 해당 PR head의 자동 실행 결과를 확인했다.
 - Windows 실행 결과: **2026-10-11 최초 실행 success**. Windows Server 2025 x64 / OS 10.0.26100 / SDK 10.0.401 / runtime 10.0.12에서 정확한 head·src/tests tree를 로그로 확인했다. 솔루션 및 추가 4개 Release 빌드 각각 경고 0·오류 0, Scanner `t18a6`의 Comic/Video 반복 성공·정확한 개수/PathKey·ItemId 집합·첫 시각/확인된 반복 성공 후 시각 저장 모두 PASS. 기존 전체 영향 suite 및 셸 정상 시작/종료 2회도 성공했다. [통합 CI 38120631136](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38120631136), job `114414440414`; Scanner 명령은 `dotnet run --project tests/RandomMultimediaManager.Scanner.Tests -c Release --no-build -- t18a6`다.
 - 기존 N01~N12 증거표·최초 통합 실행·실물 미검증 점검표·지원 한계를 보존한다. 실제 NAS/RaiDrive, 기존 수동 미검증/승인 생략·T11 재실행 이력·AVI 조사 보류는 유지한다. 제품 src·DB/공통 API·정책·배포 변경, 직접 병합, 새 Task 및 T18/T19 착수는 없다.
-- 같은 SHA의 [T03 38120631142](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38120631142) / [T05 38120631131](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38120631131)도 success. 같은 SHA 재실행이나 추가 수동 검증 요구는 없다. 이 결과 후 최종 제출은 상태/검증 문서 3개뿐이며 검증된 src/tests/CI를 유지한다. 자동 검증 보완 완료·병합 재검토 대기다.
+- 같은 SHA의 [T03 38120631142](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38120631142) / [T05 38120631131](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38120631131)도 success. 같은 SHA 재실행이나 추가 수동 검증 요구는 없다. 이 결과 후 최종 제출은 상태/검증 문서 3개뿐이며 검증된 src/tests/CI를 유지한다. 자동 검증 보완 확인 후 e850a64로 main 통합했다. 최종 head 5dcfa6073d18ab5465843af8a8f65d3c166c4bdc를 검토했으며 제품 코드 변경은 없다.
