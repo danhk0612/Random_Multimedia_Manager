@@ -1,5 +1,11 @@
 # 현재 구현 상태
 
+## 현재 인계 — T18 배포 방식 검토
+
+PR #30을 `951d7cd`로 main에 통합했다. 검토 입력 `2b9ad56`의 T18 CI `38195206459` 최초 성공(재현 ZIP·셸 정상 종료/재시작·전체 ZIP 의존성 회귀)을 확인했다. 이후 결과 문서와 재현 절차 경로만 수정했다. 공식 VLC source tar의 SHA256를 직접 대조하여 `extras/package/win32/build.sh`가 없고 `configure.sh`가 있는 것을 확인·수정했다. 저장된 native inventory 1,285행과 GPL 증거 6개 해시는 동결 manifest와 일치한다. 이 병합 검토에서 Windows 테스트나 검토 ZIP 다운로드를 독립 재수행한 것은 아니다.
+
+제3자 자료 정리는 통합 완료지만 앱 라이선스 선택, GPL FFmpeg 포함 번들의 배포 방식·대응 소스/고지, 깨끗한 사용자 PC 확인이 남아 공개 배포는 보류한다. 다음은 TASKS의 **T18 배포 방식 선택안 검토**(고성능 Work, `task/t18-distribution-options`)다. 라이브러리 교체/외부 연결은 검토할 대안이며 확정 구현 방향이 아니다. 사용자 PC 점검은 병렬 가능하다. 이전 실패·미검증·T19 후순위는 유지한다.
+
 ## 기반
 
 - 최초 조사 기준: main의 9ebda2c. 원격 브랜치는 main 하나였고 README와 docs 아래 기획 8개, 총 Markdown 9개만 있었다. 소스·솔루션·AGENTS.md는 없었다.

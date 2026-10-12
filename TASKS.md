@@ -23,14 +23,14 @@
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
 | T18A | 변경 감지와 경로 상태 갱신 | Astra | T18A-1~5 PR #23~27 main 통합 완료; T18A-6 PR #28 반복 스캔 검사 보완 확인·main 통합 완료 (e850a64) | T05/T12; T02 식별 계약 |
-| T18 | Windows 배포 및 통합 검증 | Astra | 검토 패키지 PR #29 제출·Windows CI 통과 / 실PC·재배포 최종 검토 대기 | T10~T13/T15~T17/T18A; D08 |
+| T18 | Windows 배포 및 통합 검증 | Astra | PR #29/#30 main 통합 / 배포 방식·앱 라이선스·실PC 확인 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 바로 다음 작업
 
-T18 PR #29의 패키징·SDK/CI 보완을 확인하고 `09eb08f`로 main에 통합했다. 검증 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`의 CI 9개 최종 success이며 통합 최초 파일 잠금 실패/같은 SHA attempt 2 성공은 보존한다. 최종 head `156d690`까지 후속 변경은 문서 3개뿐이다.
+T18 PR #30을 `951d7cd`로 main에 통합했다. 제3자 자료·고지 정리와 Windows 패키징 CI는 확인했으나 공개 배포는 보류한다. 검증 입력 SHA `2b9ad56`의 CI `38195206459` 최초 성공 이후 변경은 결과 문서와 VLC 소스 재현 경로 수정뿐이다. 공개 승인이나 T18 전체 완료가 아니다.
 
-T18 잔여 자료 정리는 **PR #30 검토 대기**다. 원문 byte 보존 보완 SHA `2b9ad56`의 T18 CI `38195206459` 최초 실행 성공·검토 artifact `11722139575`를 확인했다. 앱 라이선스 사용자 결정, 실제 GPL FFmpeg 처리/전체 contrib 대응 소스·플러그인 조건 검토, SDK/runtime/VLC 없는 사용자 Windows PC 확인이 남아 있다. 검토 패키지 통합은 공개 배포 승인이나 T18 전체 완료를 뜻하지 않는다. 실제 NAS/RaiDrive 미검증·기존 지원 한계는 유지한다.
+다음은 아래 **T18 배포 방식 선택안 검토**다. 고성능 Work가 현재 번들 유지 / 검증된 LGPL 번들 / 외부 libVLC 연결을 실제 근거와 구현 영향으로 비교하고 사용자 선택에 필요한 안을 완성한다. 앱 라이선스·엔진/번들 교체는 아직 결정하지 않는다. 깨끗한 Windows PC 수동 점검은 독립적으로 병렬 가능하다.
 
 ## T00 — 초기 기반 정리
 
@@ -257,44 +257,56 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18 — Windows 배포 및 통합 검증
 
 - 목적: 재현 가능한 초기 제품 배포.
-- 담당/상태: Astra / PR #29 검토 패키지 및 SDK/CI 보완 확인·main 통합 완료 (09eb08f). 최초 SHA `2599f48`의 CI 6개 및 보완 SHA `61a98bb`의 CI 9개 최종 success(통합 attempt 1 실패/2 성공 보존). 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md. `task/t18-release-readiness`에서 가능한 제3자 자료/부분 소스·고지 정리 완료·PR #30 검토 대기. 보완 SHA `2b9ad56`의 T18 CI `38195206459` 최초 성공 및 ZIP license 원문 11개 byte 일치 확인. 실제 GPL FFmpeg 증거로 공개 배포 차단 유지; full contrib 소스/조건·앱 라이선스·깨끗한 PC 미완료.
+- 담당/상태: Astra / PR #29 검토 패키지 및 SDK/CI 보완 확인·main 통합 완료 (09eb08f). 최초 SHA `2599f48`의 CI 6개 및 보완 SHA `61a98bb`의 CI 9개 최종 success(통합 attempt 1 실패/2 성공 보존). 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md. `task/t18-release-readiness`에서 가능한 제3자 자료/부분 소스·고지 정리 완료·PR #30 main 통합 완료 (951d7cd). 보완 SHA `2b9ad56`의 T18 CI `38195206459` 최초 성공 및 ZIP license 원문 11개 byte 일치 확인. 실제 GPL FFmpeg 증거로 공개 배포 차단 유지; full contrib 소스/조건·앱 라이선스·깨끗한 PC 미완료.
 - 선행: T10~T13/T15~T17/T18A; D08.
 - 범위/수정 영역: 패키징·배포 안내·통합 검증.
 - 완료 조건/검증: 깨끗한 Windows에서 실행, 네이티브 파일 포함/재배포 조건 확인, 전체 랜덤→감상→정리 흐름·파일 실패·DB 재시작 검증, 미구현/제약 명시.
 - 수정하지 말아야 할 영역: 업데이트 서버·백업 기능·범위 확대.
 
-### 새 작업 시작 지시문 — T18 공개 배포 준비 잔여 작업
+### 새 작업 시작 지시문 — T18 배포 방식 선택안 검토
 
 ```text
-Random_Multimedia_Manager의 T18 잔여 배포 준비만 고성능 Work로 진행해.
-최신 main/AI_WORKFLOW.md/기준 문서와 T18_DISTRIBUTION_VALIDATION.md,
-packaging/THIRD_PARTY_NOTICES.md를 먼저 읽어.
-PR #29는 09eb08f로 main 통합됐고 SDK/CI 보완은 완료됐다.
-최신 main에서 task/t18-release-readiness 브랜치로 작업해.
+Random_Multimedia_Manager의 T18 배포 방식 선택안만 고성능 Work로 검토해.
+최신 main의 AI_WORKFLOW.md, PROJECT.md, REQUIREMENTS.md, ARCHITECTURE.md,
+CURRENT_STATE.md, TASKS.md, docs/DECISIONS.md의 D08,
+docs/T18_DISTRIBUTION_VALIDATION.md와 packaging/release-readiness/README.md를 읽어.
+PR #30은 951d7cd로 통합됐다. task/t18-distribution-options 브랜치에서 시작해.
 
-- 검토 패키지의 정확한 native 번들/플러그인 목록·버전·해시를 기준으로
-  재배포 고지와 corresponding source 제공 방식을 구체화해.
-  실제 필요한 원문·대응 소스·빌드 정보와 고지를 확보/검증하고
-  재현 가능한 제공 절차와 누락 항목을 기록해.
-  일반 upstream 링크만으로 정확한 바이너리의 대응 소스를 확보했다고 주장하지 마.
-- 앱 자체 라이선스는 사용자 결정 대기다. 임의 LICENSE 추가나 권리 부여는 하지 마.
-  선택이 없어도 가능한 제3자 자료 정리는 완료하고 남은 결정만 보고해.
-- 깨끗한 Windows PC 접근이 있으면 기존 검증 문서의 재개 조건대로
-  SDK/runtime/VLC 사전 설치 없이 ZIP 실행·기본 흐름·정상 종료/재시작을 확인해.
-  접근이 없으면 기존 점검표를 사용하고 미검증으로 유지해.
-  사용자에게 SDK/VLC 제거를 요구하지 말고 별도 계정/VM의 한계를 구분해.
-- 최근 통합 CI의 comic.cbz 정리 잠금 실패 후 동일 SHA 재실행 성공을 보존해.
-  원인 미확정을 해결로 바꾸지 말고, 재현될 때만 좁은 조사와 수정 검증을 수행해.
-- CURRENT_STATE/TASKS/T18 검증 문서와 필요한 packaging 파일만 갱신해 PR로 제출해.
-  공개 배포 가능/차단을 정확히 구분하고 검토 artifact 위치·SHA를 명시해.
+목적:
+사용자가 앱 라이선스와 배포 경로를 선택할 수 있는 구체적인 비교안을 완성한다.
+기존 자료 수집을 반복하거나 T18 전체 완료/공개 가능을 선언하지 않는다.
 
-제품 기능·DB/공통 API·감상/삭제/종료 정책·SDK/패키지 버전은 바꾸지 마.
-라이브러리 교체나 구조 변경이 필요하면 근거와 선택지를 보고해.
-NAS/RaiDrive 미검증·원격 휴지통 차단·AVI 보류·기존 수동 미검증은 유지해.
-직접 병합·공개 Release/tag 발행·T19 VSR 착수는 하지 마.
+범위:
+1. 현재 번들 유지, 검증된 LGPL native 번들 확보, 외부 libVLC 설치/연결의
+   세 경로를 비교한다. 최신 공식 원문과 실제 후보 artifact의 버전·출처·해시,
+   플러그인/링크된 코드 근거를 구별한다. 이름이나 NuGet LGPL metadata만으로 판정하지 않는다.
+2. 각 경로의 고지/대응 소스 잔여, 사용자 설치 부담, 오프라인 실행,
+   현 LibVLCSharp 호환성, 코덱·SRT/SMI·하드웨어 디코딩 회귀,
+   앱 라이선스 선택과의 관계, 유지보수 비용 및 수정 파일 범위를 정리한다.
+   외부 연결이 모든 라이선스 문제를 자동 해소한다고 단정하지 않는다.
+3. 현재 코드의 native 탐색/초기화/패키징 경계를 읽고 변경 영향을 근거로 적는다.
+   후보가 없거나 확인 불가하면 미확인으로 남긴다. 새 번들 제작/교체·기능 구현은 하지 않는다.
+4. 근거가 가장 충분한 추천 경로 한 개와 대안, 사용자에게 필요한 최소 결정 질문을 만든다.
+   법적 의무, 보수적인 내부 검토 기준, 단순 미확보 빌드 정보를 구분한다.
+   모든 의존성에 같은 소스 제공 요건을 임의 적용하지 않는다.
+5. 기존 release-readiness/README.md에 비교안을 통합하고 CURRENT_STATE/TASKS를 갱신한다.
+   후속 구현이 필요하면 목적·범위·완료 조건·금지 영역·선행 사용자 결정을 작성한다.
+   결과는 검토 PR로 제출한다.
+
+완료 조건:
+세 경로의 근거/제약/실제 변경 영향, 추천과 미확정 사항,
+사용자 선택 이후 실행할 작업이 저장소만으로 이해된다.
+
+금지:
+앱 LICENSE/권리 부여를 임의 확정하지 않는다.
+제품·DB/API·감상/삭제/종료 정책·SDK/의존성 버전·번들을 변경하지 않는다.
+대량 소스 재수집이나 자체 native 빌드에 착수하지 않는다.
+기존 comic.cbz 잠금 원인 미확정, NAS/RaiDrive·원격 휴지통·AVI와
+깨끗한 Windows PC 미검증 상태를 보존한다.
+직접 병합·공개 Release/tag·T19 VSR 착수는 하지 않는다.
 ```
 
-의존성 자료 정리와 사용자 PC 수동 확인은 서로 독립적으로 병렬 진행 가능하다. 사용자 라이선스 결정 전에도 자료 정리는 진행하되 공개 릴리스는 보류한다.
+깨끗한 Windows x64 PC/VM 점검은 위 문서 검토와 병렬 가능하다. 기존 T18 점검표와 정확한 검토 artifact를 사용하고, 사전 SDK/runtime/VLC 설치 여부를 확인한다. 설치 제거를 요구하지 않으며 단순 새 계정은 깨끗한 PC의 근거가 아니다. 같은 상태 문서를 동시에 편집하지 말고 결과를 인계한다.
 
 ### T18 잔여 자료 정리 결과 — 공개 배포 차단 유지
 
