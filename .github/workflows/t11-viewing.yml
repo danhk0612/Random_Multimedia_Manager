@@ -2,6 +2,11 @@ name: T11 common viewing verification
 on:
   pull_request:
     paths:
+      - '**/packages.lock.json'
+      - '**/*.csproj'
+      - 'RandomMultimediaManager.sln'
+      - 'NuGet.Config'
+      - 'global.json'
       - 'src/**'
       - 'tests/RandomMultimediaManager.Viewing.Tests/**'
       - '.github/workflows/t11-viewing.yml'
@@ -13,9 +18,21 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          global-json-file: global.json
+      - name: Verify exact head and global.json SDK
+        shell: pwsh
+        run: |
+          $head = git rev-parse HEAD
+          if ($head -ne '${{ github.event.pull_request.head.sha }}') { throw 'Unexpected checkout SHA.' }
+          Write-Output "Verified checkout SHA: $head"
+          $expected = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          $actual = dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $actual -ne $expected) { throw "SDK mismatch: expected $expected, actual $actual" }
+          Write-Output "Verified global.json SDK: $actual"
       - run: dotnet --info
       - run: dotnet build RandomMultimediaManager.sln -c Release
       - run: dotnet run --project tests/RandomMultimediaManager.Core.Tests -c Release --no-build

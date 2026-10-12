@@ -1,0 +1,75 @@
+name: T18 Windows review package
+on:
+  pull_request:
+    paths:
+      - '**/packages.lock.json'
+      - '**/*.csproj'
+      - 'RandomMultimediaManager.sln'
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/*Windows*.ps1'
+      - 'packaging/**'
+      - 'global.json'
+      - 'NuGet.Config'
+      - '.github/workflows/t18-packaging.yml'
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Verify exact head and global.json SDK
+        shell: pwsh
+        run: |
+          $head = git rev-parse HEAD
+          if ($head -ne '${{ github.event.pull_request.head.sha }}') { throw 'Unexpected checkout SHA.' }
+          Write-Output "Verified checkout SHA: $head"
+          $expected = (Get-Content global.json -Raw | ConvertFrom-Json).sdk.version
+          $actual = dotnet --version
+          if ($LASTEXITCODE -ne 0 -or $actual -ne $expected) { throw "SDK mismatch: expected $expected, actual $actual" }
+          Write-Output "Verified global.json SDK: $actual"
+      - name: Exact SHA and environment
+        shell: pwsh
+        run: |
+          git rev-parse HEAD
+          git rev-parse HEAD:src HEAD:tests
+          dotnet --info
+          [Runtime.InteropServices.RuntimeInformation]::OSDescription
+          Write-Output "Global VLC installed: $(Test-Path 'C:/Program Files/VideoLAN/VLC/vlc.exe')"
+      - name: Publish folder and review ZIP
+        shell: pwsh
+        run: ./scripts/Package-Windows.ps1
+      - name: Repeat packaging with the resolved lock
+        shell: pwsh
+        run: |
+          ./scripts/Package-Windows.ps1 -OutputDirectory artifacts/t18-repeat
+          $first = Get-ChildItem artifacts/t18 -Filter '*.zip'
+          $second = Get-ChildItem artifacts/t18-repeat -Filter '*.zip'
+          if ((Get-FileHash $first.FullName).Hash -ne (Get-FileHash $second.FullName).Hash) { throw 'Repeated ZIP bytes differ.' }
+          Write-Output 'PASS byte-identical repeat ZIP'
+      - name: Extract and run app and existing regression against ZIP dependencies
+        shell: pwsh
+        run: ./scripts/Verify-WindowsPackage.ps1
+      - name: Retain review package and exact dependency evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t18-windows-review-${{ github.event.pull_request.head.sha }}-attempt-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            artifacts/t18/*.zip
+            artifacts/t18/*.sha256
+            artifacts/t18/*.log
+            artifacts/t18/loaded-native-modules.txt
+            artifacts/t18/RandomMultimediaManager-win-x64/build-info.json
+            artifacts/t18/RandomMultimediaManager-win-x64/files.json
+            artifacts/t18/RandomMultimediaManager-win-x64/dependencies.json
+            src/**/packages.lock.json
