@@ -97,3 +97,97 @@ for row in rows:
 | NAS/RaiDrive·원격 휴지통·AVI·수동 미검증 | 기존 상태 유지. 원격 휴지통 Unknown/차단, AVI 보류·기존 사용자 승인 생략·실제 IO drain/정상 종료 상한 없음 |
 
 현재 공개 배포 **차단 유지**. 자료 정리는 사용자 앱 라이선스 결정 전에 가능한 부분까지 끝냈다. 직접 병합·공개 Release/tag·T19 VSR은 수행하지 않는다.
+
+## T18 배포 방식 선택안 — 사용자 결정 전 검토
+
+검토 기준은 main `8b9ce03`(PR #30 통합 `951d7cd`), 브랜치는 `task/t18-distribution-options`다. 아래는 **추천과 조건부 후속 작업**이며 D08·앱 라이선스·제품을 변경하는 결정이 아니다. 기존 자료를 재사용했고 대량 소스 수집·native 빌드·번들 교체는 하지 않았다.
+
+### 공식 원문과 후보의 확인 수준
+
+2026-10-12 공식 URL을 다시 확인했다. 웹 조회에서 실패한 페이지는 Python HTTPS 직접 요청으로 재확인했다. HTTP 200은 원문 접근 확인이며 바이너리의 적합성이나 법적 승인과 다르다.
+
+| 공식 근거 | 이번 확인 / 적용 범위 |
+|---|---|
+| [VideoLAN 법적 안내](https://www.videolan.org/legal.html) | 직접 HTTP 200, 30,470 bytes, 페이지 SHA256 `3dd16518a6778cd4108514d5944658870e7eec7c192c6f8796b685794b364bb9`. 소프트웨어별 조건 준수와 재배포 소스 제공의 일반 안내; libVLC/plugin별 조건은 아래 exact 코드/고지 근거로 구분하며 이 페이지로 판정을 대체하지 않음 |
+| [FFmpeg 법적 안내](https://ffmpeg.org/legal.html) | 웹 본문 접근 성공. GPL 옵션 사용의 의미와 LGPL 배포 체크리스트 확인. 체크리스트의 권장 제공 방식을 라이선스의 유일한 이행 방식으로 확대하지 않음 |
+| [LGPL 2.1 원문](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt) | 직접 HTTP 200, 26,419 bytes, SHA256 `20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95`. §4/5/6의 library 배포·결합·교체 조건을 구분. 기존 SPDX 고지의 표현/줄바꿈과 새 GNU 파일의 byte 동일을 주장하지 않음 |
+| [GPL 2 원문](https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt) | 직접 HTTP 200, 17,984 bytes, SHA256 `edaef632cbb643e4e7a221717a6c441a4c1a7c918e6e4d56debc3d8739b233f6`. §2/3의 결합물·단순 집합·대응 소스 제공 조건. 앱 전체 적용은 결합 관계/다른 조건과 함께 별도 검토 |
+| [Core.Initialize API](https://docs.videolan.me/libvlcsharp/api/LibVLCSharp.Shared.Core.html) | 웹 본문 접근 성공. Windows custom directory와 major version 검사 지원. 현재 사용한 **3.10.1 exact source archive**의 `src/LibVLCSharp/Shared/Core/Core.cs`, `Core.Desktop.cs`, `docs/versioning.md`도 직접 읽어 대조 |
+| [공식 VLC 3.0.23 win64 목록](https://download.videolan.org/pub/videolan/vlc/3.0.23/win64/) 및 [ZIP checksum](https://download.videolan.org/pub/videolan/vlc/3.0.23/win64/vlc-3.0.23-win64.zip.sha256) | 목록 접근 성공, checksum 직접 HTTP 200. ZIP hash가 기존 `official-vlc-comparison.json`과 일치. 이번에 전체 VLC ZIP을 다시 내려받거나 Windows에서 실행한 것은 아님 |
+
+| 경로 / 실제 후보 | 버전·출처·hash 및 판정 |
+|---|---|
+| A 현재 번들 유지 | VideoLAN.LibVLC.Windows **3.0.23.1**, native **3.0.23-2-0-g79128878dd**, LibVLCSharp/WPF **3.10.1**. 동결 artifact `11703665480`와 전체 hash는 위 고정 검토물/manifest가 기준. 고지 보완 artifact `11722139575`의 내부 ZIP SHA256는 `c9e488ab078dc354f5572edc8c52e36383af4dfae4a55545f4e58898c7089d04`; 정확한 SHA/CI는 `docs/T18_DISTRIBUTION_VALIDATION.md` 참조. GPL FFmpeg가 포함된 **확인된 후보**, LGPL-only 아님 |
+| B 검증된 LGPL native 번들 | 현재 확보한 **적격 후보 없음**. exact version/공식 출처/archive hash/per-file hash/전체 링크 조건은 미확인. NuGet 검색에 3.0.24 표시도 있었으나 버전 페이지의 직접 웹 확인 실패·실제 archive/플러그인 검사 없음. 신규 버전의 존재/라이선스 적합성 모두 이번 비교의 확정 근거로 사용하지 않으며 업그레이드를 권하지 않음. GPL 표식 6개를 지우거나 플러그인 2개를 삭제하는 것도 검증된 LGPL 번들 제작이 아님 |
+| C 외부 libVLC 설치/연결 | 구체적인 대조 후보는 공식 **VLC 3.0.23 win64 ZIP**, URL은 위 공식 목록. 79,893,405 bytes, SHA256 `992d19dbd0b8a7cde9167d2f7780b1ef6f92acc8a71acfa736101a21f35181e1`. 기존 byte 대조에서 현재 번들의 x64 파일 423개와 동일. installer EXE/MSI hash·사용자 실제 설치 경로/모듈 로드는 이번에 검증하지 않음. 전체 VLC 설치와 사용에 따른 앱의 법적 관계는 별도이며 이 ZIP의 동일 FFmpeg 플러그인은 LGPL-only 대체 증거가 아님 |
+
+정확한 x64 주요 DLL hash: libvlc `8ae9f16a72441f43fb4ae8f72c843736726e067ea4a8def2646748631cc4e872`, libvlccore `d3475b834dd3eb77910f37f71b0341d358bcbdda5b9f04cc4a3a8e2be1bc8e35`, avcodec `ded0566aef7b4e9a527cdfeb12f92b9a3b2736b824b687071359244979ee02c7`.swscale 및 다른 아키텍처/지원 파일은 `GPL_FFMPEG_EVIDENCE.json`과 `native-inventory.csv`가 단일 기준이다. 후보 B에 이를 전용하지 않는다.
+
+### 세 경로 비교
+
+| 비교 항목 | A 현재 번들 | B 검증된 LGPL 번들 | C 외부 설치/연결 |
+|---|---|---|---|
+| 사용자 설치 부담 | 앱 ZIP 전체 압축 해제. 별도 VLC 설치 없음 | 적격 번들을 확보하면 A와 같은 흐름 | 지원하는 x64 native 일체를 사용자가 별도 설치/준비하고 경로 연결. 버전/업데이트 관리 부담 증가 |
+| 오프라인 실행 | 기존 CI는 ZIP 내 native/runtime 사용을 확인. 클린 PC 미검증 | 필요한 payload 확보 후 가능 예상; 실제 미검증 | 외부 DLL/plugins와 앱 runtime가 모두 준비된 뒤 가능 예상. 최초 준비에는 별도 다운로드 또는 오프라인 매체 필요 |
+| LibVLCSharp 3.10.1 호환 | exact 번들에서 기존 Windows 회귀 근거 있음 | libVLC 3.x가 첫 후보 조건. major 일치만으로 plugin·코덱·출력 호환 완료 아님 | 3.0.23 win64는 기존 파일 동일 근거만 있음. 외부 경로 초기화·실제 로드는 미검증; 임의 4.x/32비트 연결 제외 |
+| 코덱·자막·HW | 현재 기능/기존 미검증 보존; AVI는 보류 | 빌드 옵션과 제거 모듈에 따라 코덱·HW·자막 기능 감소 가능. SRT/SMI 및 avformat 유지 확인 필요 | 같은 버전이라도 설치 구성·plugin 탐색·사용자 업데이트로 달라짐. 공식 VLC player에서 재생된다는 사실은 자체 WPF 회귀 통과 아님 |
+| 고지·대응 소스 잔여 | GPL FFmpeg 포함 exact contrib·patches·빌드 지시·per-file 조건과 제공 수단 미완료. x86/ARM64도 ZIP에 들어 있으므로 현 상태에서는 검토 대상 | 새로운 번들의 library·linked contrib 소스/조건과 LGPL 교체 가능성·고지 검토 필요. 기존 소스가 새 바이너리와 맞는다고 가정 금지 | 앱에서 직접 배포하지 않는 native의 재배포 소스 부담은 줄일 수 있음. 앱에 남는 LibVLCSharp/WPF LGPL 및 다른 의존성 의무 유지. native를 앱 ZIP/자동 다운로드/미러로 함께 공급하면 해당 공급 행위를 별도 검토 |
+| 앱 라이선스 선택 관계 | GPL 조건과 양립 가능한 권리 부여를 검토하는 경로. 앱에 임의 GPL/MIT 지정 금지; 라이선스 문구만 바꿔도 전체 소스 미확보는 해결되지 않음 | LGPL 조건을 충족하는 결합이면 앱 자체 라이선스 선택의 폭을 넓힐 수 있음. 선택·권리 확인은 여전히 필요 | 설치 위치 분리로 결합 관계가 사라지지 않음. 같은 프로세스에서 GPL 코드가 포함된 plugin을 사용하는 관계를 검토해야 하며 MIT/비공개 앱의 자동 허용을 선언하지 않음 |
+| 유지보수 비용(상대 추정) | 초기 자료/권리 검토 높음, 제품 변경 낮음. 업데이트마다 binary/source/plugin 대응 재검토 | 초기 후보 확보·구성 검증 가장 큼; 직접 빌드 선택 시 toolchain/보안 업데이트 비용 추가 | 최초 연결 UX·검증 변경 중간 이상, 사용자별 경로/버전/설치 상태 지원 비용 지속 |
+| 현재 공개 준비 | 차단 | 적격 후보 없음으로 차단 | 연결 미구현·조건 미검토로 차단 |
+
+### 실제 코드와 패키징 경계
+
+`PreparedVideo.CreateNative`는 경로 없이 `Core.Initialize()` 후 `new LibVLC(true, options)`를 호출한다. 앱에는 외부 설치 검색/경로 선택/저장 기능이 없다. exact wrapper의 기본 탐색은 앱/assembly 주변 `libvlc/<arch>`와 DLL 경로이며 **Program Files 또는 registry의 설치된 VLC 자동 검색이 아니다**. custom path는 libvlccore와 libvlc를 순서대로 로드하고 major를 검사한다. native handle/loaded 상태는 static이므로 재생 중 엔진 경로 변경을 승인된 기능으로 가정하지 않는다. 외부 방식은 최초 native 사용 전에 경로를 결정하고 이후 변경은 재시작 기준으로 설계 검토해야 한다.
+
+| 경계 / 현재 파일 | A의 후속 영향 | B의 후속 영향 | C의 후속 영향 |
+|---|---|---|---|
+| `src/RandomMultimediaManager.App/RandomMultimediaManager.App.csproj`, App/Core `packages.lock.json` | 현재 버전/graph 유지 가능 | 적격 공급 방식에 따라 native reference/content 공급과 영향 locks 검토. wrapper 버전 변경은 별도 승인 | native PackageReference 제거와 transitive graph/locks 확인 필요. managed wrappers 유지; 테스트 프로젝트 직접 참조도 조사 |
+| `src/RandomMultimediaManager.App/Video/PreparedVideo.cs` | 기존 준비/해제/옵션 유지 | 동일 layout/ABI 후보라면 변경 불필요할 수 있음; 후보 확인 전 확정 금지 | 최초 초기화에 승인된 absolute native directory 전달, 잘못된 구조/architecture/버전 결과를 기존 준비 실패 경계로 연결 |
+| native 경로 UI/저장 | 새 기능 불필요 | 동일 bundled layout이면 새 기능 불필요 | 경로 선택·보관·설치 없음의 사용자 안내가 필요. `MainWindow.xaml(.cs)` 및 기존 `Data/LibraryDatabase.Reads.cs`, `LibraryDatabase.Catalog.cs` 및 Core AppSettings의 저장 계약 적용 가능성은 후속 설계에서 확인. DB schema/API 신규 필드 여부는 이번에 승인하지 않음 |
+| `scripts/Package-Windows.ps1` | 현 필수 native 검사를 유지. 승인 후 검증된 source sidecar 제공 절차 추가 가능 | 후보 payload·manifest·고지 공급/검사 변경. 전 아키텍처 포함 여부도 승인 범위 안에서 결정 | bundled libvlc 필수 파일/plugins 검사를 외부 방식에 맞게 변경, 최종 ZIP에 native 미포함을 직접 확인. self-contained .NET/SQLite/Skia는 그대로 |
+| `scripts/Verify-WindowsPackage.ps1`, `.github/workflows/t18-packaging.yml` | 기존 동일 SHA ZIP/로드 회귀 유지 | 새 exact 후보 hash·버전·동일 ZIP 및 실제 load 경로 검사 | 현재 libvlc/core가 ZIP root 아래여야 하는 assertion과 harness 의존성 공급을 변경해야 함. .NET/SQLite/Skia는 ZIP, VLC는 지정 외부 root를 각각 검증; assertion 단순 삭제 금지 |
+| `tests/RandomMultimediaManager.Video.Tests`, `Subtitle.Tests`, `Viewing.Tests` 및 관련 csproj | 현 회귀/미검증 유지 | 후보별 동등 기능과 손실 확인 | 테스트에서도 앱의 외부 초기화와 같은 경계를 사용해야 함. harness publish가 native를 재혼입하지 않는지 확인 |
+| `packaging/USER_GUIDE.md`, `THIRD_PARTY_NOTICES.md`, `licenses/`, 이 README 및 T18 검증 문서 | 승인된 권리/소스 제공 위치·exact manifest 대응 | 새 공급자의 원문·contrib/소스·지원 기능 대응 | 별도 설치 단계/지원 버전·경로/변경 시 재시작 안내, 앱에 실제 포함된 것과 외부 공급의 고지 구분 |
+
+파일 목록은 영향 분석이지 수정 승인이 아니다. 특히 C는 단순히 NuGet reference 하나를 제거하면 끝나는 작업이 아니다. A/B/C 모두 랜덤·Pending·삭제·해제·숨김/정상 종료 계약을 유지한다.
+
+### 의무·내부 기준·미확보 정보를 구분
+
+| 구분 | 적용 |
+|---|---|
+| 라이선스 원문에 따른 의무 | LGPL library 바이너리 자체 배포의 대응 소스 조건(§4), 결합물의 고지·권리/교체 조건(§6), GPL 적용 부분의 고지·변경/전체 대응 소스 및 허용되는 제공 경로(§2/3)를 실제 배포 형태에 맞춰 충족해야 함. LGPL §6(b)의 적합한 공유 library 사용과, 직접 library를 배포할 때의 §4를 혼동하지 않음 |
+| 보수적인 내부 검토 기준 | 현재 GPL 포함 native를 in-process 사용하는 결합에 대해 양립 가능한 앱 권리와 라이선스 범위를 확인하기 전 공개 보류. exact per-file/hash 대응표, 검증한 source sidecar를 바이너리와 같은 영속 배포 위치에서 제공하는 방식을 권장. 법이 모든 경우 sidecar/같은 서버/byte 동일 재빌드를 요구한다는 뜻은 아님 |
+| 단순 미확보 빌드 정보 | compiler patch version·실제 configure 로그·아키텍처별 provenance 및 SQLitePCLRaw exact commit 미확보. 필요한 컴파일/설치 scripts·patches는 대응 소스 검토 대상이지만, 모든 compiler 바이너리의 수집이나 native byte 동일 재빌드를 일괄 법적 의무로 두지 않음 |
+| 다른 의존성의 조건 | MIT wrapper/.NET의 고지, Apache-2.0 SQLitePCLRaw의 라이선스·적용되는 NOTICE/변경 고지, SQLite public-domain 상태는 각각 검토. 동일한 GPL 전체 소스 요건을 일괄 부과하지 않음. Skia native/linked third-party는 MIT wrapper 이름만으로 완료 판정하지 않음 |
+
+동적 연결·별도 폴더·공개 GitHub 저장소라는 사실 하나만으로 조건 충족을 선언하지 않는다. A에서 GPL-compatible 경로를 제안하는 것은 **내부 검토 선택안**이며 현재 문자열 증거만으로 앱 전체의 법적 라이선스를 확정한 결론이 아니다. 예를 들어 GPL-2.0-only를 즉시 선택하는 것도 Apache-2.0 등 타 의존성과의 양립 검토 없이 진행하지 않는다. B/C에도 앱 권리 부여 문구/EULA와 library 수정·debugging 목적 reverse engineering 제한 검토가 남는다.
+
+### 추천 한 개와 대안
+
+**추천: A 현재 번들을 유지하고 GPL 조건과 양립 가능한 공개 소스 배포를 검토하는 경로.** 전제는 사용자가 자신의 앱 코드에 그 권리를 부여하는 방향을 수용하고, 기여 코드/전체 graph의 양립 및 정확한 source 제공을 후속 검토로 닫는 것이다. 추천 이유는 D08의 의존성 포함 우선, exact payload/hash·기존 Windows 회귀·공식 파일 대응 근거가 가장 충분하고 제품 엔진/코덱 변경을 피할 수 있다는 점이다. 소스 잔여 작업량은 크며 빠른 공개를 보장하지 않는다. 전제를 수용하지 않으면 A를 실행하지 않고 선택을 다시 받는다.
+
+대안 **B**는 앱 라이선스 선택 폭과 설치 없는 UX를 우선할 때다. 먼저 적격 x64/libVLC 3.x 번들 하나의 binary/linked-code/source 조건을 확인하는 제한 검토만 승인하고, 찾지 못하면 미확인으로 중단한다. 자체 native 빌드는 별도 비용·범위 승인 전 시작하지 않는다. **C**는 사용자가 별도 설치를 수용하고 실제 연결 관계/대상 배포물 조건 검토가 성립할 때의 대안이다. 공식 3.0.23 외부 ZIP은 기술 대조 후보일 뿐 LGPL 문제의 해결책으로 추천하지 않는다.
+
+사용자에게 필요한 최소 질문(검토 후 선택, 이번 작업에서 답을 가정하지 않음):
+
+1. **앱 소스에 GPL과 양립하는 이용·수정·재배포 권리를 부여하는 방향을 수용하는가?** 수용하면 A의 조건 검토로, 수용하지 않거나 보류하면 다음 질문으로 간다. 정확한 앱 라이선스명은 전체 의존성과 권리 확인 후 별도로 확정한다.
+2. **설치 없는 ZIP 유지를 위해 LGPL 후보 확보를 먼저 검토할 것인가(B), 별도 x64 native 설치/경로 연결을 수용할 것인가(C)?** C는 법적 검토가 닫히지 않으면 구현하지 않는다. 둘 다 보류할 수도 있으며 그때 공개 차단을 유지한다.
+
+### 선택 후 작업 계약 — 아직 착수하지 않음
+
+| 후속 작업 | 목적·선행 사용자 결정 | 범위 | 완료 조건 | 금지 영역 |
+|---|---|---|---|---|
+| T18-D1 현재 번들 권리·소스 제공 준비 | A 선택 및 GPL-compatible 권리 부여 방향 수용. 정확한 앱 LICENSE 문구는 사용자 별도 확정 | 현 exact graph의 양립·기여 권리/per-file 조건 검토, 필요한 contrib archives/patches/scripts 대응·source sidecar 및 고지 제공 계획. 이 경로를 선택한 뒤에만 잔여 소스 수집 재개 | 앱 라이선스 선택에 필요한 graph/권리 근거, 바이너리별 소스/고지 매핑과 제공 방식, 빠진 조건 목록. 공개 가능 여부를 별도 보고 | 엔진/버전 교체·기능/DB 변경·자동 license 지정·직접 병합·Release/tag |
+| T18-D2 LGPL 후보 적격성 확인 | B 선택. 조사의 공급 경로/예산·직접 빌드 제외를 사용자 확인 | 기존 버전 조건을 우선하는 x64/libVLC 3.x 후보 한 개를 공급자 자료와 실제 파일로 검토. 후보 hash·linked libraries/license·대응 소스·코덱 구성 기록 | 적격 후보 확보 여부를 명확히 판정. 없음/자료 불충분이면 중단·재개 조건 보고, 후보 선택·제품 반영은 별도 사용자 승인 | 대량 수집·자체 build·제품/locks/native 교체·임의 라이선스·공개 배포 |
+| T18-D3 선택한 LGPL 후보 통합 | D2 적격 후보, 그 exact hash/공급 방식 및 변경 범위 승인, 앱 라이선스 사용자 결정 | 위 B 영향 파일에 한정해 native 공급·packaging/고지·회귀 연결 | exact SHA ZIP 재현/manifest·native load·전체 회귀와 아래 미디어 비교, source/권리 조건 검토. 기능 손실은 수용 결정 전 공개 차단 | wrapper/SDK 임의 변경·DB/세션/삭제/종료 정책 변경·기능 손실 은폐·직접 공개 |
+| T18-D4 외부 연결 설계·구현 | C 선택, 대상 exact native artifact 및 결합 조건 검토, 경로 UX/저장 방식 사용자 승인 | 최초 초기화의 external root, x64/major/구조 확인·기존 준비 실패 연결, native 미포함 packaging/CI·사용 안내. 저장/API 변경이 필요하면 공통 계약 검토 후 별도 승인 | 외부 exact root 실제 로드·ZIP native 미포함·미설치/잘못된 경로/32비트/4.x/누락 plugin 검사, 최초 설정/재시작·전체 회귀와 지원 버전 고정. source/고지 조건 보고 | 무제한 자동 검색/다운로드·외부 플레이어 실행으로 대체·DB 임의 확대·세션/정상 종료 변경·라이선스 자동 면제·공개 배포 |
+| T18-D5 선택 경로의 클린 PC/공개 전 검토 | 선택 경로의 구현·고지/소스 조건 완료 및 exact 검토 ZIP. 실PC 접근 확보 | 기존 T18 점검표, A/B는 SDK/runtime/VLC 미설치 지원 OS, C는 처음 VLC 미설치 상태와 승인 설치 후 상태를 분리. 테스트 복사본만 사용 | OS/설치 상태·ZIP hash·실제 loaded DLL 경로·오프라인 실행·기본 흐름/실패 보존·권리/소스 제공 대조를 기록. 공개 승인 요청은 그 이후 별도 | 기존 앱 데이터 초기화·사용자 설치 제거 요구·새 계정을 클린 PC로 간주·검증 없는 공개/전체 완료 |
+
+B/C의 필수 미디어 비교는 기존 지원 확장자 `.mp4/.mkv/.avi/.webm/.mov/.wmv/.m4v/.ts`의 테스트 복사본과 대표 H.264/HEVC/VP9/AV1·AAC/AC3 등을 대상으로 후보가 실제 지원하는 범위를 기록한다. AVI의 `--demux=avformat` 옵션이 있으므로 avcodec/swscale를 삭제하고 통과로 간주하지 않는다. 한글 UTF-8 SRT 및 UTF-8/CP949 SMI 자동/수동 연결·싱크·끄기, HW on/off와 실제 디코더 경로, WPF 출력/전체화면/음소거/지연 준비·취소/끝 위치/Dispose 후 파일 잠금·삭제/정상 종료 회귀를 비교한다. codec 네 가지 전부를 새 필수 제품 보장으로 승격하지 않고 미지원/기존 대비 손실을 사용자에게 보고한다. fixtures/CI 합성 검증과 실파일/실HW 청취·화면 확인을 구분한다.
+
+### 이번 검토의 검증 및 남은 상태
+
+변경은 이 README와 CURRENT_STATE/TASKS뿐이다. 기존 archive 4개와 inventory/manifest/GPL evidence hash를 로컬 대조했고 exact wrapper 초기화 소스와 제품/패키징 경계를 읽었다. Markdown 링크·diff/문서 보존을 검사한다. `packaging/**`가 T18 CI paths에 포함되므로 이 README만 바뀌어도 PR exact head에서 기존 Windows 패키징 CI가 실행된다. 그 결과는 PR checks로 확인하며 새로운 LGPL/외부 방식 구현 검증이나 라이선스 승인으로 해석하지 않는다.
+
+깨끗한 Windows PC, NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 조사 보류·기존 수동 미검증/승인 생략·실제 IO drain/정상 종료 상한 없음은 유지한다. 통합 `38142117377`의 최초 comic.cbz cleanup 잠금 실패→동일 SHA 재실행 성공은 원인 미확정이며 이번 문서 검토가 해결한 것이 아니다. 기존 자료/패키지/실패 이력과 앱 라이선스 미확정·공개 배포 차단을 보존한다.
