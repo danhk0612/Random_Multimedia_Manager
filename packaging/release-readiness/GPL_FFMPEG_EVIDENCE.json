@@ -1,0 +1,82 @@
+{
+  "reviewCommit": "61a98bb5f51a0aa997ab37429e00cee3be18a4cf",
+  "checkedOn": "2026-10-12",
+  "method": "ASCII strings in frozen manifest-verified binaries; not runtime license API or complete dependency scan",
+  "findings": [
+    {
+      "path": "libvlc/win-arm64/plugins/codec/libavcodec_plugin.dll",
+      "sha256": "02ef82445c5592613fa4d37f435b90290d17130b8bf30043ce704a5f08027397",
+      "strings": [
+        "Mb`?FFmpeg version 4.4.5",
+        "--extra-ldflags='-lucrt --start-no-unused-arguments -Wl,-l:libunwind.a -Wl,-l:libpthread.a -static-libstdc++ --end-no-unused-arguments -L/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt/lib ' --cc=aarch64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=aarch64-w64-mingw32- --arch=aarch64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --nm= --ar=aarch64-w64-mingw32-ar --ranlib=aarch64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt --enable-static --disable-shared",
+        "libavformat license: GPL version 2 or later",
+        "FFmpeg version 4.4.5",
+        "--extra-ldflags='-lucrt --start-no-unused-arguments -Wl,-l:libunwind.a -Wl,-l:libpthread.a -static-libstdc++ --end-no-unused-arguments -L/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt/lib ' --cc=aarch64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=aarch64-w64-mingw32- --arch=aarch64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --nm= --ar=aarch64-w64-mingw32-ar --ranlib=aarch64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt --enable-static --disable-shared",
+        "libavcodec license: GPL version 2 or later",
+        " is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.",
+        "FFmpeg version 4.4.5",
+        "--extra-ldflags='-lucrt --start-no-unused-arguments -Wl,-l:libunwind.a -Wl,-l:libpthread.a -static-libstdc++ --end-no-unused-arguments -L/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt/lib ' --cc=aarch64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=aarch64-w64-mingw32- --arch=aarch64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --nm= --ar=aarch64-w64-mingw32-ar --ranlib=aarch64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt --enable-static --disable-shared",
+        "libavutil license: GPL version 2 or later"
+      ]
+    },
+    {
+      "path": "libvlc/win-arm64/plugins/video_chroma/libswscale_plugin.dll",
+      "sha256": "a232049725cb470911fa79238288a1bfdeffcdcc97c280839840086bd05d18ff",
+      "strings": [
+        "--extra-ldflags='-lucrt --start-no-unused-arguments -Wl,-l:libunwind.a -Wl,-l:libpthread.a -static-libstdc++ --end-no-unused-arguments -L/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt/lib ' --cc=aarch64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=aarch64-w64-mingw32- --arch=aarch64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --nm= --ar=aarch64-w64-mingw32-ar --ranlib=aarch64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/aarch64-w64-mingw32ucrt --enable-static --disable-shared",
+        "libswscale license: GPL version 2 or later",
+        " is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented."
+      ]
+    },
+    {
+      "path": "libvlc/win-x64/plugins/codec/libavcodec_plugin.dll",
+      "sha256": "ded0566aef7b4e9a527cdfeb12f92b9a3b2736b824b687071359244979ee02c7",
+      "strings": [
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/x86_64-w64-mingw32/lib ' --cc=x86_64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=athlon64 --arch=x86_64 --nm= --ar=x86_64-w64-mingw32-ar --ranlib=x86_64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/x86_64-w64-mingw32 --enable-static --disable-shared",
+        "libavformat license: GPL version 2 or later",
+        "FFmpeg version 4.4.5",
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/x86_64-w64-mingw32/lib ' --cc=x86_64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=athlon64 --arch=x86_64 --nm= --ar=x86_64-w64-mingw32-ar --ranlib=x86_64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/x86_64-w64-mingw32 --enable-static --disable-shared",
+        "libavcodec license: GPL version 2 or later",
+        "FFmpeg version 4.4.5",
+        " is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.",
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/x86_64-w64-mingw32/lib ' --cc=x86_64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=athlon64 --arch=x86_64 --nm= --ar=x86_64-w64-mingw32-ar --ranlib=x86_64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/x86_64-w64-mingw32 --enable-static --disable-shared",
+        "libavutil license: GPL version 2 or later",
+        "FFmpeg version 4.4.5"
+      ]
+    },
+    {
+      "path": "libvlc/win-x64/plugins/video_chroma/libswscale_plugin.dll",
+      "sha256": "51ef783c1addd748d31fa1e53765f0d8d787d348f9bdf0f00eb7c5bead25f9d0",
+      "strings": [
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/x86_64-w64-mingw32/lib ' --cc=x86_64-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=x86_64-w64-mingw32- --arch=x86_64 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=athlon64 --arch=x86_64 --nm= --ar=x86_64-w64-mingw32-ar --ranlib=x86_64-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/x86_64-w64-mingw32 --enable-static --disable-shared",
+        "libswscale license: GPL version 2 or later",
+        " is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented."
+      ]
+    },
+    {
+      "path": "libvlc/win-x86/plugins/codec/libavcodec_plugin.dll",
+      "sha256": "f9731d286fb07b5cf06c23142698ab3c48354aec6a173f74b13ddf8c71d8a596",
+      "strings": [
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/i686-w64-mingw32/lib ' --cc=i686-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=i686-w64-mingw32- --arch=x86 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=i686 --arch=x86 --nm= --ar=i686-w64-mingw32-ar --ranlib=i686-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/i686-w64-mingw32 --enable-static --disable-shared",
+        "libavformat license: GPL version 2 or later",
+        "oGjFFmpeg version 4.4.5",
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/i686-w64-mingw32/lib ' --cc=i686-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=i686-w64-mingw32- --arch=x86 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=i686 --arch=x86 --nm= --ar=i686-w64-mingw32-ar --ranlib=i686-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/i686-w64-mingw32 --enable-static --disable-shared",
+        "libavcodec license: GPL version 2 or later",
+        "FFmpeg version 4.4.5",
+        " is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented.",
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/i686-w64-mingw32/lib ' --cc=i686-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=i686-w64-mingw32- --arch=x86 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=i686 --arch=x86 --nm= --ar=i686-w64-mingw32-ar --ranlib=i686-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/i686-w64-mingw32 --enable-static --disable-shared",
+        "libavutil license: GPL version 2 or later",
+        "tjFFmpeg version 4.4.5"
+      ]
+    },
+    {
+      "path": "libvlc/win-x86/plugins/video_chroma/libswscale_plugin.dll",
+      "sha256": "36e649384fc6e812a19e0ba55d25ad7af389304308ddc607933e303a2a0dc75b",
+      "strings": [
+        "--extra-ldflags=' -L/builds/videolan/vlc/contrib/i686-w64-mingw32/lib ' --cc=i686-w64-mingw32-gcc --pkg-config=pkg-config --disable-doc --disable-encoder=vorbis --disable-decoder=opus --enable-libgsm --disable-debug --disable-avdevice --disable-devices --disable-avfilter --disable-filters --disable-protocol=concat --disable-bsfs --disable-bzlib --disable-libvpx --disable-avresample --enable-bsf=vp9_superframe --disable-swresample --disable-iconv --disable-avisynth --disable-nvenc --disable-linux-perf --enable-libopenjpeg --enable-libmp3lame --enable-gpl --enable-postproc --enable-cross-compile --disable-programs --cross-prefix=i686-w64-mingw32- --arch=x86 --target-os=mingw32 --disable-w32threads --enable-pthreads --extra-libs=-lpthread --disable-mediafoundation --disable-amf --disable-schannel --enable-dxva2 --cpu=i686 --arch=x86 --nm= --ar=i686-w64-mingw32-ar --ranlib=i686-w64-mingw32-ranlib --prefix=/builds/videolan/vlc/contrib/i686-w64-mingw32 --enable-static --disable-shared",
+        "libswscale license: GPL version 2 or later",
+        " is not implemented. Update your FFmpeg version to the newest one from Git. If the problem still occurs, it means that your file has a feature which has not been implemented."
+      ]
+    }
+  ]
+}

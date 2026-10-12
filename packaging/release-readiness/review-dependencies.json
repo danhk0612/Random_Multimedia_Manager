@@ -1,0 +1,122 @@
+[
+  {
+    "package": "LibVLCSharp.WPF/3.10.1",
+    "sha512": "aE/yQPT57bYl+xZ7decqS9TtwvWncIFOzyd7yauM4EWTW8XAfjjwp4HPEx/vh9+uE5GpskIM2EtUc7tyyDjoVQ==",
+    "noticeFiles": [
+      "libvlcsharp.wpf.3.10.1.nupkg.sha512",
+      "libvlcsharp.wpf.nuspec"
+    ]
+  },
+  {
+    "package": "LibVLCSharp/3.10.1",
+    "sha512": "6iSrYMk6RU8fyftdXrfR1TW3xpR/WhEmliORuWvAu2N05wECb8k2hykWiU53/1zqx616v/qUlDbJJyqv78MDkQ==",
+    "noticeFiles": [
+      "libvlcsharp.3.10.1.nupkg.sha512",
+      "libvlcsharp.nuspec"
+    ]
+  },
+  {
+    "package": "Microsoft.Data.Sqlite.Core/10.0.8",
+    "sha512": "26t7WDiEjjAls/sFpWvVEFDxt+7Q5VPt6+blU2Lafuj9L8PzAv/GtGV4cqVPtrhWbfD2BX/z2v8hD1qXYtK6Aw==",
+    "noticeFiles": [
+      "microsoft.data.sqlite.core.10.0.8.nupkg.sha512",
+      "microsoft.data.sqlite.core.nuspec"
+    ]
+  },
+  {
+    "package": "Microsoft.Data.Sqlite/10.0.8",
+    "sha512": "iyDWyD6r/SnqgoYYQIlLhxL1ZIGZr+SByMXrJKSA1w7sOt7bPMJmN3h2laqwKqyQkjh/lUPJ7LTXwpvqzhggOQ==",
+    "noticeFiles": [
+      "microsoft.data.sqlite.10.0.8.nupkg.sha512",
+      "microsoft.data.sqlite.nuspec"
+    ]
+  },
+  {
+    "package": "SkiaSharp.NativeAssets.macOS/4.151.2",
+    "sha512": "hDGy20k1DJZuKcdbHjwaOfsPeQYY9ty8wJeG1qzJWidPUzrwwvVtTLpDdTiP1M89UWbEYyWAhZo9qOaoYae6iQ==",
+    "noticeFiles": [
+      "LICENSE.txt",
+      "skiasharp.nativeassets.macos.4.151.2.nupkg.sha512",
+      "skiasharp.nativeassets.macos.nuspec",
+      "THIRD-PARTY-NOTICES.txt"
+    ]
+  },
+  {
+    "package": "SkiaSharp.NativeAssets.Win32/4.151.2",
+    "sha512": "sTUHSfWXVYThf/lTG81n8y1gMnr0TiN/2zrApwd0jbGfbsEt9g4+GPsj6UVjjgNLXCI9l5CyzxQ6Zh4fP9ZoVQ==",
+    "noticeFiles": [
+      "LICENSE.txt",
+      "skiasharp.nativeassets.win32.4.151.2.nupkg.sha512",
+      "skiasharp.nativeassets.win32.nuspec",
+      "THIRD-PARTY-NOTICES.txt"
+    ]
+  },
+  {
+    "package": "SkiaSharp/4.151.2",
+    "sha512": "zqcEy5E17Tqoh2tEvb4uC2G3ulli5YdsljzZuf93pCc/9gQDMx9VrUInxiqkLMGt+MjQi8hNrf1Uxmq25yyU3A==",
+    "noticeFiles": [
+      "LICENSE.txt",
+      "skiasharp.4.151.2.nupkg.sha512",
+      "skiasharp.nuspec"
+    ]
+  },
+  {
+    "package": "SQLitePCLRaw.bundle_e_sqlite3/2.1.13",
+    "sha512": "NlDixlC7uHmo+ojXRgkNvN0tQtVGpLDZ3x2OpgNj+G07VHh5cXSszFDrAiC4BpUiPwkcaeuQkMV9WQ123xVtmQ==",
+    "noticeFiles": [
+      "sqlitepclraw.bundle_e_sqlite3.2.1.13.nupkg.sha512",
+      "sqlitepclraw.bundle_e_sqlite3.nuspec"
+    ]
+  },
+  {
+    "package": "SQLitePCLRaw.core/2.1.13",
+    "sha512": "2joofoinuHBFs0nMX3nKuXgxpXryRkCOdM2Ua6HBqQLLy6IW+5f28ZI+HAvMyF8vG7XfNz/lwfBfE6V4juru8Q==",
+    "noticeFiles": [
+      "sqlitepclraw.core.2.1.13.nupkg.sha512",
+      "sqlitepclraw.core.nuspec"
+    ]
+  },
+  {
+    "package": "SQLitePCLRaw.lib.e_sqlite3/2.1.13",
+    "sha512": "D2UAuiGxFYBqeRXjjjGgvJ5UQifzn6wefmSqeKU7XcNGKLbJRP6X7kcPZ6opOBJGdCIlgbSxTvDpBbLvsN594A==",
+    "noticeFiles": [
+      "sqlitepclraw.lib.e_sqlite3.2.1.13.nupkg.sha512",
+      "sqlitepclraw.lib.e_sqlite3.nuspec"
+    ]
+  },
+  {
+    "package": "SQLitePCLRaw.provider.e_sqlite3/2.1.13",
+    "sha512": "ZU60dSqoSNRe49KcQDUmOVgdRtjITOssVXFtiISs+zJXDI4D2Sndwpn2NOtzDQNPu0ZAvpoLPQ+GLKv6iEZn8Q==",
+    "noticeFiles": [
+      "sqlitepclraw.provider.e_sqlite3.2.1.13.nupkg.sha512",
+      "sqlitepclraw.provider.e_sqlite3.nuspec"
+    ]
+  },
+  {
+    "package": "VideoLAN.LibVLC.Windows/3.0.23.1",
+    "sha512": "yTGNrzj+Q/t72VNKK0d64jZ+8BGu5Vcp2nxpZ2ll350LkRWKSwqShGpZWcVxXVP8TiMbeGML09+Jzz3hNsIcqA==",
+    "noticeFiles": [
+      "videolan.libvlc.windows.3.0.23.1.nupkg.sha512",
+      "videolan.libvlc.windows.nuspec"
+    ]
+  },
+  {
+    "package": "microsoft.netcore.app.runtime.win-x64/10.0.12",
+    "sha512": "Oa/LIiAy6r6+LH+lGjfEkcaw9FZ5ateIhDGXG47vT2icruVFQmA5jOD/r+SRxWWJGzXnOvxnWFo+TEvemVcQ7g==",
+    "noticeFiles": [
+      "LICENSE.TXT",
+      "microsoft.netcore.app.runtime.win-x64.10.0.12.nupkg.sha512",
+      "microsoft.netcore.app.runtime.win-x64.nuspec",
+      "THIRD-PARTY-NOTICES.TXT"
+    ]
+  },
+  {
+    "package": "microsoft.windowsdesktop.app.runtime.win-x64/10.0.12",
+    "sha512": "BeGI/KTBBca4pduu1nff61VvZAwlzVwqNmo+eVqT26ltsAJsQsF//DCPJssw+fXpARq+FQ7pVKiQed5igv8KYQ==",
+    "noticeFiles": [
+      "LICENSE",
+      "microsoft.windowsdesktop.app.runtime.win-x64.10.0.12.nupkg.sha512",
+      "microsoft.windowsdesktop.app.runtime.win-x64.nuspec"
+    ]
+  }
+]

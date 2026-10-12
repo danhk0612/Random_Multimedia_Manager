@@ -349,3 +349,13 @@ main `7c16295`에서 `task/t18-windows-packaging`으로 패키징·고지·실�
 ## T18 다음 작업 — 공개 배포 준비 잔여
 
 PR #29는 09eb08f로 통합했다. 최종 검토 head 156d690 이후 제품 변경 없이 병합했으며 검증 SHA 61a98bb 이후 문서 3개만 변경됨을 확인했다. 검토 패키지는 준비됐으나 T18 전체/공개 배포는 미완료다. 다음은 TASKS.md의 잔여 작업 지시문에 따른 native 대응 소스·플러그인 재배포 자료 정리이며 앱 자체 라이선스는 사용자 결정 대기다. 깨끗한 Windows PC 수동 확인은 독립 병렬 가능하고 접근 없으면 미검증을 유지한다. 검토 artifact 11703665480(run 38142117345)은 2026-10-25 만료 예정이다. 공개 Release/tag와 T19는 시작하지 않았다.
+
+## T18 공개 배포 준비 잔여 — 제3자 자료 정리
+
+main `163f88f`에서 `task/t18-release-readiness`로 동결 검토 artifact `11703665480` / 패키징 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`를 재대조했다. 내부 ZIP SHA256 `53f8128461bc3153b84708340b20888d4794672c520ba97e781bde46ee3cb045` 및 manifest 1,718개 크기/hash가 모두 일치한다. native/지원 파일 1,285행·plugin DLL 956개·공식 VLC 파일 byte 비교와 원문 source archives/고지를 [재배포 자료](packaging/release-readiness/README.md)에 보존했다.
+
+LGPL NuGet metadata와 달리 실제 avcodec/swscale 6개 바이너리에 GPL FFmpeg configure/license 증거가 발견됐다. 별도 GPL 패키지 미참조만으로 LGPL-only 재배포를 승인할 수 없다. exact VLC revision/LibVLCSharp commit/SQLite source ID와 대응하는 부분 소스를 확보했지만 contrib 전체·patch/build provenance/per-file 조건과 source sidecar는 미완료다. 앱 라이선스는 사용자 결정 대기이며 임의 LICENSE/권리 부여·제품/번들 교체는 없다.
+
+가능한 자료 정리/검증과 누락 인계는 완료했으나 **공개 배포 차단 유지**다. 사전 설치 없는 Windows PC는 접근 없어 미검증이다. 기존 comic.cbz 통합 실패→동일 SHA 재실행 성공/원인 미확정, NAS/RaiDrive·원격 휴지통 차단·AVI 보류·수동 미검증/승인 생략·종료 상한 없음과 이전 패키지 증거를 보존했다. 자료/문서만 변경했다. PR #30의 정확한 자료 SHA `748eddd244ae3749c589b3ac4bc90a0b76ed074e`에서 시작된 T18 CI `38194679543`은 attempt 1 success다. 새 artifact `11723171100`과 원래 `11703665480`을 구별한다. 추가 ZIP QA의 license 줄바꿈 변환을 packaging/.gitattributes로 보완하며 새 보완 검증을 이전 success로 대체하지 않는다. 직접 병합·공개 Release/tag·T19 착수는 하지 않는다.
+
+T18 고지 byte 보존 보완 SHA `2b9ad561590ac6e97887980b26277398a8e3b424`의 CI `38195206459` / job `114636222826`은 최초 실행 success다. 새 검토 artifact `11722139575`(2026-10-26 만료), ZIP SHA256 `c9e488ab078dc354f5572edc8c52e36383af4dfae4a55545f4e58898c7089d04`의 전체 manifest와 license 11개 원본 byte 일치를 다운로드 후 확인했다. 제품·고지/소스·검증 입력은 이후 결과 문서 확정에서 변경하지 않는다. PR #30 검토 인계 완료이며 공개 배포 차단·사용자 라이선스 결정 대기와 이전 미검증/실패 이력을 유지한다.

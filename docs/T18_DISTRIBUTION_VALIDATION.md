@@ -119,3 +119,34 @@ native/runtime 라이선스 원문·metadata는 ZIP의 dependency-notices와 lic
 새 manifest와 최초 manifest의 payload 경로 집합 및 네 개 native 파일 SHA256가 동일하다. 변경 payload는 build-info와 App/Core의 exe/DLL/PDB이며 소스/의존성 버전 변경이 아닌 새 SourceRevisionId를 기록하는 재빌드다. 두 SHA의 ZIP byte 동일을 주장하지 않는다.
 
 판정: **SDK 설치/paths 정합성 보완 확인·PR #29 main 통합 완료 (09eb08f)**. 공개 배포의 앱 라이선스·native corresponding source/플러그인 조건·깨끗한 사용자 PC 잔여 항목과 NAS/RaiDrive 실물 미검증, 원격 휴지통 차단·수동 미검증/승인 생략·AVI 보류·종료 시간 상한 없음은 유지한다. 직접 병합·공개 Release/tag·T19는 수행하지 않는다.
+
+## T18 공개 배포 준비 잔여 작업 — 자료 PR
+
+최신 main `163f88f` / PR #29 통합 `09eb08f`에서 `task/t18-release-readiness`를 시작했다. 제품·DB/API/감상/삭제/종료 정책, SDK/패키지 버전·workflows·tests·패키징 스크립트를 변경하지 않았다. 자료 검증은 기존 검토물 대조/제3자 자료와 누락 정리다. PR #30의 정확한 자료 SHA `748eddd244ae3749c589b3ac4bc90a0b76ed074e`에서 별도로 시작된 [T18 CI 38194679543](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38194679543), job `114634629592`는 attempt 1 success다. 새 결과/검토 artifact는 아래와 같이 기존 동결 evidence와 구별한다.
+
+- 2026-10-12 artifact `11703665480`을 다시 내려받아 위 artifact ZIP 및 내부 ZIP SHA256·bytes, build-info와 1,718개 manifest 파일 크기/hash 전부를 확인했다. 결과 PASS. 새 원문 자료는 기존 ZIP에 들어 있지 않으며 이전 검증 이력을 덮어쓰지 않는다.
+- 실제 native/지원 파일 1,285행, plugin DLL x64 323 / x86 323 / ARM64 310의 경로·hash를 [자료](../packaging/release-readiness/README.md)에 보존했다. 기존 436 modules는 실행 로그 값이며 plugin DLL 파일 개수와 구별한다. 공식 VLC ZIP의 해당 파일 1,256개 byte 일치, x64 import .lib 2개는 공식 7z와 일치. x86/ARM64 import .lib 4개는 공식 파일 대조 미완료다.
+- **새 배포 차단 근거:** LGPL nuspec와 달리 세 아키텍처의 avcodec/swscale 6개 바이너리에서 GPL FFmpeg license/configure 증거를 확인했다. 정확한 hash·문자열은 GPL_FFMPEG_EVIDENCE.json이다. `.GPL` 패키지 미참조·upstream GPL 필터 통과를 LGPL-only 판정으로 사용하지 않는다. 앱 라이선스 선택이나 엔진/번들 변경은 수행하지 않았다.
+- 공식 VLC source revision은 native와 같은 3.0.23-2 / `79128878ddb2c280bbb6c89c76a46b31a80ade1c`; 공식 checksum과 일치한 tar를 보존했다. LibVLCSharp 두 nuspec의 exact commit source, SQLite native와 동일 source ID의 amalgamation, VLC contrib SHA512SUMS와 일치한 FFmpeg source도 확보했다. archive 4개·43,450,258 bytes 및 hashes는 source-inputs.json을 따른다. 원문 licenses/고지·정확한 Skia submodule/build 정보도 보존한다.
+- **미완료 구분:** source tar/recipes 확보는 full corresponding source 제공 완료가 아니다. 결합된 contrib 전체 소스·패치/빌드 provenance·per-file 고지/라이선스 대응·완전한 source sidecar·앱 라이선스/EULA 검토가 남았다. 현재 source build/교체 검증은 미실행이다. 후속 선택지는 같은 자료의 차단/선택지 표를 따른다.
+- Linux 작업 환경이며 사전 설치 없는 Windows PC/VM 접근은 없다. 기존 사용자 PC 점검표의 미검증 상태를 유지한다. 새 계정으로 machine-wide SDK/runtime 제거를 가정하지 않으며 사용자에게 설치 제거를 요구하지 않았다.
+- 통합 `38142117377` attempt 1의 comic.cbz cleanup 잠금 실패와 동일 SHA attempt 2 성공은 그대로 보존한다. 이번 작업에서 새로 재현되지 않았고 조사/수정/원인 해결을 선언하지 않는다. NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 보류·기존 수동 미검증/사용자 승인 생략·종료 상한 없음도 유지한다.
+
+판정: **가능한 제3자 자료 정리와 누락/제공 절차 인계 완료, 공개 배포는 차단 유지**. PR 검토만 요청하며 직접 병합·공개 Release/tag·VSR 착수는 하지 않는다.
+
+### 자료 SHA 748eddd의 Windows 검증과 원문 byte 보존 보완
+
+- run `38194679543` / job `114634629592`, exact SHA `748eddd244ae3749c589b3ac4bc90a0b76ed074e`, attempt 1 success. Windows Server 2025 x64 / SDK 10.0.401 / runtime 10.0.12. 두 publish ZIP byte 일치·압축 해제 셸 정상 종료/재시작 2회·전체 ZIP 의존성 16회 harness/native 경로 검사가 최초 실행 통과했다.
+- [artifact 11723171100](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38194679543/artifacts/11723171100), 만료 `2026-10-26T02:13:44Z`. artifact ZIP 231,509,000 bytes / SHA256 `cdf1217d7ecdb87880bf982e1302b00910464a6c67cc75448499499322c3d92e`. 내부 ZIP `RandomMultimediaManager-win-x64-748eddd244ae.zip` 232,000,245 bytes / SHA256 `709f052a9228b70390ee77b9f31e94460fceb3c570ccbc7db3a405125d6461a2`. 다운로드 후 build-info 및 manifest 1,726행 모두 검증했다(payload 1,727 파일).
+- 이전 ZIP 대비 라이선스 원문 8개 추가. 기존 파일 변경은 새 SourceRevisionId의 App/Core assembly/PDB·apphost, build-info, THIRD_PARTY_NOTICES다. 동결 inventory 1,285개 중 apphost만 새 revision으로 달라지고 나머지 1,284개 native/지원 파일 해시는 동일하다. archive 소스는 runtime ZIP에 포함되지 않으며 full source sidecar로 오인하지 않는다.
+- 추가 QA에서 Windows Git checkout이 LF license를 CRLF로 바꾸는 것을 확인했다. 해당 텍스트는 줄바꿈을 정규화하면 원문과 같지만 byte 동일이 아니므로 원문 byte 보존을 완료 처리하지 않았다. packaging/.gitattributes에서 licenses 및 수집 notices/upstream/sources에 `-text`를 지정해 checkout 변환을 막는다. 원문 자체를 수정한 것은 아니다. 압축 해제 ZIP에 없는 상대 자료 링크도 exact `748eddd` 저장소 링크로 바꿨다. 이 보완은 packaging 고지/원문 보존만 바꾸며 제품·SDK/의존성·테스트/스크립트 변경은 없다.
+- 이 보완의 새 exact SHA/CI/artifact는 PR #30에서 별도로 확인한다. 위 success/ZIP은 보완 전 증거이며 보완 후 원문 byte 일치 검사와 혼동하지 않는다. CI success를 라이선스 조건/깨끗한 PC·이전 comic.cbz 원인 해결의 근거로 사용하지 않는다.
+
+### 원문 byte 보존 보완의 정확한 SHA 검증 — PR #30
+
+- 보완 SHA `2b9ad561590ac6e97887980b26277398a8e3b424`의 [T18 CI 38195206459](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38195206459), job `114636222826`, attempt 1 **success**. Windows Server 2025 x64 / SDK 10.0.401 / runtime 10.0.12. 두 ZIP byte 일치, 압축 해제 셸 시작·정상 종료·재시작 2회, 전체 ZIP 의존성 16회 harness 및 native/runtime load 경로 검사가 최초 실행 통과했다. 깨끗한 사용자 PC 검증은 아니다.
+- [artifact 11722139575](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38195206459/artifacts/11722139575), `t18-windows-review-2b9ad561590ac6e97887980b26277398a8e3b424-attempt-1`, `2026-10-26T02:21:49Z` 만료. artifact ZIP **231,508,693 bytes**, SHA256 `4c24204e4fdd1f802f5f4875d6b3c5f6742dc16a85920e783d936a23c322c8f8`.
+- 내부 `RandomMultimediaManager-win-x64-2b9ad561590a.zip`: **231,999,650 bytes**, SHA256 `c9e488ab078dc354f5572edc8c52e36383af4dfae4a55545f4e58898c7089d04`. 다운로드 후 artifact/내부 ZIP 해시·build-info의 exact SHA/SDK/runtime/publicReleaseApproved false, manifest 1,726개 크기/hash를 전부 대조했다(payload 1,727 파일).
+- `packaging/licenses` 11개가 이번 ZIP에 **원본 byte 그대로** 포함되는 것을 확인했다. `core.autocrlf=true` checkout의 수집 원문·소스/빌드 자료 51개도 byte 일치다. 패키지 안내의 자료 링크는 압축 해제 폴더에 없는 상대 경로가 아닌 exact `748eddd` 저장소 자료로 연결된다.
+- 동결 native/지원 inventory 1,285개 중 새 SourceRevisionId의 apphost만 달라지고 나머지 1,284개 hash가 일치한다. GPL FFmpeg 6개 DLL과 native 버전은 바뀌지 않았다. 최초 `748eddd`의 CI 성공/줄바꿈 변환 관찰을 보존하며 이번 결과와 구별한다. 원래 `61a98bb` 검토 artifact `11703665480`과 source 대응표는 계속 동결 기준이다.
+- 이후 결과 확정은 CURRENT_STATE/TASKS/이 검증 문서만 변경한다. packaging 고지·원문·소스, 제품 및 검증 입력은 이 검증 SHA와 동일하며 후속 문서 SHA에서 새 패키지를 검증했다고 주장하지 않는다. 자료 정리/PR #30 검토 인계 완료, **공개 배포 차단 유지**다. 앱 라이선스·GPL FFmpeg 처리/전체 contrib source 제공·깨끗한 PC, 기존 미검증/잠금 원인 미확정은 해결 처리하지 않는다. 직접 병합·공개 Release/tag·T19는 수행하지 않았다.

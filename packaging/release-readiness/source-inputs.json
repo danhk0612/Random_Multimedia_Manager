@@ -1,0 +1,39 @@
+[
+  {
+    "file": "sources/vlc-3.0.23.tar.xz",
+    "bytes": 26486988,
+    "sha256": "e891cae6aa3ccda69bf94173d5105cbc55c7a7d9b1d21b9b21666e69eff3e7e0",
+    "url": "https://download.videolan.org/pub/videolan/vlc/3.0.23/vlc-3.0.23.tar.xz",
+    "checkedOn": "2026-10-12",
+    "status": "VLC revision matches 79128878ddb2c280bbb6c89c76a46b31a80ade1c; contrib recipes/patches included, contrib upstream archives missing",
+    "parts": [
+      "sources/vlc-3.0.23.tar.xz.part01",
+      "sources/vlc-3.0.23.tar.xz.part02",
+      "sources/vlc-3.0.23.tar.xz.part03"
+    ]
+  },
+  {
+    "file": "sources/LibVLCSharp-4896d0e06d19ac40b46802cf7dc167d432f3fd63.tar.gz",
+    "bytes": 4441745,
+    "sha256": "1d521fd1097fac901776626c4a72a76e9549c47bd08ee4c32bf487d5c9498f09",
+    "url": "https://code.videolan.org/videolan/LibVLCSharp/-/archive/4896d0e06d19ac40b46802cf7dc167d432f3fd63/LibVLCSharp-4896d0e06d19ac40b46802cf7dc167d432f3fd63.tar.gz",
+    "checkedOn": "2026-10-12",
+    "status": "exact NuGet repository commit for both managed wrappers; build not executed"
+  },
+  {
+    "file": "sources/sqlite-amalgamation-3530300.zip",
+    "bytes": 2945929,
+    "sha256": "646421e12aac110282ef8cc68f1a62d4bb15fc7b8f09da0b53e29ee690500431",
+    "url": "https://www.sqlite.org/2026/sqlite-amalgamation-3530300.zip",
+    "checkedOn": "2026-10-12",
+    "status": "SQLITE_SOURCE_ID matches e_sqlite3.dll; native compiler/options and SQLitePCLRaw package commit unresolved"
+  },
+  {
+    "file": "sources/ffmpeg-4.4.5.tar.xz",
+    "bytes": 9575596,
+    "sha256": "f9514e0d3515aee5a271283df71636e1d1ff7274b15853bcd84e144be416ab07",
+    "url": "https://ffmpeg.org/releases/ffmpeg-4.4.5.tar.xz",
+    "checkedOn": "2026-10-12",
+    "status": "version candidate from binary and VLC contrib; patches/build provenance incomplete, not full corresponding source"
+  }
+]
