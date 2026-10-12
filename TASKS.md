@@ -257,7 +257,7 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18 — Windows 배포 및 통합 검증
 
 - 목적: 재현 가능한 초기 제품 배포.
-- 담당/상태: Astra / PR #29 검토 패키지 및 SDK/CI 보완 확인·main 통합 완료 (09eb08f). 최초 SHA `2599f48`의 CI 6개 및 보완 SHA `61a98bb`의 CI 9개 최종 success(통합 attempt 1 실패/2 성공 보존). 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md. `task/t18-release-readiness`에서 가능한 제3자 자료/부분 소스·고지 정리 완료·PR 검토 대상. 실제 GPL FFmpeg 증거로 공개 배포 차단 유지; full contrib 소스/조건·앱 라이선스·깨끗한 PC 미완료.
+- 담당/상태: Astra / PR #29 검토 패키지 및 SDK/CI 보완 확인·main 통합 완료 (09eb08f). 최초 SHA `2599f48`의 CI 6개 및 보완 SHA `61a98bb`의 CI 9개 최종 success(통합 attempt 1 실패/2 성공 보존). 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md. `task/t18-release-readiness`에서 가능한 제3자 자료/부분 소스·고지 정리 완료·PR #30 검토 대기. 실제 GPL FFmpeg 증거로 공개 배포 차단 유지; full contrib 소스/조건·앱 라이선스·깨끗한 PC 미완료.
 - 선행: T10~T13/T15~T17/T18A; D08.
 - 범위/수정 영역: 패키징·배포 안내·통합 검증.
 - 완료 조건/검증: 깨끗한 Windows에서 실행, 네이티브 파일 포함/재배포 조건 확인, 전체 랜덤→감상→정리 흐름·파일 실패·DB 재시작 검증, 미구현/제약 명시.

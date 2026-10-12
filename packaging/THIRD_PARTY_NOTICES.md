@@ -32,7 +32,7 @@ libVLC는 수정 없이 외부 DLL/plugins 폴더로 유지하며 단일 exe에 
 
 ## 2026-10-12 실제 native 검토 — 공개 배포 차단 유지
 
-[재배포 자료와 재현/제공 절차](release-readiness/README.md)에 동결 artifact `11703665480` / 코드 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`의 전체 manifest, 1,285개 native/지원 파일 목록과 956개 plugin DLL 해시를 보존했다. x64/x86/ARM64의 공식 VLC ZIP 동일 파일 1,256개를 byte 대조했다. x64 import .lib 2개는 공식 7z와도 일치하며 나머지 아키텍처의 import .lib 대조는 미완료다.
+[재배포 자료와 재현/제공 절차](https://github.com/danhk0612/Random_Multimedia_Manager/blob/748eddd244ae3749c589b3ac4bc90a0b76ed074e/packaging/release-readiness/README.md)에 동결 artifact `11703665480` / 코드 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`의 전체 manifest, 1,285개 native/지원 파일 목록과 956개 plugin DLL 해시를 보존했다. x64/x86/ARM64의 공식 VLC ZIP 동일 파일 1,256개를 byte 대조했다. x64 import .lib 2개는 공식 7z와도 일치하며 나머지 아키텍처의 import .lib 대조는 미완료다.
 
 **LGPL metadata와 결합된 코드 조건이 다르다.** 세 아키텍처의 avcodec/swscale plugin 총 6개에 FFmpeg `--enable-gpl`와 GPL license 문자열이 있다. FFmpeg 공식 https://ffmpeg.org/legal.html 에 접근 확인했고, optional GPL 부분 사용 시 적용되는 조건을 이 바이너리 증거와 대조했다. 정확한 문자열·경로·해시는 `release-readiness/GPL_FFMPEG_EVIDENCE.json`에 있다. GPL 제외 파일/폴더 규칙에 해당하는 DLL이 없다는 검사만으로 LGPL 준수를 선언하지 않는다. 앱 자체 라이선스에 GPL 또는 다른 라이선스를 자동 적용/선택한 것이 아니다.
 

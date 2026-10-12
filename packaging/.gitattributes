@@ -1,0 +1,5 @@
+# Preserve acquired license/notice/build originals and source archive bytes on Windows.
+licenses/** -text
+release-readiness/notices/** -text
+release-readiness/upstream/** -text
+release-readiness/sources/** -text

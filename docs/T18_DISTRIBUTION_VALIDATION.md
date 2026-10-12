@@ -122,7 +122,7 @@ native/runtime 라이선스 원문·metadata는 ZIP의 dependency-notices와 lic
 
 ## T18 공개 배포 준비 잔여 작업 — 자료 PR
 
-최신 main `163f88f` / PR #29 통합 `09eb08f`에서 `task/t18-release-readiness`를 시작했다. 제품·DB/API/감상/삭제/종료 정책, SDK/패키지 버전·workflows·tests·패키징 스크립트를 변경하지 않았다. 이 작업은 기존 검토물 대조/제3자 자료와 누락 정리이며 새 Windows CI/패키지 검증을 수행한 것은 아니다.
+최신 main `163f88f` / PR #29 통합 `09eb08f`에서 `task/t18-release-readiness`를 시작했다. 제품·DB/API/감상/삭제/종료 정책, SDK/패키지 버전·workflows·tests·패키징 스크립트를 변경하지 않았다. 자료 검증은 기존 검토물 대조/제3자 자료와 누락 정리다. PR #30의 정확한 자료 SHA `748eddd244ae3749c589b3ac4bc90a0b76ed074e`에서 별도로 시작된 [T18 CI 38194679543](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38194679543), job `114634629592`는 attempt 1 success다. 새 결과/검토 artifact는 아래와 같이 기존 동결 evidence와 구별한다.
 
 - 2026-10-12 artifact `11703665480`을 다시 내려받아 위 artifact ZIP 및 내부 ZIP SHA256·bytes, build-info와 1,718개 manifest 파일 크기/hash 전부를 확인했다. 결과 PASS. 새 원문 자료는 기존 ZIP에 들어 있지 않으며 이전 검증 이력을 덮어쓰지 않는다.
 - 실제 native/지원 파일 1,285행, plugin DLL x64 323 / x86 323 / ARM64 310의 경로·hash를 [자료](../packaging/release-readiness/README.md)에 보존했다. 기존 436 modules는 실행 로그 값이며 plugin DLL 파일 개수와 구별한다. 공식 VLC ZIP의 해당 파일 1,256개 byte 일치, x64 import .lib 2개는 공식 7z와 일치. x86/ARM64 import .lib 4개는 공식 파일 대조 미완료다.
@@ -133,3 +133,11 @@ native/runtime 라이선스 원문·metadata는 ZIP의 dependency-notices와 lic
 - 통합 `38142117377` attempt 1의 comic.cbz cleanup 잠금 실패와 동일 SHA attempt 2 성공은 그대로 보존한다. 이번 작업에서 새로 재현되지 않았고 조사/수정/원인 해결을 선언하지 않는다. NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 보류·기존 수동 미검증/사용자 승인 생략·종료 상한 없음도 유지한다.
 
 판정: **가능한 제3자 자료 정리와 누락/제공 절차 인계 완료, 공개 배포는 차단 유지**. PR 검토만 요청하며 직접 병합·공개 Release/tag·VSR 착수는 하지 않는다.
+
+### 자료 SHA 748eddd의 Windows 검증과 원문 byte 보존 보완
+
+- run `38194679543` / job `114634629592`, exact SHA `748eddd244ae3749c589b3ac4bc90a0b76ed074e`, attempt 1 success. Windows Server 2025 x64 / SDK 10.0.401 / runtime 10.0.12. 두 publish ZIP byte 일치·압축 해제 셸 정상 종료/재시작 2회·전체 ZIP 의존성 16회 harness/native 경로 검사가 최초 실행 통과했다.
+- [artifact 11723171100](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38194679543/artifacts/11723171100), 만료 `2026-10-26T02:13:44Z`. artifact ZIP 231,509,000 bytes / SHA256 `cdf1217d7ecdb87880bf982e1302b00910464a6c67cc75448499499322c3d92e`. 내부 ZIP `RandomMultimediaManager-win-x64-748eddd244ae.zip` 232,000,245 bytes / SHA256 `709f052a9228b70390ee77b9f31e94460fceb3c570ccbc7db3a405125d6461a2`. 다운로드 후 build-info 및 manifest 1,726행 모두 검증했다(payload 1,727 파일).
+- 이전 ZIP 대비 라이선스 원문 8개 추가. 기존 파일 변경은 새 SourceRevisionId의 App/Core assembly/PDB·apphost, build-info, THIRD_PARTY_NOTICES다. 동결 inventory 1,285개 중 apphost만 새 revision으로 달라지고 나머지 1,284개 native/지원 파일 해시는 동일하다. archive 소스는 runtime ZIP에 포함되지 않으며 full source sidecar로 오인하지 않는다.
+- 추가 QA에서 Windows Git checkout이 LF license를 CRLF로 바꾸는 것을 확인했다. 해당 텍스트는 줄바꿈을 정규화하면 원문과 같지만 byte 동일이 아니므로 원문 byte 보존을 완료 처리하지 않았다. packaging/.gitattributes에서 licenses 및 수집 notices/upstream/sources에 `-text`를 지정해 checkout 변환을 막는다. 원문 자체를 수정한 것은 아니다. 압축 해제 ZIP에 없는 상대 자료 링크도 exact `748eddd` 저장소 링크로 바꿨다. 이 보완은 packaging 고지/원문 보존만 바꾸며 제품·SDK/의존성·테스트/스크립트 변경은 없다.
+- 이 보완의 새 exact SHA/CI/artifact는 PR #30에서 별도로 확인한다. 위 success/ZIP은 보완 전 증거이며 보완 후 원문 byte 일치 검사와 혼동하지 않는다. CI success를 라이선스 조건/깨끗한 PC·이전 comic.cbz 원인 해결의 근거로 사용하지 않는다.

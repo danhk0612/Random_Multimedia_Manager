@@ -356,4 +356,4 @@ main `163f88f`에서 `task/t18-release-readiness`로 동결 검토 artifact `117
 
 LGPL NuGet metadata와 달리 실제 avcodec/swscale 6개 바이너리에 GPL FFmpeg configure/license 증거가 발견됐다. 별도 GPL 패키지 미참조만으로 LGPL-only 재배포를 승인할 수 없다. exact VLC revision/LibVLCSharp commit/SQLite source ID와 대응하는 부분 소스를 확보했지만 contrib 전체·patch/build provenance/per-file 조건과 source sidecar는 미완료다. 앱 라이선스는 사용자 결정 대기이며 임의 LICENSE/권리 부여·제품/번들 교체는 없다.
 
-가능한 자료 정리/검증과 누락 인계는 완료했으나 **공개 배포 차단 유지**다. 사전 설치 없는 Windows PC는 접근 없어 미검증이다. 기존 comic.cbz 통합 실패→동일 SHA 재실행 성공/원인 미확정, NAS/RaiDrive·원격 휴지통 차단·AVI 보류·수동 미검증/승인 생략·종료 상한 없음과 이전 패키지 증거를 보존했다. 자료/문서만 변경하여 새 Windows CI/제품 검증을 주장하지 않는다. 직접 병합·공개 Release/tag·T19 착수는 하지 않는다.
+가능한 자료 정리/검증과 누락 인계는 완료했으나 **공개 배포 차단 유지**다. 사전 설치 없는 Windows PC는 접근 없어 미검증이다. 기존 comic.cbz 통합 실패→동일 SHA 재실행 성공/원인 미확정, NAS/RaiDrive·원격 휴지통 차단·AVI 보류·수동 미검증/승인 생략·종료 상한 없음과 이전 패키지 증거를 보존했다. 자료/문서만 변경했다. PR #30의 정확한 자료 SHA `748eddd244ae3749c589b3ac4bc90a0b76ed074e`에서 시작된 T18 CI `38194679543`은 attempt 1 success다. 새 artifact `11723171100`과 원래 `11703665480`을 구별한다. 추가 ZIP QA의 license 줄바꿈 변환을 packaging/.gitattributes로 보완하며 새 보완 검증을 이전 success로 대체하지 않는다. 직접 병합·공개 Release/tag·T19 착수는 하지 않는다.
