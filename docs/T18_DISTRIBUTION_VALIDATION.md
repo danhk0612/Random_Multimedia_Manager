@@ -119,3 +119,17 @@ native/runtime 라이선스 원문·metadata는 ZIP의 dependency-notices와 lic
 새 manifest와 최초 manifest의 payload 경로 집합 및 네 개 native 파일 SHA256가 동일하다. 변경 payload는 build-info와 App/Core의 exe/DLL/PDB이며 소스/의존성 버전 변경이 아닌 새 SourceRevisionId를 기록하는 재빌드다. 두 SHA의 ZIP byte 동일을 주장하지 않는다.
 
 판정: **SDK 설치/paths 정합성 보완 확인·PR #29 main 통합 완료 (09eb08f)**. 공개 배포의 앱 라이선스·native corresponding source/플러그인 조건·깨끗한 사용자 PC 잔여 항목과 NAS/RaiDrive 실물 미검증, 원격 휴지통 차단·수동 미검증/승인 생략·AVI 보류·종료 시간 상한 없음은 유지한다. 직접 병합·공개 Release/tag·T19는 수행하지 않는다.
+
+## T18 공개 배포 준비 잔여 작업 — 자료 PR
+
+최신 main `163f88f` / PR #29 통합 `09eb08f`에서 `task/t18-release-readiness`를 시작했다. 제품·DB/API/감상/삭제/종료 정책, SDK/패키지 버전·workflows·tests·패키징 스크립트를 변경하지 않았다. 이 작업은 기존 검토물 대조/제3자 자료와 누락 정리이며 새 Windows CI/패키지 검증을 수행한 것은 아니다.
+
+- 2026-10-12 artifact `11703665480`을 다시 내려받아 위 artifact ZIP 및 내부 ZIP SHA256·bytes, build-info와 1,718개 manifest 파일 크기/hash 전부를 확인했다. 결과 PASS. 새 원문 자료는 기존 ZIP에 들어 있지 않으며 이전 검증 이력을 덮어쓰지 않는다.
+- 실제 native/지원 파일 1,285행, plugin DLL x64 323 / x86 323 / ARM64 310의 경로·hash를 [자료](../packaging/release-readiness/README.md)에 보존했다. 기존 436 modules는 실행 로그 값이며 plugin DLL 파일 개수와 구별한다. 공식 VLC ZIP의 해당 파일 1,256개 byte 일치, x64 import .lib 2개는 공식 7z와 일치. x86/ARM64 import .lib 4개는 공식 파일 대조 미완료다.
+- **새 배포 차단 근거:** LGPL nuspec와 달리 세 아키텍처의 avcodec/swscale 6개 바이너리에서 GPL FFmpeg license/configure 증거를 확인했다. 정확한 hash·문자열은 GPL_FFMPEG_EVIDENCE.json이다. `.GPL` 패키지 미참조·upstream GPL 필터 통과를 LGPL-only 판정으로 사용하지 않는다. 앱 라이선스 선택이나 엔진/번들 변경은 수행하지 않았다.
+- 공식 VLC source revision은 native와 같은 3.0.23-2 / `79128878ddb2c280bbb6c89c76a46b31a80ade1c`; 공식 checksum과 일치한 tar를 보존했다. LibVLCSharp 두 nuspec의 exact commit source, SQLite native와 동일 source ID의 amalgamation, VLC contrib SHA512SUMS와 일치한 FFmpeg source도 확보했다. archive 4개·43,450,258 bytes 및 hashes는 source-inputs.json을 따른다. 원문 licenses/고지·정확한 Skia submodule/build 정보도 보존한다.
+- **미완료 구분:** source tar/recipes 확보는 full corresponding source 제공 완료가 아니다. 결합된 contrib 전체 소스·패치/빌드 provenance·per-file 고지/라이선스 대응·완전한 source sidecar·앱 라이선스/EULA 검토가 남았다. 현재 source build/교체 검증은 미실행이다. 후속 선택지는 같은 자료의 차단/선택지 표를 따른다.
+- Linux 작업 환경이며 사전 설치 없는 Windows PC/VM 접근은 없다. 기존 사용자 PC 점검표의 미검증 상태를 유지한다. 새 계정으로 machine-wide SDK/runtime 제거를 가정하지 않으며 사용자에게 설치 제거를 요구하지 않았다.
+- 통합 `38142117377` attempt 1의 comic.cbz cleanup 잠금 실패와 동일 SHA attempt 2 성공은 그대로 보존한다. 이번 작업에서 새로 재현되지 않았고 조사/수정/원인 해결을 선언하지 않는다. NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 보류·기존 수동 미검증/사용자 승인 생략·종료 상한 없음도 유지한다.
+
+판정: **가능한 제3자 자료 정리와 누락/제공 절차 인계 완료, 공개 배포는 차단 유지**. PR 검토만 요청하며 직접 병합·공개 Release/tag·VSR 착수는 하지 않는다.

@@ -1,0 +1,6 @@
+{
+  "SkiaSharp": "a0a2142b86627ec1a9c90b9beff0068ce567ee77",
+  "externals/skia": "098aeb5e4aa2e7f74e120e78200bbe0412ed57c5",
+  "externals/depot_tools": "8fecc592a290769242d5098666cee8d29b7f0523",
+  "nativeSourceComplete": false
+}

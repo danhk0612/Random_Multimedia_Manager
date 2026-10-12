@@ -1,0 +1,9 @@
+{
+  "commit": "61a98bb5f51a0aa997ab37429e00cee3be18a4cf",
+  "sdk": "10.0.401",
+  "runtime": "10.0.12",
+  "rid": "win-x64",
+  "selfContained": true,
+  "singleFile": false,
+  "publicReleaseApproved": false
+}
