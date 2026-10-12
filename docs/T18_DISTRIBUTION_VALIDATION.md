@@ -118,4 +118,4 @@ native/runtime 라이선스 원문·metadata는 ZIP의 dependency-notices와 lic
 
 새 manifest와 최초 manifest의 payload 경로 집합 및 네 개 native 파일 SHA256가 동일하다. 변경 payload는 build-info와 App/Core의 exe/DLL/PDB이며 소스/의존성 버전 변경이 아닌 새 SourceRevisionId를 기록하는 재빌드다. 두 SHA의 ZIP byte 동일을 주장하지 않는다.
 
-판정: **SDK 설치/paths 정합성 보완 완료·기존 PR #29 재검토 대기**. 공개 배포의 앱 라이선스·native corresponding source/플러그인 조건·깨끗한 사용자 PC 잔여 항목과 NAS/RaiDrive 실물 미검증, 원격 휴지통 차단·수동 미검증/승인 생략·AVI 보류·종료 시간 상한 없음은 유지한다. 직접 병합·공개 Release/tag·T19는 수행하지 않는다.
+판정: **SDK 설치/paths 정합성 보완 확인·PR #29 main 통합 완료 (09eb08f)**. 공개 배포의 앱 라이선스·native corresponding source/플러그인 조건·깨끗한 사용자 PC 잔여 항목과 NAS/RaiDrive 실물 미검증, 원격 휴지통 차단·수동 미검증/승인 생략·AVI 보류·종료 시간 상한 없음은 유지한다. 직접 병합·공개 Release/tag·T19는 수행하지 않는다.

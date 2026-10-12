@@ -28,9 +28,9 @@
 
 ## 바로 다음 작업
 
-T18A-1~6 PR #23~28은 main 통합 완료다. PR #28은 반복 스캔 검사 보완과 수정 SHA `387cc495f96ea28d0e1de585d55ca007b31418e9`의 Windows 통합 CI 38120631136 성공을 확인하고 `e850a64`로 병합했다. T18 PR #29의 SDK/CI 정합성 보완을 수정 SHA `61a98bb`에서 완료했다. 모든 dotnet workflow의 SDK 설치와 관련 paths를 정렬했고 영향 CI 9개가 최종 success다(통합은 최초 파일 잠금 실패 후 동일 SHA attempt 2 success). 기존/새 패키지·실패 이력을 보존했으며 현재는 **기존 PR #29 재검토 대기**다. 공개 배포 준비 완료나 다음 Task 착수 승인이 아니다.
+T18 PR #29의 패키징·SDK/CI 보완을 확인하고 `09eb08f`로 main에 통합했다. 검증 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`의 CI 9개 최종 success이며 통합 최초 파일 잠금 실패/같은 SHA attempt 2 성공은 보존한다. 최종 head `156d690`까지 후속 변경은 문서 3개뿐이다.
 
-실제 NAS/RaiDrive 미검증은 기존 실사용 점검표로 이관한다. 이 제한을 명시하는 패키지 준비는 진행 가능하며 공개 배포 준비 완료 여부는 T18 결과에서 판단한다. 원격 휴지통 Unknown 차단·정상 종료 시간 상한 없음·기존 수동 미검증/승인 생략·AVI 조사 보류를 유지한다.
+다음은 아래 **T18 공개 배포 준비 잔여 작업**이다. 앱 라이선스 사용자 결정, native 대응 소스/플러그인 조건 정리, SDK/runtime/VLC 없는 사용자 Windows PC 확인이 남아 있다. 검토 패키지 통합은 공개 배포 승인이나 T18 전체 완료를 뜻하지 않는다. 실제 NAS/RaiDrive 미검증·기존 지원 한계는 유지한다.
 
 ## T00 — 초기 기반 정리
 
@@ -257,84 +257,44 @@ Windows 자동 검증 근거는 코드 `5519fb6225da8e4193f2f358894aa4ade8a7fe55
 ## T18 — Windows 배포 및 통합 검증
 
 - 목적: 재현 가능한 초기 제품 배포.
-- 담당/상태: Astra / PR #29 검토 패키지 및 SDK/CI 보완 완료·재검토 대기. 최초 SHA `2599f48`의 CI 6개 및 보완 SHA `61a98bb`의 CI 9개 최종 success(통합 attempt 1 실패/2 성공 보존). 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md.
+- 담당/상태: Astra / PR #29 검토 패키지 및 SDK/CI 보완 확인·main 통합 완료 (09eb08f). 최초 SHA `2599f48`의 CI 6개 및 보완 SHA `61a98bb`의 CI 9개 최종 success(통합 attempt 1 실패/2 성공 보존). 공개 배포·라이선스·native 소스 제공·깨끗한 PC 확인은 대기; 결과는 docs/T18_DISTRIBUTION_VALIDATION.md.
 - 선행: T10~T13/T15~T17/T18A; D08.
 - 범위/수정 영역: 패키징·배포 안내·통합 검증.
 - 완료 조건/검증: 깨끗한 Windows에서 실행, 네이티브 파일 포함/재배포 조건 확인, 전체 랜덤→감상→정리 흐름·파일 실패·DB 재시작 검증, 미구현/제약 명시.
 - 수정하지 말아야 할 영역: 업데이트 서버·백업 기능·범위 확대.
 
-### T18 PR #29 보완 지시문 — 현재 우선 작업
-
-보완 완료·재검토 대기: 아래 지시문은 수행 근거로 보존한다. 정확한 수정 SHA `61a98bb5f51a0aa997ab37429e00cee3be18a4cf`의 SDK 선택/restore/build와 9개 영향 CI, 새 artifact `11703665480` 및 최초 실패/동일 SHA 재실행 결과는 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)를 따른다. 직접 병합·공개 배포·T19 착수는 대기한다.
+### 새 작업 시작 지시문 — T18 공개 배포 준비 잔여 작업
 
 ```text
-Random_Multimedia_Manager의 기존 task/t18-windows-packaging / PR #29를 보완해.
-최신 main과 AI_WORKFLOW.md, T18 계약 및 검증 문서를 먼저 읽어.
-검토 head는 5bdf748a51a0f08e52126851323d66434a59b256이다.
+Random_Multimedia_Manager의 T18 잔여 배포 준비만 고성능 Work로 진행해.
+최신 main/AI_WORKFLOW.md/기준 문서와 T18_DISTRIBUTION_VALIDATION.md,
+packaging/THIRD_PARTY_NOTICES.md를 먼저 읽어.
+PR #29는 09eb08f로 main 통합됐고 SDK/CI 보완은 완료됐다.
+최신 main에서 task/t18-release-readiness 브랜치로 작업해.
 
-global.json은 SDK 10.0.401 / rollForward disable을 요구하지만
-기존 T03/T05/T06/T07/T09/T10/T11/T18A-6 workflow는 10.0.x 설치를 사용한다.
-runner의 SDK가 갱신되면 정확한 SDK가 없어 restore 이전에 실패할 수 있다.
-T03 실제 파일과 PR diff에서 불일치를 확인했다.
+- 검토 패키지의 정확한 native 번들/플러그인 목록·버전·해시를 기준으로
+  재배포 고지와 corresponding source 제공 방식을 구체화해.
+  실제 필요한 원문·대응 소스·빌드 정보와 고지를 확보/검증하고
+  재현 가능한 제공 절차와 누락 항목을 기록해.
+  일반 upstream 링크만으로 정확한 바이너리의 대응 소스를 확보했다고 주장하지 마.
+- 앱 자체 라이선스는 사용자 결정 대기다. 임의 LICENSE 추가나 권리 부여는 하지 마.
+  선택이 없어도 가능한 제3자 자료 정리는 완료하고 남은 결정만 보고해.
+- 깨끗한 Windows PC 접근이 있으면 기존 검증 문서의 재개 조건대로
+  SDK/runtime/VLC 사전 설치 없이 ZIP 실행·기본 흐름·정상 종료/재시작을 확인해.
+  접근이 없으면 기존 점검표를 사용하고 미검증으로 유지해.
+  사용자에게 SDK/VLC 제거를 요구하지 말고 별도 계정/VM의 한계를 구분해.
+- 최근 통합 CI의 comic.cbz 정리 잠금 실패 후 동일 SHA 재실행 성공을 보존해.
+  원인 미확정을 해결로 바꾸지 말고, 재현될 때만 좁은 조사와 수정 검증을 수행해.
+- CURRENT_STATE/TASKS/T18 검증 문서와 필요한 packaging 파일만 갱신해 PR로 제출해.
+  공개 배포 가능/차단을 정확히 구분하고 검토 artifact 위치·SHA를 명시해.
 
-- 모든 dotnet 사용 workflow를 확인하고 global.json의 SDK를 설치하도록 통일해.
-  setup-dotnet의 global-json-file 사용 등 단일 기준을 우선하며
-  기존의 넓은 dotnet-version 설정이 동시에 남지 않도록 해.
-- SDK 고정 파일 변경이 필요한 영향 CI를 실행하도록 paths 필터도 대조·수정해.
-  검증 suite 자체의 의미/조건은 바꾸지 마.
-- 정확한 수정 SHA에서 SDK 선택과 restore/build 및 영향 CI 결과를 확인해.
-  기존 T18 검증 2599f48 / run 38140925671의 artifact·해시·성공/실패 이력은 보존해.
-  새로운 패키지가 생성되면 새 SHA/artifact/해시와 구분해 기록해.
-- App/Core 잠금 파일은 이미 추적되고 기본 CI는 locked restore다.
-  과거 lock 누락 리뷰를 미해결로 취급하거나 BootstrapLock으로 되돌리지 마.
-- CURRENT_STATE.md/TASKS.md/검증 문서와 기존 PR을 보완 완료·재검토 대기로 갱신해.
-
-제품 코드·DB/공통 API·정책, SDK 버전 자체, 라이브러리 버전은 바꾸지 마.
-앱 라이선스는 임의 선택하지 마. native corresponding source/플러그인 검토와
-깨끗한 사용자 PC 검증은 공개 배포 전 잔여 항목으로 유지해.
-NAS/RaiDrive 미검증·원격 휴지통 차단·기존 수동 생략/AVI 보류를 보존해.
-직접 병합·공개 Release/tag·T19 착수는 하지 마.
+제품 기능·DB/공통 API·감상/삭제/종료 정책·SDK/패키지 버전은 바꾸지 마.
+라이브러리 교체나 구조 변경이 필요하면 근거와 선택지를 보고해.
+NAS/RaiDrive 미검증·원격 휴지통 차단·AVI 보류·기존 수동 미검증은 유지해.
+직접 병합·공개 Release/tag 발행·T19 VSR 착수는 하지 마.
 ```
 
-### 최초 작업 범위 — T18 (현재 보완 지시문 우선)
-
-```text
-https://github.com/danhk0612/Random_Multimedia_Manager 의 T18만 고성능 Work로 진행해.
-
-최신 main과 AI_WORKFLOW.md 및 기준 문서를 확인해.
-T18A-6 PR #28은 e850a64로 main 통합됐다.
-TASKS.md T18, DECISIONS.md D08, T18A_6_INTEGRATION_VALIDATION.md를 계약으로
-task/t18-windows-packaging 브랜치에서 작업해.
-
-목적은 재현 가능한 Windows x64 exe/ZIP 패키지와 실행·배포 안내 준비다.
-- 현재 프로젝트·패키지·네이티브 의존성을 확인하고 최소 publish 절차를 만들어.
-  .NET 런타임·필수 네이티브 파일 포함을 우선하되 단일 exe를 강제하지 마.
-  SkiaSharp/libVLC/SQLite 등 실제 파일·버전·재배포 조건과 고지 의무를 확인해.
-  포함 불가 시 D08에 따라 추가 설치/연결 방식을 제시해.
-  앱 자체 라이선스 미확정 시 임의 지정하지 말고 결정 항목으로 보고해.
-- Windows 지원 버전은 현재 공식 지원표·패키지 조건·실제 검증을 구분해.
-  Server CI 성공만으로 Windows 10/11 전체 지원을 주장하지 마.
-- 재현 가능한 패키징 스크립트/최소 CI, exe 포함 ZIP, 의존성 고지,
-  실행·데이터 위치·업데이트 시 교체·제한 안내를 준비해.
-  기존 LocalAppData DB/삭제 저널 위치와 ZIP 교체 시 데이터 보존을 유지해.
-- 실제 ZIP을 별도 폴더에 풀어 Windows에서 실행 검증해.
-  SDK/사전 설치 런타임·VLC 의존 여부를 확인해.
-  깨끗한 PC 환경이 없으면 CI 성공과 해당 검증 미실시를 구분해.
-  로컬 테스트 복사본으로 만화/영상/자막·랜덤→감상→정리,
-  파일 실패·DB 재시작·정상 종료 및 네이티브 파일 포함을 검증해.
-- 실제 NAS/RaiDrive는 기존 실사용 점검표로 이관하고 반복 조사하지 마.
-  원격 휴지통 Unknown/실행 차단, 임의 영구삭제 전환 없음,
-  실제 IO drain과 종료 시간 상한 없음 및 AVI 조사 보류를 명시해.
-- 검증 SHA·명령·패키지 파일 목록/해시·CI artifact·결과/미검증/제약을
-  docs/T18_DISTRIBUTION_VALIDATION.md에 정리해.
-  README/CURRENT_STATE/TASKS 및 실제 영향 문서만 갱신해 PR로 제출해.
-
-자동 업데이트·설치 관리자·백업 기능·새 설정은 추가하지 마.
-공통 API·DB/감상/삭제/종료 정책·엔진 교체·새 네트워크 기능·VSR은 금지해.
-구조 변경이나 라이선스 선택이 필요하면 근거와 결정 항목을 보고해.
-직접 병합하거나 공개 Release/tag 발행 또는 T19 착수는 하지 마.
-CI 검토용 artifact 생성까지 진행하고 공개 배포 가능 여부를 별도로 보고해.
-```
+의존성 자료 정리와 사용자 PC 수동 확인은 서로 독립적으로 병렬 진행 가능하다. 사용자 라이선스 결정 전에도 자료 정리는 진행하되 공개 릴리스는 보류한다.
 
 ## T19 — RTX VSR 기술 검증
 
