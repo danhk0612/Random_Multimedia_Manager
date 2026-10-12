@@ -60,7 +60,7 @@ VLC x64 configure 원문은 `upstream/vlc-x64-configure.txt`, Skia build 원문/
 
 1. 위 artifact에서 내부 ZIP을 가져와 SHA256/bytes를 확인한다. 만료 후 artifact를 읽을 수 없으면 기존 payload 검증을 재수행했다고 기록하지 않는다. 공개 승인 전 동결 ZIP을 별도 보존하거나 새 exact SHA의 CI artifact로 검토 기준을 다시 지정한다.
 2. sources/의 archive를 source-inputs.json의 hash·bytes로 대조한다. 외부에서 다시 받을 때도 version URL만 믿지 말고 hash 불일치를 실패로 취급한다. Git archive 재압축의 byte가 달라지면 원래 보존한 archive를 사용하고 임의로 hash를 갱신하지 않는다.
-3. VLC archive의 part01/part02/part03을 순서대로 이어 붙여 source-inputs.json의 file 이름으로 저장하고 전체 hash를 확인한 뒤 source를 풀어 src/revision.txt, contrib/src/*/rules.mak·SHA512SUMS·patches, extras/package/win32/build.sh 및 configure를 읽는다. dependency별 실제 binary-linked version/configuration을 확인한 뒤 필요한 원문 archive를 확보하고 hashes/patches/build instructions/원문 licenses를 대응표에 추가한다. configure에 기록된 GPL FFmpeg를 단순 LGPL로 재표기하지 않는다.
+3. VLC archive의 part01/part02/part03을 순서대로 이어 붙여 source-inputs.json의 file 이름으로 저장하고 전체 hash를 확인한 뒤 source를 풀어 src/revision.txt, contrib/src/*/rules.mak·SHA512SUMS·patches, extras/package/win32/configure.sh 및 configure를 읽는다. dependency별 실제 binary-linked version/configuration을 확인한 뒤 필요한 원문 archive를 확보하고 hashes/patches/build instructions/원문 licenses를 대응표에 추가한다. configure에 기록된 GPL FFmpeg를 단순 LGPL로 재표기하지 않는다.
 4. 아래 차단 항목이 닫히면 바이너리 ZIP과 **검증된 전체 source sidecar**를 같은 배포 위치에서 동시에 제공하는 방식으로 준비한다. sidecar에는 source-inputs, native-inventory, 해당 archive·contrib 소스·patches·빌드 지시·원문 고지를 넣고 source-sidecar.files.json과 SHA256를 생성한다. 이는 향후 승인 후 절차이며 이번 PR에서 완전한 sidecar를 만들거나 공개 업로드하지 않았다. CI artifact의 14일 만료 링크나 일반 upstream 링크를 source 제공 수단으로 사용하지 않는다.
 5. 소스 제공·고지·DLL 교체 가능한 연결과 앱 권리 부여 문구를 검토하고 깨끗한 PC 점검까지 수행한 뒤 별도 공개 배포 판단을 받는다. 이번 작업에서는 앱/EULA/업데이트 서버/엔진이나 배포 정책을 바꾸지 않는다.
 
