@@ -12,6 +12,10 @@
 - 이전 비교안의 “앱 라이선스명/문구 사용자 별도 확정 대기”는 이번 위임으로 해소한다. 실제 조건 검토·대응 소스 준비·클린 PC 확인은 완료된 것이 아니며 공개 Release/tag 승인은 별개다.
 
 
+### T18-D1 적용 결과 (2026-10-13)
+
+소유자 자체 코드·작성 문서에 MIT LICENSE를 적용한다. 제3자·수집 원문·의존성 권리는 보존한다. 사용자 위임·Git 단일 author 이력과 MIT의 GPL-compatible 권리가 근거다. 전체 ZIP은 MIT-only가 아니며 GPL FFmpeg/Apache-2.0를 포함한 linked graph 버전 양립과 대응 소스는 미완료다. [근거·누락·재개 조건](../packaging/release-readiness/README.md#t18-d1-라이선스-적용과-검토용-소스-묶음)을 따른다. 공개 승인이나 엔진/번들 변경 위임은 아니다.
+
 ## 사용자 확정 및 위임 (2026-09-07)
 
 | ID | 현재 정책 | 후속 작업 |
@@ -193,4 +197,4 @@ D04 위임에 따라 공통 감상 창의 로컬 키와 입력 충돌·반복 �
 
 ## T18 공개 배포 전 결정·검증 대기
 
-D08의 의존성 포함 방향으로 self-contained Windows x64 검토 ZIP을 준비한다. 앱 자체 라이선스는 미확정이며 임의 MIT/GPL 등으로 지정하지 않는다. 라이선스 선택과 exact native 번들의 고지·corresponding source 제공 방식/플러그인별 조건 확정이 필요하다. 깨끗한 사용자 Windows PC 실행과 실제 NAS/RaiDrive 미검증은 별도이며 CI 자동 성공으로 대체하지 않는다. 현재 증거·판정은 [T18_DISTRIBUTION_VALIDATION.md](T18_DISTRIBUTION_VALIDATION.md)를 따른다. 이 기록은 공개 Release/tag 또는 T19 착수 승인이 아니다.
+D08의 의존성 포함 방향으로 self-contained Windows x64 검토 ZIP을 준비한다. T18-D1에서 자체 소스·작성 문서에 MIT를 적용했다. 제3자와 결합 ZIP은 별도 조건이며 대응 소스·전체 graph 양립/공개 적합성은 미완료다. 라이선스 선택과 exact native 번들의 고지·corresponding source 제공 방식/플러그인별 조건 확정이 필요하다. 깨끗한 사용자 Windows PC 실행과 실제 NAS/RaiDrive 미검증은 별도이며 CI 자동 성공으로 대체하지 않는다. 현재 증거·판정은 [T18_DISTRIBUTION_VALIDATION.md](T18_DISTRIBUTION_VALIDATION.md)를 따른다. 이 기록은 공개 Release/tag 또는 T19 착수 승인이 아니다.

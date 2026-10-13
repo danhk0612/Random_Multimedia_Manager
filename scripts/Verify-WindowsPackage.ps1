@@ -12,6 +12,15 @@ foreach ($entry in $manifest) {
     $file = Join-Path $package $entry.path
     if ((Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.sha256) { throw "ZIP hash mismatch: $($entry.path)" }
 }
+foreach ($relative in @('LICENSE', 'USER_GUIDE.md', 'THIRD_PARTY_NOTICES.md')) {
+    $original = if ($relative -eq 'LICENSE') { $relative } else { "packaging/$relative" }
+    if ((Get-FileHash $original).Hash -ne (Get-FileHash "$package/$relative").Hash) { throw "License/notice byte mismatch: $relative" }
+}
+foreach ($file in (Get-ChildItem packaging/licenses -Recurse -File)) {
+    $relative = [IO.Path]::GetRelativePath((Resolve-Path packaging/licenses).Path, $file.FullName)
+    if ((Get-FileHash $file.FullName).Hash -ne (Get-FileHash "$package/licenses/$relative").Hash) { throw "Upstream license byte mismatch: $relative" }
+}
+Write-Output 'PASS app LICENSE and upstream notices exact bytes in extracted ZIP'
 $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 function Observe-Native($process, $root) {
     try {

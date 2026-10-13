@@ -1,6 +1,6 @@
 # 의존성·재배포 검토 고지
 
-이 패키지는 공개 배포 승인 전 CI 검토용이다. 앱 자체 라이선스는 저장소에서 미확정이며 여기서 임의 지정하지 않는다. 이 문서는 개별 원문 라이선스를 대체하지 않는다.
+이 패키지는 공개 배포 승인 전 CI 검토용이다. 앱 자체 코드·작성 문서에는 동봉 LICENSE의 MIT를 적용한다. 제3자와 전체 ZIP을 MIT로 표시하지 않는다. 이 문서는 개별 원문 라이선스를 대체하지 않는다.
 
 ## 포함 방향과 조건
 
@@ -24,7 +24,7 @@ libVLC는 수정 없이 외부 DLL/plugins 폴더로 유지하며 단일 exe에 
 - [VideoLAN libVLC 설명](https://github.com/videolan/vlc), [VideoLAN NuGet 프로필](https://www.nuget.org/profiles/videolan): 접근 확인. upstream libVLC LGPL와 별도 GPL plugins 패키지 구분.
 - VideoLAN 법률/모듈 안내 및 정확한 native NuGet 버전 페이지는 이번 웹 접근 일부 실패. 실패한 페이지를 검토 완료 근거로 사용하지 않으며 정확한 NuGet archive의 metadata/고지로 보완한다.
 
-앱 자체 라이선스 선택과 위 재배포 미확정 사항은 공개 배포 판단의 차단 항목이다. 공개 Release/tag는 발행하지 않는다.
+앱 자체 MIT 적용과 별개로 위 재배포 미확정 사항은 공개 배포 판단의 차단 항목이다. 공개 Release/tag는 발행하지 않는다.
 
 ## exact NuGet archive 대조
 
@@ -41,3 +41,11 @@ VLC 3.0.23-2 대응 revision의 공식 source tar, nuspec commit의 LibVLCSharp 
 Skia/runtime의 exact ZIP 고지·nuspec와 source revision/build 자료, VLC COPYING/COPYING.LIB/AUTHORS, LibVLCSharp/FFmpeg 라이선스 원문을 보존한다. packaging/licenses의 새 원문은 기존 폴더 복사에 의해 향후 publish에 포함되며 원래 검토 artifact에 소급 포함되지 않는다. GPL 원문 추가는 제3자 고지이며 앱 LICENSE/권리 부여가 아니다.
 
 공개 배포는 앱 라이선스 사용자 결정, GPL FFmpeg 처리 방식 검토, exact plugin/contrib 소스·고지·제공 묶음 완성, 사전 설치 없는 Windows PC 수동 검증이 남아 차단한다. 현재 archive/recipe 확보만으로 바이너리 재빌드나 DLL 교체 검증 성공을 주장하지 않는다.
+
+## T18-D1 현재 고지
+
+MIT 자체 소스 권리와 GPL 결합 배포 의무를 구별한다. FFmpeg의 실제 `GPL version 2 or later`를 GPL-2.0-only로 바꾸지 않는다. Apache-2.0인 SQLitePCLRaw와 GPLv2-only를 결합할 수 있다고 선언하지 않으며, GPLv3도 모든 linked code의 원문 확인 전 전체 ZIP에 확정하지 않는다. 전체 graph 버전 양립·대응 소스는 미완료다.
+
+licenses/contrib/에는 VLC recipe checksum과 일치하는 GSM 1.0.13 COPYRIGHT, OpenJPEG 2.5.0 LICENSE, LAME 3.100 COPYING/LICENSE, zlib 1.3.1 LICENSE/README 원문을 포함한다. 정확한 linked 버전의 최종 입증은 아니며 전체 고지를 대체하지 않는다. LGPL 소스·교체/수정 debugging 조건은 유지한다. MIT/Apache/public-domain 의존성에 GPL의 전체 소스 의무를 일괄 부여하지 않는다.
+
+source sidecar는 exact SHA 앱 소스·확보 archive 8개·VLC contrib recipes/patches·module 후보/source headers·동결 native hash·manifest와 LICENSE를 포함한다. incomplete이며 전체 대응 소스 제공 완료가 아니다. 공개 전 binary와 완전한 대응 소스를 같은 위치에서 다운로드할 수 있게 하고 commit/hash/크기·고지·build instructions를 대조한다. 아직 서면 소스 제공 약정이나 공개 Release를 발행하지 않았다.
