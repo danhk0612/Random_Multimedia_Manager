@@ -26,11 +26,54 @@
 | T18 | Windows 배포 및 통합 검증 | Astra | PR #29/#30 main 통합 / 배포 방식·앱 라이선스·실PC 확인 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
-## 현재 우선 상태 — T18-D1 PR #32 보완 후 재검토 대기
+## 현재 우선 상태 — PR #32 통합·T18-D1 잔여 대응 소스 확인
 
-수정 SHA **a420a39a62a554c9e0427b0a273a6dec7eb81d18**에서 assert 기반 무결성 검사 9개를 명시적 조건/ValueError로 바꾸고 일반/-O/PYTHONOPTIMIZE=1 정상·변조 회귀 42개를 T18 CI에 연결했다. Windows [run 38344541619](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38344541619), job 115122761895 최초 성공. artifact 11788208112을 내려받아 실제 ZIP manifest·LICENSE/원문 licenses 17개·source archive 8개를 재대조했고 source sidecar는 Linux/Windows와 세 모드에서 byte 동일했다. 자세한 새 SHA/해시와 이전 거짓 PASS 재현은 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)를 따른다.
+PR #32를 `5159714`로 main에 통합했다. 자체 코드·작성 문서 MIT LICENSE 및 검토용 소스 묶음 생성/검증이 반영됐다. 전체 ZIP은 MIT-only 배포물이 아니며 제3자 조건은 별도로 유지한다.
 
-검사 누락 보완은 재검토로 넘기며 전체 대응 소스·license graph·클린 PC 미완료와 기존 실물/수동/잠금 실패 이력은 유지한다. MIT·제품/SDK/엔진/번들을 변경하지 않았다. 이후 결과 커밋은 문서 3개뿐이다. 직접 병합·공개 Release/tag·다음 Task/VSR 착수는 없다.
+최적화 모드의 거짓 PASS 보완을 확인했다. 검증 입력 `a420a39`의 Windows run `38344541619` / job `115122761895` 최초 성공: 42개 무결성 회귀, source/runtime ZIP 반복 byte 일치, 셸 시작·정상 종료·재시작 2회와 기존 ZIP 의존성 회귀 통과. 병합 검토에서도 최종 head의 42개 Python 회귀를 로컬에서 직접 실행해 통과했다. 최종 head `42d3881`까지 후속 변경은 결과 문서 3개뿐이며 검토 중 Windows/실제 artifact 다운로드를 재수행한 것은 아니다.
+
+다음은 고성능 Work의 **T18-D1 잔여 대응 소스·배포 조건 확인**이다. 8개 확보 archives와 recipe/module 후보는 완전한 대응 소스 증명이 아니다. 공개 배포 보류, 클린 PC·NAS/RaiDrive·AVI 및 기존 comic.cbz 잠금 원인 미확정은 유지한다. MIT 선택은 다시 승인 대기로 돌리지 않는다.
+
+## 새 작업 시작 지시문 — T18-D1 잔여 대응 소스·배포 조건 확인
+
+```text
+Random_Multimedia_Manager의 최신 main/AI_WORKFLOW.md와 기준 문서를 확인해.
+PR #32는 5159714로 통합됐다. task/t18-d1-source-closure에서
+T18-D1의 남은 대응 소스·배포 조건만 고성능 Work로 진행해.
+
+자체 소스 MIT 적용과 무결성 검사 보완은 완료됐다. 이를 반복하지 마.
+release-readiness README, contrib-acquisition.json, source-inputs.json,
+기존 source sidecar와 native inventory를 재사용해 다음을 수행해.
+
+1. 공개 배포를 실제로 막는 항목을 바이너리/구성요소별로 좁혀.
+   필수 고지·대응 소스/빌드 지시와 단순 미확보 provenance 정보를 구분해.
+   recipe 존재·문자열 부재를 실제 링크/라이선스 적합성 증거로 삼지 마.
+2. 현재 exact native 번들의 공식 빌드/배포 자료와 기존 소스에서
+   linked contrib 버전·적용 patch·조건을 확인하고 필요한 누락 자료를 확보해.
+   pthreads 404는 공식 대체 경로와 기존 checksum으로 확인해.
+   이미 확보한 자료를 반복 수집하거나 버전이 다른 소스로 대체하지 마.
+3. 입증된 범위의 바이너리→소스/패치/고지 대응을 기존 자료에 통합하고
+   source sidecar를 갱신해. 전체 license graph의 양립 여부를 근거로 정리해.
+   MIT 자체 소스와 결합 배포 조건은 구분하고 제3자 권리를 재부여하지 마.
+4. 외부 자료 없이는 닫을 수 없는 항목은 정확한 파일·질문·필요 증거·
+   확인한 공식 경로와 실패 결과를 명시해. 공급자 문의 초안은 준비할 수 있으나
+   실제 메시지는 보내지 마. 같은 조사를 끝없이 반복하지 마.
+5. 변경 영향에 맞게 무결성/재현/고지 포함과 필요한 Windows CI를 검증하고,
+   CURRENT_STATE/TASKS/T18 검증 문서 및 기존 배포 자료를 갱신해 PR로 제출해.
+   completeCorrespondingSource/publicReleaseApproved는 근거 없이 true로 바꾸지 마.
+
+완료 조건:
+남은 필수 항목의 대응 자료 확보 여부·검증 근거와
+외부 증거가 꼭 필요한 잔여/재개 조건이 명확해야 한다.
+필요 자료를 모두 확보하면 검증된 source 묶음과 고지를 준비하되 공개 배포는 별도다.
+
+제품·DB/API·감상/삭제/종료·SDK/엔진/번들을 변경하지 마.
+새 자체 native 빌드·대체 번들 전환·플러그인 제거는 진행하지 마.
+기존 성공/실패/실물 미검증을 유지해.
+직접 병합·공개 Release/tag·VSR 착수는 하지 마.
+```
+
+기존 검토 ZIP의 클린 Windows PC 점검은 독립적으로 병렬 가능하다. 사전 SDK/runtime/VLC 설치 여부·정확한 ZIP을 기록하고 공유 상태 문서는 동시에 편집하지 않는다.
 
 ### 0fc0c82 검토 당시 보완 요구와 재현 근거
 
@@ -40,7 +83,7 @@ PR #32 head `0fc0c82340cd983310498ae5081285f193c931bd`를 검토했다. 자체 �
 
 위 요구에 따른 기존 PR #32의 좁은 보완을 수행했다. 라이선스 위임은 유효하며 사용자 재승인 대기로 바꾸지 않는다. 전체 대응 소스·license graph·클린 PC 미완료 및 기존 실물/잠금 실패 이력은 유지한다.
 
-## T18-D1 PR #32 보완 지시문 — 현재 우선 작업
+## 완료된 T18-D1 PR #32 보완 지시문
 
 ```text
 Random_Multimedia_Manager 최신 main/AI_WORKFLOW.md와 PR #32를 확인하고

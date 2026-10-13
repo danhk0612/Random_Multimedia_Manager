@@ -1,10 +1,12 @@
 # 현재 구현 상태
 
-## 현재 우선 상태 — T18-D1 PR #32 보완 후 재검토 대기
+## 현재 우선 상태 — PR #32 통합·T18-D1 잔여 대응 소스 확인
 
-수정 SHA **a420a39a62a554c9e0427b0a273a6dec7eb81d18**에서 assert 기반 무결성 검사 9개를 명시적 조건/ValueError로 바꾸고 일반/-O/PYTHONOPTIMIZE=1 정상·변조 회귀 42개를 T18 CI에 연결했다. Windows [run 38344541619](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38344541619), job 115122761895 최초 성공. artifact 11788208112을 내려받아 실제 ZIP manifest·LICENSE/원문 licenses 17개·source archive 8개를 재대조했고 source sidecar는 Linux/Windows와 세 모드에서 byte 동일했다. 자세한 새 SHA/해시와 이전 거짓 PASS 재현은 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)를 따른다.
+PR #32를 `5159714`로 main에 통합했다. 자체 코드·작성 문서 MIT LICENSE 및 검토용 소스 묶음 생성/검증이 반영됐다. 전체 ZIP은 MIT-only 배포물이 아니며 제3자 조건은 별도로 유지한다.
 
-검사 누락 보완은 재검토로 넘기며 전체 대응 소스·license graph·클린 PC 미완료와 기존 실물/수동/잠금 실패 이력은 유지한다. MIT·제품/SDK/엔진/번들을 변경하지 않았다. 이후 결과 커밋은 문서 3개뿐이다. 직접 병합·공개 Release/tag·다음 Task/VSR 착수는 없다.
+최적화 모드의 거짓 PASS 보완을 확인했다. 검증 입력 `a420a39`의 Windows run `38344541619` / job `115122761895` 최초 성공: 42개 무결성 회귀, source/runtime ZIP 반복 byte 일치, 셸 시작·정상 종료·재시작 2회와 기존 ZIP 의존성 회귀 통과. 병합 검토에서도 최종 head의 42개 Python 회귀를 로컬에서 직접 실행해 통과했다. 최종 head `42d3881`까지 후속 변경은 결과 문서 3개뿐이며 검토 중 Windows/실제 artifact 다운로드를 재수행한 것은 아니다.
+
+다음은 고성능 Work의 **T18-D1 잔여 대응 소스·배포 조건 확인**이다. 8개 확보 archives와 recipe/module 후보는 완전한 대응 소스 증명이 아니다. 공개 배포 보류, 클린 PC·NAS/RaiDrive·AVI 및 기존 comic.cbz 잠금 원인 미확정은 유지한다. MIT 선택은 다시 승인 대기로 돌리지 않는다.
 
 ### 0fc0c82 검토 당시 보완 요구와 재현 근거
 
