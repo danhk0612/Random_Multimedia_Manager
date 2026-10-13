@@ -1,6 +1,15 @@
 # 현재 구현 상태
 
-## 현재 우선 상태 — T18-D1 source-closure 검토
+## 현재 우선 상태 — PR #33 통합·확보 자료의 잔여 검사
+
+PR #33을 `79ec9f2`로 main에 통합했다. 검증 입력 `e27c80d`의 Windows CI `38350407460` / job `115141274710` 최초 성공과 이후 결과 문서 3개만 변경된 것을 확인했다. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·ZIP 의존성 회귀가 통과했다. 병합 검토에서는 native/closure inventory의 1,285개 고유 path/hash 일치를 직접 대조했다. Windows 실행과 실제 artifact 다운로드는 이 검토에서 독립 재수행하지 않았다.
+
+자체 코드 MIT, 10개 확보 archive 및 원문 고지는 main에 반영됐다. 전체 대응 소스·license graph·LGPL 교체·클린 PC 완료나 공개 배포 승인은 아니다. S01 공급자 release trace 401/만료 artifact 404는 외부 자료 대기로 분리하고 반복 조회하지 않는다.
+
+다음은 고성능 Work의 **T18-D1 확보 패키지 잔여 검사**다. S02/S03/N02/N03 중 현재 exact artifact와 확보 원문으로 확인 가능한 범위만 수행한다. 실제 공급자 연락·native 빌드·번들 교체는 승인된 작업이 아니다. 기존 실패/실물 미검증과 공개 배포 보류를 유지한다.
+
+
+## PR #33 제출 당시 결과
 
 PR **#33** 제출·검증 완료: 검증 입력 `e27c80d`의 Windows T18 run `38350407460` / job `115141274710` attempt 1 최초 성공. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·전체 ZIP 의존성 회귀를 통과했고 artifact `11789979837`를 실제 다운로드해 대조했다. Source ZIP SHA256 `c41e83c1...7985e29f`는 Linux/Windows 전체 byte 일치. runtime manifest 1,739개·LICENSE/원문 licenses 23개·제3자 native/support 1,284개 보존을 확인했다. 자체 App.exe의 새 SHA 버전 정보와 작성 문서 LF/CRLF 차이는 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)의 최종 결과에 구분한다. 최종 결과 변경은 문서 3개뿐이다.
 

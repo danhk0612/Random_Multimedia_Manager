@@ -26,17 +26,50 @@
 | T18 | Windows 배포 및 통합 검증 | Astra | PR #29/#30 main 통합 / 배포 방식·앱 라이선스·실PC 확인 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
-## 현재 우선 상태 — T18-D1 source-closure 검토
+## 현재 우선 상태 — PR #33 통합·확보 자료의 잔여 검사
 
-PR **#33** 제출·검증 완료: 검증 입력 `e27c80d`의 Windows T18 run `38350407460` / job `115141274710` attempt 1 최초 성공. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·전체 ZIP 의존성 회귀를 통과했고 artifact `11789979837`를 실제 다운로드해 대조했다. Source ZIP SHA256 `c41e83c1...7985e29f`는 Linux/Windows 전체 byte 일치. runtime manifest 1,739개·LICENSE/원문 licenses 23개·제3자 native/support 1,284개 보존을 확인했다. 자체 App.exe의 새 SHA 버전 정보와 작성 문서 LF/CRLF 차이는 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)의 최종 결과에 구분한다. 최종 결과 변경은 문서 3개뿐이다.
+PR #33을 `79ec9f2`로 main에 통합했다. 검증 입력 `e27c80d`의 Windows CI `38350407460` / job `115141274710` 최초 성공과 이후 결과 문서 3개만 변경된 것을 확인했다. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·ZIP 의존성 회귀가 통과했다. 병합 검토에서는 native/closure inventory의 1,285개 고유 path/hash 일치를 직접 대조했다. Windows 실행과 실제 artifact 다운로드는 이 검토에서 독립 재수행하지 않았다.
 
-PR #32를 `5159714`로 main에 통합했다. 자체 코드·작성 문서 MIT LICENSE 및 검토용 소스 묶음 생성/검증이 반영됐다. 전체 ZIP은 MIT-only 배포물이 아니며 제3자 조건은 별도로 유지한다.
+자체 코드 MIT, 10개 확보 archive 및 원문 고지는 main에 반영됐다. 전체 대응 소스·license graph·LGPL 교체·클린 PC 완료나 공개 배포 승인은 아니다. S01 공급자 release trace 401/만료 artifact 404는 외부 자료 대기로 분리하고 반복 조회하지 않는다.
 
-최적화 모드의 거짓 PASS 보완을 확인했다. 검증 입력 `a420a39`의 Windows run `38344541619` / job `115122761895` 최초 성공: 42개 무결성 회귀, source/runtime ZIP 반복 byte 일치, 셸 시작·정상 종료·재시작 2회와 기존 ZIP 의존성 회귀 통과. 병합 검토에서도 최종 head의 42개 Python 회귀를 로컬에서 직접 실행해 통과했다. 최종 head `42d3881`까지 후속 변경은 결과 문서 3개뿐이며 검토 중 Windows/실제 artifact 다운로드를 재수행한 것은 아니다.
+다음은 고성능 Work의 **T18-D1 확보 패키지 잔여 검사**다. S02/S03/N02/N03 중 현재 exact artifact와 확보 원문으로 확인 가능한 범위만 수행한다. 실제 공급자 연락·native 빌드·번들 교체는 승인된 작업이 아니다. 기존 실패/실물 미검증과 공개 배포 보류를 유지한다.
 
-`task/t18-d1-source-closure`에서 잔여 조사·검토 자료를 통합했다. 기존 8개 archive를 재수집하지 않고 MinGW-w64 10.0.0/libbluray 1.4.0 원본과 고지(기존 VLC recipe SHA512 일치), exact 공식 Windows build/CI 원문을 추가했다. 전체 1,285개 native/support 파일을 대응표에 연결했고 지원 파일 84개는 원문 hash, 96개는 LF→CRLF hash가 일치한다. compiler provenance advisory와 필수 source/patch/build/notice 잔여를 구분했다. 공식 release job 2403066/7/8 trace 401·win64 artifact 404 때문에 외부 증거 없이 selected graph를 닫지 않는다. [정확한 누락 S01~S03/N01~N03/G01·재개 조건](packaging/release-readiness/README.md#t18-d1-잔여-대응-소스-확인--source-closure)을 따른다. 자체 MIT·최적화 무결성 보완은 반복하지 않았으며 공개 배포/전체 소스 상태는 false다. 클린 PC·NAS/RaiDrive·AVI·comic.cbz 잠금 원인 미확정·기존 성공/실패는 유지한다. 이번 PR 검토가 다음 단계이며 직접 병합·공개 배포·VSR은 없다.
+## 새 작업 시작 지시문 — T18-D1 확보 패키지 잔여 검사
 
-## 새 작업 시작 지시문 — T18-D1 잔여 대응 소스·배포 조건 확인
+```text
+Random_Multimedia_Manager 최신 main/AI_WORKFLOW.md와 기준 문서를 읽고
+task/t18-d1-local-evidence 브랜치에서 이번 범위만 고성능 Work로 수행해.
+PR #33은 79ec9f2로 통합됐다. release-readiness README의
+S01~S03/N01~N03/G01을 현재 잔여 계약으로 사용해.
+
+목적: 확보한 exact 패키지·원문으로 닫을 수 있는 항목을 완료하고,
+공급자 자료가 없이는 확인 불가한 항목을 분리한다.
+
+- 기존 artifact/hash·소스 archive를 재사용해 libbluray JAR의 class/resource/
+  manifest/내부 고지 목록과 확보 source/build rules를 대조한다(S02).
+- Lua bytecode의 판독 가능한 header/version과 기존 36개 source/build rule을
+  대조한다(S03). byte 동일 재빌드나 실제 적용 patch를 근거 없이 주장하지 마.
+- 이미 hash가 대응된 지원 파일과 NuGet/runtime/Skia 제공 고지의 적용 범위를
+  확인해 필요한 원문 고지를 보완하고 확인된 범위/남은 범위를 기록한다(N02/N03).
+- 위 작업에서 S01 selected linked graph 없이는 판정 불가하면 해당 의존성을
+  정확히 남겨. 401/404 조회와 포괄적 조사·전체 소스 수집을 반복하지 마.
+- 결과를 기존 source-closure 자료/고지에 통합하고 영향 검증 후 PR로 제출해.
+  신규 파일을 무조건 늘리지 말고 기존 표와 검증 문서를 갱신해.
+
+완료 조건: 검사한 exact 파일/근거와 해소된 ID 범위, 외부 증거 없이는
+해소할 수 없는 잔여가 명확하고 자료/패키징 변경의 무결성과 CI가 확인돼야 해.
+수행 불가능한 검사를 통과로 처리하지 마. 전체 완료를 억지로 만들지 마.
+
+자체 MIT·제품·DB/API·SDK/엔진/번들·기존 정책은 변경하지 마.
+native 자체 빌드·대체 번들·plugin 제거·자동 다운로드 기능을 추가하지 마.
+공급자 문의 초안은 이미 있으므로 반복 작성하거나 실제 발송하지 마.
+completeCorrespondingSource/publicReleaseApproved를 근거 없이 true로 바꾸지 마.
+직접 병합·공개 Release/tag·VSR 착수는 하지 마.
+```
+
+클린 Windows PC 점검은 위 검사와 독립적으로 병렬 가능하다. 기존 T18 점검표와 exact 검토 ZIP을 사용하고 사전 SDK/runtime/VLC 설치 여부를 기록한다. 공급자 증거 요청은 별도 발송 승인 전 대기한다.
+
+## 완료된 작업 지시문 — T18-D1 잔여 대응 소스·배포 조건 확인 (PR #33 통합)
 
 ```text
 Random_Multimedia_Manager의 최신 main/AI_WORKFLOW.md와 기준 문서를 확인해.
