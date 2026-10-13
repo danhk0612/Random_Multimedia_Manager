@@ -9,6 +9,7 @@ on:
       - 'tests/**'
       - 'scripts/*Windows*.ps1'
       - 'scripts/Package-SourceSidecar.py'
+      - 'scripts/Verify-SourceSidecar.py'
       - 'LICENSE'
       - '.gitattributes'
       - 'packaging/**'
@@ -46,6 +47,11 @@ jobs:
           dotnet --info
           [Runtime.InteropServices.RuntimeInformation]::OSDescription
           Write-Output "Global VLC installed: $(Test-Path 'C:/Program Files/VideoLAN/VLC/vlc.exe')"
+      - name: Source integrity regression in all Python modes
+        shell: pwsh
+        run: |
+          python scripts/Verify-SourceSidecar.py
+          if ($LASTEXITCODE -ne 0) { throw 'Source integrity regression failed.' }
       - name: Build and verify repeatable review source sidecar
         shell: pwsh
         run: |

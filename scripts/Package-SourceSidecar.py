@@ -26,16 +26,22 @@ def encoded(value):
 def verify(path):
     with zipfile.ZipFile(path) as z:
         manifest = json.loads(z.read('manifest.json'))
-        assert set(z.namelist()) == {x['path'] for x in manifest} | {'manifest.json'}
-        assert len(z.namelist()) == len(manifest) + 1
+        if set(z.namelist()) != {x['path'] for x in manifest} | {'manifest.json'}:
+            raise ValueError('ZIP entry set does not match manifest.')
+        if len(z.namelist()) != len(manifest) + 1:
+            raise ValueError('ZIP entry count does not match manifest (duplicate entry).')
         for item in manifest:
             data = z.read(item['path'])
-            assert len(data) == item['bytes'] and digest(data) == item['sha256'], item['path']
+            if len(data) != item['bytes'] or digest(data) != item['sha256']:
+                raise ValueError(f"ZIP size/SHA256 mismatch: {item['path']}")
         status = json.loads(z.read('status.json'))
-        assert status['completeCorrespondingSource'] is False
-        assert status['publicReleaseApproved'] is False
+        if status['completeCorrespondingSource'] is not False:
+            raise ValueError('Expected incomplete corresponding source status.')
+        if status['publicReleaseApproved'] is not False:
+            raise ValueError('Expected public release approval false.')
         with tarfile.open(fileobj=io.BytesIO(z.read('application.tar'))) as app:
-            assert app.extractfile('LICENSE').read() == z.read('LICENSE')
+            if app.extractfile('LICENSE').read() != z.read('LICENSE'):
+                raise ValueError('Application LICENSE does not match sidecar LICENSE.')
         print(f"PASS source sidecar manifest {len(manifest)} entries; incomplete/source release blocked")
 
 
@@ -47,9 +53,11 @@ def build(output):
     for item in inputs:
         paths = item.get('parts', [item['file']])
         data = b''.join((READY / p).read_bytes() for p in paths)
-        assert len(data) == item['bytes'] and digest(data) == item['sha256'], item['file']
+        if len(data) != item['bytes'] or digest(data) != item['sha256']:
+            raise ValueError(f"Source input size/SHA256 mismatch: {item['file']}")
         if 'sha512' in item:
-            assert hashlib.sha512(data).hexdigest() == item['sha512'], item['file']
+            if hashlib.sha512(data).hexdigest() != item['sha512']:
+                raise ValueError(f"Source input SHA512 mismatch: {item['file']}")
         files[item['file']] = data
     # Use committed Git objects rather than checkout line-ending conversions.
     tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
@@ -61,7 +69,8 @@ def build(output):
     for p in sorted(paths):
         end = batch.index(b'\n', cursor)
         header = batch[cursor:end].split()
-        assert header[1] == b'blob', p
+        if header[1] != b'blob':
+            raise ValueError(f'Expected Git blob: {p}')
         length = int(header[2])
         cursor = end + 1
         snapshot[p] = batch[cursor:cursor + length]
