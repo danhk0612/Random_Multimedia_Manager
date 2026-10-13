@@ -26,15 +26,19 @@
 | T18 | Windows 배포 및 통합 검증 | Astra | PR #29~#33 main 통합 / 자체 MIT 적용 완료 / T18-D1 잔여 소스·고지 검사 및 클린 PC 확인 대기, 공개 배포 보류 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
-## 현재 우선 상태 — PR #33 통합·확보 자료의 잔여 검사
+## 현재 우선 상태 — T18-D1 로컬 검사 완료·PR 제출 차단
 
 PR #33을 `79ec9f2`로 main에 통합했다. 검증 입력 `e27c80d`의 Windows CI `38350407460` / job `115141274710` 최초 성공과 이후 결과 문서 3개만 변경된 것을 확인했다. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·ZIP 의존성 회귀가 통과했다. 병합 검토에서는 native/closure inventory의 1,285개 고유 path/hash 일치를 직접 대조했다. Windows 실행과 실제 artifact 다운로드는 이 검토에서 독립 재수행하지 않았다.
 
 자체 코드 MIT, 10개 확보 archive 및 원문 고지는 main에 반영됐다. 전체 대응 소스·license graph·LGPL 교체·클린 PC 완료나 공개 배포 승인은 아니다. S01 공급자 release trace 401/만료 artifact 404는 외부 자료 대기로 분리하고 반복 조회하지 않는다.
 
-다음은 고성능 Work의 **T18-D1 확보 패키지 잔여 검사**다. S02/S03/N02/N03 중 현재 exact artifact와 확보 원문으로 확인 가능한 범위만 수행한다. 실제 공급자 연락·native 빌드·번들 교체는 승인된 작업이 아니다. 기존 실패/실물 미검증과 공개 배포 보류를 유지한다.
+로컬 자료 SHA `c8bfd72`: 기존 42개 무결성 회귀, 실제 source sidecar 2회 byte 동일/645개 manifest payload, 세 Python 모드 verify 및 새 고지 4개 원문 byte 포함 통과. **PR 미제출·이번 SHA Windows CI 미실행**이다. automatic approval review가 공개 저장소 push를 공개 배포 금지로 해석해 차단했으며 우회 전송 없음. branch push/PR 제출 허용과 Release/tag 금지의 범위 확인 후 exact SHA Windows CI 및 새 artifact 검사를 재개한다.
 
-## 새 작업 시작 지시문 — T18-D1 확보 패키지 잔여 검사
+현재 `task/t18-d1-local-evidence`에서 main 2a395f3의 문서 정리를 유지하고 JAR 6개·Lua 108개/source 36개·지원 180개/제공 notice 36개를 대조했다. 내부 목록/header·provided notice 보존 부분만 완료이며 actual source/patch·selected graph·지원 자료 author/license 및 Desktop/Skia 고지 scope는 외부 증거 대기다. 검사/고지는 기존 JSON/CSV/README에 통합했다. 영향 검증·PR 결과는 docs/T18_DISTRIBUTION_VALIDATION.md의 local-evidence 절을 따른다. 다음은 해당 PR 검토이며 새 Task·공개 배포로 진행하지 않는다.
+
+이 Task의 계약은 다음과 같다: 고성능 Work의 **T18-D1 확보 패키지 잔여 검사**다. S02/S03/N02/N03 중 현재 exact artifact와 확보 원문으로 확인 가능한 범위만 수행한다. 실제 공급자 연락·native 빌드·번들 교체는 승인된 작업이 아니다. 기존 실패/실물 미검증과 공개 배포 보류를 유지한다.
+
+## 수행 중인 작업 지시문 — T18-D1 확보 패키지 잔여 검사
 
 ```text
 Random_Multimedia_Manager 최신 main/AI_WORKFLOW.md와 기준 문서를 읽고

@@ -1,0 +1,991 @@
+Source header excerpts from retained source archives. Candidate correspondence only; not complete linked-license approval. Original header bytes retained.
+
+Sources: libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/AnnotationVisitor.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/AnnotationWriter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Attribute.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/ByteVector.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/ClassReader.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/ClassVisitor.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/ClassWriter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Edge.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/FieldVisitor.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/FieldWriter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Frame.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Handle.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Handler.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Item.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Label.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/MethodVisitor.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/MethodWriter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Opcodes.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Type.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/LocalVariablesSorter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/Remapper.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/RemappingAnnotationAdapter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/RemappingClassAdapter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/RemappingFieldAdapter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/RemappingMethodAdapter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/RemappingSignatureAdapter.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/commons/SimpleRemapper.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/signature/SignatureReader.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/signature/SignatureVisitor.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/signature/SignatureWriter.java
+/***
+ * ASM: a very small and fast Java bytecode manipulation framework
+ * Copyright (c) 2000-2011 INRIA, France Telecom
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+Sources: libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/Context.java
+/***
+ * ASM: a very small and fast Java bytecode manipulation framework
+ * Copyright (c) 2000-2011 INRIA, France Telecom
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+Sources: libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/TypePath.java, libbluray-1.4.0/contrib/asm/src/org/objectweb/asm/TypeReference.java
+/***
+ * ASM: a very small and fast Java bytecode manipulation framework
+ * Copyright (c) 2000-2013 INRIA, France Telecom
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holders nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/CompleteTransactionEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCCancelEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCCompleteEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCErrorEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCException.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCMAvailableEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCOT.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCProgress.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCStartEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/MCStopEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mc/ManagedCopy.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/mt/MCMTransaction.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/online/ContentAttribute.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/online/DeviceAttribute.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/online/EnablePermission.java, libbluray-1.4.0/src/libbluray/bdj/java/com/aacsla/bluray/online/MediaAttribute.java, libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDFontMetrics.java, libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDGraphicsEnvironment.java, libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDImage.java, libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDImageConsumer.java, libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDWindowGraphics.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/bdplus/Status.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/bdplus/StatusListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/Arrays.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/image/BufferedImage.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/peer/BDLightweightComponentPeer.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/org/dvb/ui/DVBGraphicsImpl.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/sun/awt/KeyboardFocusManagerPeerProvider.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/sun/awt/image/BufferedImagePeer.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012  libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/Area.java
+ /*
+ * This file is part of libbluray
+ * Copyright (C) 2013  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDGraphicsBase.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/BDGraphics.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012-2014  libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDGraphicsConfigurationBase.java, libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDRootWindow.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/BDGraphicsConfiguration.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012  Libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDGraphicsDevice.java, libbluray-1.4.0/src/libbluray/bdj/java/java/io/BDFileSystem.java, libbluray-1.4.0/src/libbluray/bdj/java/java/io/DefaultFileSystem.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/Manager.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/SystemTimeBase.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/URLSourceStream.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/xlet/UnavailableContainerException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/xlet/XletContext.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/RatingDimensionImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceIteratorImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceListImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/TransportImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/DiscImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/io/ixc/IxcRegistry.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJAction.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJActionManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJActionQueue.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJAppProxy.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJAppsDatabase.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJLoaderCallback.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/Copy.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/IxcRegistryImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/TitleInfo.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/BDHandler.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/PlayerManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/audio/Handler.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/VideoControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/sound/Handler.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/video/dvb/mpeg/drip/Handler.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/video/dvb/mpeg/drip/VideoControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/protocol/bd/DataSource.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/protocol/dripfeed/DataSource.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/io/BDFileSystemImpl.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/io/FileInputStream.java
+/*
+ * This file is part of libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDJHelper.java
+ /*
+ * This file is part of libbluray
+ * Copyright (C) 2012  Libbluray
+ * Copyright (C) 2013  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDOffScreenImageSource.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/media/AlignedSubtitleChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/protocol/file/DataSource.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/org/videolan/PortingHelper.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2013  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/BDToolkitBase.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012      libbluray
+ * Copyright (C) 2012-2014 Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/java/awt/Font.java, libbluray-1.4.0/src/libbluray/bdj/java/java/awt/PolyEdge.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2014  libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/javax/media/CachingControl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/CachingControlEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/Clock.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ClockStartedError.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ClockStoppedException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ConnectionErrorEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/Control.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/Controller.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ControllerClosedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ControllerErrorEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ControllerEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ControllerListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/DataStarvedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/DeallocateEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/Duration.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/DurationUpdateEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/EndOfMediaEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/GainChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/GainChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/GainControl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/IncompatibleSourceException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/IncompatibleTimeBaseException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/InternalErrorEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/MediaError.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/MediaEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/MediaException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/MediaHandler.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/MediaLocator.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/MediaProxy.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/MediaTimeSetEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/NoDataSourceException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/NoPlayerException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/NotPrefetchedError.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/NotRealizedError.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/PackageManager.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/Player.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/PrefetchCompleteEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/RateChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/RealizeCompleteEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/ResourceUnavailableEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/RestartingEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/StartEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/StopAtTimeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/StopByRequestEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/StopEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/StopTimeChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/StopTimeSetError.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/Time.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/TimeBase.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/TransitionEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/ContentDescriptor.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/Controls.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/DataSource.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/Positionable.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/PullDataSource.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/PullSourceStream.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/PushDataSource.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/PushSourceStream.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/RateConfiguration.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/RateConfigureable.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/RateRange.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/Seekable.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/SourceStream.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/SourceTransferHandler.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/media/protocol/URLDataSource.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/graphics/AlphaColor.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/graphics/TVContainer.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/locator/InvalidLocatorException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/locator/Locator.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/locator/LocatorFactory.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/locator/LocatorFactoryImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/locator/LocatorImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/locator/MalformedLocatorException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/AWTVideoSize.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/AWTVideoSizeControl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/MediaSelectCARefusedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/MediaSelectControl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/MediaSelectEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/MediaSelectFailedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/MediaSelectListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/MediaSelectPermission.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/media/MediaSelectSucceededEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/RatingDimension.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/ReadPermission.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIChangeType.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIElement.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIManager.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIManagerImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIRequest.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIRequestFailureType.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIRequestor.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIRequestorImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/SIRetrievable.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/Service.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/ServiceInformationType.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/ServiceMinorNumber.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/ServiceNumber.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/ServiceType.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/guide/ContentRatingAdvisory.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/guide/ProgramEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/guide/ProgramEventDescription.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/guide/ProgramSchedule.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/guide/ProgramScheduleChangeType.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/guide/ProgramScheduleEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/guide/ProgramScheduleListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/CAIdentification.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/DeliverySystemType.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/FavoriteServicesName.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/FilterNotSupportedException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/LocatorFilter.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/PreferenceFilter.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceComponent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceComponentChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceComponentChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceDescription.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceDetails.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceDetailsSIChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceFilter.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceIterator.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceList.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceProviderInformation.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/ServiceTypeFilter.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/SortNotAvailableException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/StreamType.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/AlternativeContentEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/InsufficientResourcesException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/InvalidServiceComponentException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/NormalContentEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/PresentationChangedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/PresentationTerminatedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/SelectPermission.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/SelectionFailedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContentHandler.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContext.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContextDestroyedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContextEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContextException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContextFactory.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContextFactoryImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContextListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceContextPermission.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/selection/ServiceMediaHandler.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/Bouquet.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/BouquetChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/BouquetChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/BouquetCollection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/Network.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/NetworkChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/NetworkChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/NetworkCollection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/ServiceDetailsChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/ServiceDetailsChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/Transport.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/TransportSIChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/TransportStream.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/TransportStreamChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/TransportStreamChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/transport/TransportStreamCollection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/xlet/Xlet.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/xlet/XletContext.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/xlet/XletStateChangeException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/application/AppAttributes.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/AngleChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/AngleChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/AngleControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/AsynchronousPiPControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/AudioControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/AudioMetadataControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/InvalidAngleException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/InvalidPlayListException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/OverallGainControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PanningChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PanningChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PanningControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PiPControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PiPStatusEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PiPStatusListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PlayListChangeControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PlaybackControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PlaybackListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PlaybackMarkEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PlaybackPlayItemEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PrimaryAudioControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/PrimaryGainControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/SecondaryAudioControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/SecondaryGainControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/StreamNotAvailableException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/SubtitleStyleNotAvailableException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/SubtitlingControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/TextSubtitleNotAvailableException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/UOMaskTableChangedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/UOMaskTableControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/UOMaskTableListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/media/UOMaskedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/net/BDLocator.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/storage/DataAreaInfo.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/storage/StorageManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/system/RegisterAccess.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/CodingType.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/DeliverySystemType.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/Disc.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/DiscEjectedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/DiscInsertedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/DiscManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/DiscStatusEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/DiscStatusListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/PlayItem.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/PlayList.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/Title.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/TitleComponent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/TitleInformationType.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/TitleType.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/selection/TitleContext.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/selection/TitleContextImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/AnimationParameters.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/BDVideoConfigTemplate.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/DeviceConfigurations.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/FrameAccurateAnimationTimer.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/event/HRcEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/vfs/PreparingFailedException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/vfs/VFSPermission.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/AudioLanguageControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/FreezeControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/LanguageControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/LanguageNotAvailableException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaFreezeException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaLocator.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaPresentedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaTimeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaTimeEventControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaTimeEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaTimePositionChangedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/MediaTimePositionControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/NotAuthorizedException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/ResourceReturnedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/ResourceWithdrawnEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/media/SubtitlingLanguageControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/mpeg/NotAuthorizedException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/mpeg/NotAuthorizedInterface.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/net/InvalidLocatorException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/net/Locator.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/net/TransportDependentLocator.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/resources/ResourceClient.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/resources/ResourceProxy.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/resources/ResourceServer.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/resources/ResourceStatusEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/davic/resources/ResourceStatusListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppAttributes.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppID.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppIcon.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppProxy.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppStateChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppStateChangeEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppsControlPermission.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppsDatabase.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppsDatabaseEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppsDatabaseEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/AppsDatabaseFilter.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/CurrentServiceFilter.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/DVBHTMLProxy.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/DVBJProxy.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/IllegalProfileParameterException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/LanguageNotAvailableException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/application/RunningApplicationsFilter.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/AsynchronousLoadingEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/AsynchronousLoadingEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/DSMCCException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/DSMCCObject.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/DSMCCStream.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/DSMCCStreamEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/IllegalObjectTypeException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/InsufficientResourcesEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/InsufficientResourcesException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/InvalidAddressException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/InvalidFormatEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/InvalidFormatException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/InvalidPathNameException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/InvalidPathnameEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/LoadingAbortedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/MPEGDeliveryErrorEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/MPEGDeliveryException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NPTDiscontinuityEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NPTListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NPTPresentEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NPTRate.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NPTRateChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NPTRemovedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NPTStatusEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NotEntitledEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NotEntitledException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NotLoadedException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/NothingToAbortException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ObjectChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ObjectChangeEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ServerDeliveryErrorEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ServerDeliveryException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ServiceDomain.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ServiceXFRErrorEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ServiceXFRException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/ServiceXFRReference.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/StreamEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/StreamEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/SuccessEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/dsmcc/UnknownEventException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/EventManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/OverallRepository.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/RepositoryDescriptor.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/UserEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/UserEventAvailableEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/UserEventListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/UserEventRepository.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/event/UserEventUnavailableEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/io/persistent/FileAccessPermissions.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/io/persistent/FileAttributes.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/lang/DVBClassLoader.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/lang/DVBClassLoaderImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/ActiveFormatDescriptionChangedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/AspectRatioChangedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/BackgroundVideoPresentationControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/CAException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/CAStopEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/DFCChangedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/DVBMediaSelectControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/DripFeedDataSource.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/DripFeedPermission.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/NoComponentSelectedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/PresentationChangedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/ServiceRemovedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/StopByResourceLossEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/SubtitleAvailableEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/SubtitleListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/SubtitleNotAvailableEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/SubtitleNotSelectedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/SubtitleSelectedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/SubtitlingEventControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/VideoFormatControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/VideoFormatEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/VideoFormatListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/VideoPresentationControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/media/VideoTransformation.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/test/DVBTest.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/DVBColor.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/DVBGraphics.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/DVBRasterFormatException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/DVBTextLayoutManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/FontFormatException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/FontNotAvailableException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/TestOpacity.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/TextOverflowListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/UnsupportedDrawingOperationException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/Facility.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/GeneralPreference.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/Preference.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/UnsupportedPreferenceException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/UserPreferenceChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/UserPreferenceChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/UserPreferenceManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/user/UserPreferencePermission.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HActionInputPreferred.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HActionable.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HAdjustableLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HAdjustmentInputPreferred.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HAdjustmentValue.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HAnimateEffect.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HAnimateLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HAnimation.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HBackgroundConfigTemplate.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HBackgroundConfiguration.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HBackgroundImage.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HChangeData.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HComponentOrdering.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HConfigurationException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HContainer.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HEmulatedGraphicsConfiguration.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HEmulatedGraphicsDevice.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HEventMulticaster.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HExtendedLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HFontCapabilities.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HGraphicButton.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HGraphicLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HGraphicsConfigTemplate.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HGraphicsConfiguration.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HIcon.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HImageHints.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HInvalidLookException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HItemValue.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HKeyboardInputPreferred.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HListGroup.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HListGroupLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HMatte.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HMatteException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HMatteLayer.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HMultilineEntry.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HMultilineEntryLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HNavigable.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HNavigationInputPreferred.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HNoInputPreferred.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HOrientable.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HPermissionDeniedException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HRange.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HRangeLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HRangeValue.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScene.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HSceneFactory.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HSceneTemplate.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScreen.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScreenConfigTemplate.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScreenConfiguration.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScreenDimension.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScreenPoint.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScreenRectangle.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HSelectionInputPreferred.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HSinglelineEntry.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HSinglelineEntryLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HState.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HStaticAnimation.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HStaticIcon.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HStillImageBackgroundConfiguration.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HSwitchable.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HTextButton.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HTextLayoutManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HTextValue.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HToggleButton.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HToggleGroup.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HUIException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HVersion.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HVideoComponent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HVideoConfigTemplate.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HVideoConfiguration.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HActionEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HActionListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HAdjustmentEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HAdjustmentListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HBackgroundImageEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HBackgroundImageListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HEventGroup.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HEventRepresentation.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HFocusEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HFocusListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HItemEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HItemListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HKeyCapabilities.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HKeyEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HKeyListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HMouseCapabilities.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HRcCapabilities.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HRcEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HScreenConfigurationEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HScreenConfigurationListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HScreenDeviceReleasedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HScreenDeviceReservedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HScreenLocationModifiedEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HScreenLocationModifiedListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HTextEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/event/HTextListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJClassLoader.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJLoader.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJUtil.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/FontIndex.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/FontIndexData.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/GUIManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/MountException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/PlaylistInfo.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/StreamInfo.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/TIClip.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/TIMark.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/control/MediaTimePositionControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/AngleControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/AudioMetadataControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/BackgroundVideoPresentationControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/DVBMediaSelectControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/MediaTimeEventControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/PlayListChangeControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/PlaybackControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/StreamControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/VideoFormatControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/video/dvb/mpeg/drip/BackgroundVideoPresentationControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/CommConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/Connection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/ConnectionNotFoundException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/Connector.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/ContentConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/Datagram.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/DatagramConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/HttpConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/HttpsConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/InputConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/OutputConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/SecureConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/SecurityInfo.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/ServerSocketConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/SocketConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/StreamConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/StreamConnectionNotifier.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/io/UDPDatagramConnection.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/pki/Certificate.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/microedition/pki/CertificateException.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/io/ConnectorImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2019  VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/net/InterfaceMap.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/util/TVTimer.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/util/TVTimerScheduleFailedException.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/util/TVTimerSpec.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/util/TVTimerWentOffEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/util/TVTimerWentOffListener.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2016  VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/javax/tv/service/navigation/SIElementFilter.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2015-2016  Petri Hintukainen
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/storage/BindingunitDataAreaInfo.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/storage/PersistentDataAreaInfo.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012  Petri Hintukainen
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/PlayItemImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/PlayListImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ti/TitleComponentImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010-2015 VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/FrameAccurateAnimation.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/ImageFrameAccurateAnimation.java, libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/ui/SyncFrameAccurateAnimation.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/UOMaskTableControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2012  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/bluray/vfs/VFSManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/FontFactory.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2014  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/media/AlignedSubtitleChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/media/AlignedSubtitleControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/media/GraphicsOffsetSequenceChangeEvent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/media/GraphicsOffsetSequenceChangeListener.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/media/GraphicsOffsetSequenceControl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/system/StereoscopicRegisters.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ti/StereoscopicCodingType.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2013  Libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ui/DirectDrawS3D.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ui/HBackgroundConfigTemplateS3D.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ui/HBackgroundConfigurationS3D.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ui/HGraphicsConfigTemplateS3D.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ui/HGraphicsConfigurationS3D.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ui/HVideoConfigTemplateS3D.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/s3d/ui/S3DProperty.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2014  Libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/system/UHDRegisters.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/ti/UHDCodingType.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/ui/ColorSpaceProperty.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/ui/DeviceConfigurationsUHD.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/ui/DynamicRangeProperty.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/ui/HBackgroundConfigurationTemplateUHD.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/ui/HGraphicsConfigurationTemplateUHD.java, libbluray-1.4.0/src/libbluray/bdj/java/org/blurayx/uhd/ui/HVideoConfigurationTemplateUHD.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJClassLoaderAdapter.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/mmbd/Adapter.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2017  VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/DVBAlphaComposite.java, libbluray-1.4.0/src/libbluray/bdj/java/org/dvb/ui/DVBBufferedImage.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2016  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HBackgroundDevice.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HGraphicsDevice.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HScreenDevice.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HVideoDevice.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2019  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HComponent.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HDefaultTextLayoutManager.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HFlatEffectMatte.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HFlatMatte.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HImageEffectMatte.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HImageMatte.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HSound.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HStaticText.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HText.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HTextLook.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HVisible.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJThreadGroup.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJXletContext.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2013  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HListElement.java, libbluray-1.4.0/src/libbluray/bdj/java/org/havi/ui/HStaticRange.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2016  Petri Hintukainen
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJClassFilePatcher.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/backdoor/System.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/patchers/ReplaceMethodPatcher.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2020  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJClassFileTransformer.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJSecurityManager.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2015  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJListeners.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2013  VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJLoaderAdapter.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/mmbd/LoaderAdapter.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2018  VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJSocketFactory.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BDJSockets.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BUMFAsset.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/BUMFParser.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/CacheDir.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/VFSCache.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/org/videolan/LockFile.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2014  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/Libbluray.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/Handler.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010      William Hahne
+ * Copyright (C) 2012-2019 Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/Logger.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/peer/BDComponentPeer.java, libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/peer/BDKeyboardFocusManagerPeer.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/MountManager.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2014  Petri Hintukainen
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/StrUtil.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  Libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/bdjo/AppCache.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/bdjo/AppEntry.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/bdjo/AppProfile.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/bdjo/Bdjo.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/bdjo/GraphicsResolution.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/bdjo/PlayListTable.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/bdjo/TerminalInfo.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/control/GainControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2015  Petri Hintukainen
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/control/OverallGainControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/control/PanningControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/control/PrimaryGainControlImpl.java, libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/control/SecondaryGainControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2015  Petri Hintukainen
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/PiPControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2013-2019 Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/PrimaryAudioControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2016-2019 Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/SecondaryAudioControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2014-2019 Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/org/videolan/media/content/playlist/SubtitlingControlImpl.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2010  William Hahne
+ * Copyright (C) 2012-2019 Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java/sun/font/FontDesignMetrics.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2015  libbluray
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/BDToolkit.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012  libbluray
+ * Copyright (C) 2012  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java-j2se/java/awt/peer/BDFramePeer.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2012-2019  Petri Hintukainen <phintuka@users.sourceforge.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+
+Sources: libbluray-1.4.0/src/libbluray/bdj/java-j2se/sun/awt/PlatformGraphicsInfo.java
+/*
+ * This file is part of libbluray
+ * Copyright (C) 2021  VideoLAN
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library. If not, see
+ * <http://www.gnu.org/licenses/>.
+ */
+

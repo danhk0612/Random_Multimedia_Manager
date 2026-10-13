@@ -236,3 +236,25 @@ fixture는 TemporaryDirectory의 작은 synthetic tar/ZIP/archive만 사용한�
 - archive 10개/기존 8개 입력의 byte/hash 보존, 공식 script Git blob 3개, closure 1,285개 path/hash coverage·그룹 합계, 기존 문서 heading/길이·diff/local 링크를 확인했다. 기존 성공/실패/실물 미검증은 삭제하지 않았다.
 
 최종 판정은 **PR #33의 잔여 조사·검토 자료 및 영향 검증 제출 완료**다. S01~S03/N01~N03/G01의 공급자/링크 증거·전체 대응 소스·license graph·LGPL 교체·클린 PC 및 기존 실물 잔여는 미완료다. `completeCorrespondingSource/publicReleaseApproved:false`를 유지하고 MIT를 다시 승인 대기로 돌리지 않는다. 직접 병합·공개 Release/tag·제품/번들 변경·VSR은 없다.
+
+
+## T18-D1 local-evidence — 확보 패키지 잔여 검사
+
+기준 main **2a395f3**의 문서 정리/병렬 클린 PC 인계와 기존 실패/미검증을 보존했다. 미push 이전 로컬 작업은 자동 정리로 복구되지 않았으며 이번 검사는 이전 성공 승계가 아닌 같은 exact artifact/확보 archive에서의 자료 복원·검증이다. 공급자 웹 조사나 원본 archive 재수집은 하지 않았다.
+
+입력 artifact **11789979837** outer 292,227,189 bytes/SHA256 `0965d00ba6a2f9cdc541a20700f23c2ebd090e8adc1108d9a652fe1558aa2482`, runtime 232,034,356 bytes/SHA256 `8be9d64370ff0feec06b409131b1053d01c6dab6620ebd42e1d43df04e2a9bc0`를 직접 대조했다. 1,739개 manifest payload와 제3자 native/support 1,284개 크기/hash가 동결 자료와 일치한다. apphost hash 차이는 PR #33의 exact SHA 구분을 유지한다.
+
+Python ZIP reader로 JAR 6개의 모든 entry hash/manifest를 읽고 CAFEBABE·constant pool·this_class·SourceFile을 파싱해 entry/className과 package/SourceFile 후보를 대조했다. 총 class 2,364개가 Java 722개 단일 source 후보에 대응하며 class partition/build-only 제외도 검사했다. header/version/자기표시 compiler와 원문 build 규칙의 일관성은 실제 source equivalence/patch 적용이나 compiler 실행 attestation이 아니다. Lua 12-byte header·size_t/source chunk 및 source hash·기존 share/configure/recipe/32-bit patch 후보를 대조했다. 지원 파일은 source bytes와 LF→CRLF만 적용한 bytes를 비교했고 dependencies.json의 noticeFiles 존재·hash·sha512 파일/metadata를 별도로 대조하고 저장 원문 bytes를 확인했다. runtime 2개 hash 값은 일치, NuGet 12개는 불일치해 auxiliary 비교를 통과 처리하지 않았다. dependencies/lock과 원래 동결 metadata 값은 동일하며 실제 archive/hash 산출 의미 없이 원인을 단정하거나 값을 바꾸지 않는다. 고지 byte 통과와 provenance advisory를 구별한다. 실행/디컴파일/native 또는 Java/Lua 재빌드는 하지 않았다.
+
+검사 결과는 기존 source-closure JSON/CSV와 README에 통합했고 고지 4개 원문을 보완했다. support author/license와 full dual-license 조건, actual source 변경·selected linked graph/Desktop/Skia scope는 외부 증거 대기로 분리했다. S01 401/404 조회/공급자 연락·제품/번들/SDK/엔진/무결성 로직 변경·직접 병합·공개 배포·VSR 없음. completeCorrespondingSource/publicReleaseApproved false와 기존 클린 PC/NAS/RaiDrive/AVI/잠금/수동 미검증을 유지한다. 로컬/정확한 SHA Windows CI·새 artifact 결과는 아래에 기록한다.
+
+
+### local-evidence 최종 로컬 검증·원격 제출 차단
+
+검증 자료 SHA **c8bfd72222054ef05d83e8131037b5ebc0e337c9**. 기존 무결성 회귀 **42개**가 일반 Python/`-O`/`PYTHONOPTIMIZE=1`에서 통과했다. 10개 기존 archive bytes/SHA256/제공 SHA512를 모두 검증했고 source sidecar를 두 번 생성해 전체 byte 일치했다. Source ZIP **74,037,284 bytes / SHA256 `f606597f74a33567b84a61d5755761400be715d44ebfd52592cf0a33fecbf552`**, manifest 645개 payload/ZIP entry 646개. 실제 ZIP은 세 Python 모드 verify 통과, 원문 고지 4개 byte 포함 및 source/public 승인 false 확인.
+
+기존 source-closure JSON의 모든 이전 key/value, CSV 1,285개 path/architecture/hash/group/sourcePaths/remaining은 유지된다. main 대비 src/tests/scripts/workflows/SDK/MIT/source-inputs 및 source archives 변경 없음. 추가 source 헤더 판독은 Java 47종/헤더 없는 후보 2개, Lua 36개, 웹 지원 18개(16 GPL 설명·2 dual-license 설명)를 보존했다. 고지의 정확한 적용 잔여는 README의 local-evidence 표를 따른다. 이전 ac828d5의 sidecar hash/성공을 복구했다고 표시하지 않는다.
+
+**PR 미제출·이번 SHA Windows CI 미실행**이다. automatic approval review가 공개 저장소 작업 브랜치 push도 사용자의 공개 배포 금지에 포함된다고 해석해 거절했다. 다른 API나 우회 경로로 전송하지 않았다. 공개 저장소의 branch push/PR 제출은 허용하고 Release/tag 배포 금지는 유지한다는 범위 확인 후 exact SHA의 T18 CI·새 artifact runtime/source manifest 및 원문 고지 포함을 검증해 PR 결과를 갱신한다. 이전 PR #33 Windows 성공을 이번 자료의 성공으로 대체하지 않는다.
+
+이 결과 커밋은 CURRENT_STATE/TASKS/이 검증 문서만 변경한다. 검증 자료/고지/패키징 입력은 위 SHA 그대로이며 결과 문서 SHA의 새 ZIP 검증을 주장하지 않는다. 전체 소스/고지 graph 미완료·공개 배포 보류와 클린 PC/NAS/RaiDrive/AVI/잠금 및 기존 실물 잔여를 유지한다.
