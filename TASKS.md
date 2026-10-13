@@ -28,6 +28,8 @@
 
 ## 현재 우선 상태 — T18-D1 source-closure 검토
 
+PR **#33** 제출·검증 완료: 검증 입력 `e27c80d`의 Windows T18 run `38350407460` / job `115141274710` attempt 1 최초 성공. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·전체 ZIP 의존성 회귀를 통과했고 artifact `11789979837`를 실제 다운로드해 대조했다. Source ZIP SHA256 `c41e83c1...7985e29f`는 Linux/Windows 전체 byte 일치. runtime manifest 1,739개·LICENSE/원문 licenses 23개·제3자 native/support 1,284개 보존을 확인했다. 자체 App.exe의 새 SHA 버전 정보와 작성 문서 LF/CRLF 차이는 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)의 최종 결과에 구분한다. 최종 결과 변경은 문서 3개뿐이다.
+
 PR #32를 `5159714`로 main에 통합했다. 자체 코드·작성 문서 MIT LICENSE 및 검토용 소스 묶음 생성/검증이 반영됐다. 전체 ZIP은 MIT-only 배포물이 아니며 제3자 조건은 별도로 유지한다.
 
 최적화 모드의 거짓 PASS 보완을 확인했다. 검증 입력 `a420a39`의 Windows run `38344541619` / job `115122761895` 최초 성공: 42개 무결성 회귀, source/runtime ZIP 반복 byte 일치, 셸 시작·정상 종료·재시작 2회와 기존 ZIP 의존성 회귀 통과. 병합 검토에서도 최종 head의 42개 Python 회귀를 로컬에서 직접 실행해 통과했다. 최종 head `42d3881`까지 후속 변경은 결과 문서 3개뿐이며 검토 중 Windows/실제 artifact 다운로드를 재수행한 것은 아니다.
