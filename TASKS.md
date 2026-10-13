@@ -23,7 +23,7 @@
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
 | T18A | 변경 감지와 경로 상태 갱신 | Astra | T18A-1~5 PR #23~27 main 통합 완료; T18A-6 PR #28 반복 스캔 검사 보완 확인·main 통합 완료 (e850a64) | T05/T12; T02 식별 계약 |
-| T18 | Windows 배포 및 통합 검증 | Astra | PR #29/#30 main 통합 / 배포 방식·앱 라이선스·실PC 확인 대기 | T10~T13/T15~T17/T18A; D08 |
+| T18 | Windows 배포 및 통합 검증 | Astra | PR #29~#33 main 통합 / 자체 MIT 적용 완료 / T18-D1 잔여 소스·고지 검사 및 클린 PC 확인 대기, 공개 배포 보류 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 현재 우선 상태 — PR #33 통합·확보 자료의 잔여 검사
@@ -68,6 +68,36 @@ completeCorrespondingSource/publicReleaseApproved를 근거 없이 true로 바�
 ```
 
 클린 Windows PC 점검은 위 검사와 독립적으로 병렬 가능하다. 기존 T18 점검표와 exact 검토 ZIP을 사용하고 사전 SDK/runtime/VLC 설치 여부를 기록한다. 공급자 증거 요청은 별도 발송 승인 전 대기한다.
+
+## 병렬 작업 지시문 — T18 클린 Windows 검토 ZIP 검사
+
+```text
+최신 main/AI_WORKFLOW.md와 docs/T18_DISTRIBUTION_VALIDATION.md의
+“깨끗한 사용자 PC 재개 조건”을 읽고 기존 검토 ZIP만 검사해.
+T18-D1 확보 패키지 잔여 검사와 별개이며 제품 구현 작업이 아니다.
+
+선행 조건: SDK/.NET Desktop Runtime/VLC가 사전 설치되지 않은
+지원 대상 Windows x64 Desktop PC 또는 폐기 가능한 VM 접근.
+기존 사용자 설치를 제거하지 마. 새 계정만으로 클린 PC라고 판단하지 마.
+환경 접근이 없으면 환경 확보 대기로 보고하고 통과로 기록하지 마.
+
+PR #33 검증 run 38350407460 / artifact 11789979837의
+runtime ZIP을 기준으로 사용해. ZIP SHA256:
+8be9d64370ff0feec06b409131b1053d01c6dab6620ebd42e1d43df04e2a9bc0
+다른 ZIP이면 해당 SHA·manifest·검증 입력을 별도로 식별해.
+artifact가 만료되거나 접근 불가하면 임의 다운로드 파일로 대체하지 마.
+
+OS 에디션/빌드·아키텍처·사전 설치 상태·ZIP hash를 기록하고,
+기존 점검표의 실행/종료/재시작·기본 감상·실패 보존·삭제·숨김/복원·
+업데이트 후 데이터 보존을 테스트 복사본으로만 확인해.
+가능한 실제 loaded runtime/native 경로와 오프라인 실행 결과도 기록해.
+미실행·실패·통과를 구분하고 NAS/RaiDrive 호환성까지 통과로 확대하지 마.
+
+완료 조건: 환경/정확한 패키지와 각 검사 결과·재현 절차를 보고.
+공유 CURRENT_STATE.md/TASKS.md를 다른 Work와 동시에 편집하지 말고
+검사 결과를 통합 검토에 넘겨. 제품/패키지/라이선스 변경,
+공급자 연락, 직접 병합, 공개 Release/tag, VSR은 진행하지 마.
+```
 
 ## 완료된 작업 지시문 — T18-D1 잔여 대응 소스·배포 조건 확인 (PR #33 통합)
 

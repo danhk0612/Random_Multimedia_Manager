@@ -2,7 +2,7 @@
 
 ## 범위와 기준
 
-main `7c16295` / PR #28 통합 `e850a64`, AI_WORKFLOW/TASKS T18/D08 및 T18A-6 인계를 기준으로 `task/t18-windows-packaging`에서 패키징·기존 통합 검사·사용자 안내만 준비한다. 제품 소스 코드/DB/API/감상/삭제/종료 정책을 보존한다. src 변경은 App/Core packages.lock.json 추가뿐이다. 기존 검증 의미는 유지하고 T18에서 T13 상태 대기와 T17 후보 ID 확인만 보강한다. 앱 자체 라이선스는 미확정이다. 공개 Release/tag·병합·VSR은 범위 밖이다.
+main `7c16295` / PR #28 통합 `e850a64`, AI_WORKFLOW/TASKS T18/D08 및 T18A-6 인계를 기준으로 `task/t18-windows-packaging`에서 패키징·기존 통합 검사·사용자 안내만 준비한다. 제품 소스 코드/DB/API/감상/삭제/종료 정책을 보존한다. src 변경은 App/Core packages.lock.json 추가뿐이다. 기존 검증 의미는 유지하고 T18에서 T13 상태 대기와 T17 후보 ID 확인만 보강한다. 이 절은 최초 T18 패키징 범위다. 현재 자체 코드·작성 문서는 PR #32에서 MIT 적용 완료이며 제3자/전체 번들의 배포 조건 검토는 남아 있다. 공개 Release/tag·병합·VSR은 범위 밖이다.
 
 ## 재현 절차
 
@@ -32,7 +32,7 @@ Windows x64, PowerShell 7, SDK **10.0.401**, runtime **10.0.12**, NuGet.org 단�
 
 .NET 10 공식 OS 표(2026-10-11 접근 확인)는 Windows 11의 현재 지원 에디션과 Windows 10 일부 Enterprise/LTSC·IoT만 열거한다. 앱 사용자 대상은 Windows x64 Desktop이고 Server CI 성공을 Windows 10/11 전체 보장으로 해석하지 않는다. 현재는 **CI 검토 패키지 준비**이며 공개 배포 준비 완료를 선언하지 않는다.
 
-공개 배포 전 남은 항목: 앱 자체 라이선스 선택, exact native 번들/플러그인 고지·corresponding source 제공 방식 확정, 깨끗한 사용자 PC 압축 해제 실행 및 실제 기본 흐름 확인. dependencies metadata/추출 license 원문과 이 표의 조건을 대조해야 하며 metadata만으로 재배포 완료 선언을 하지 않는다. [의존성 고지](../packaging/THIRD_PARTY_NOTICES.md), [사용자 안내](../packaging/USER_GUIDE.md)가 패키지에 포함된다.
+공개 배포 전 남은 항목: exact native 번들/플러그인 고지·corresponding source 제공 방식 확정, 깨끗한 사용자 PC 압축 해제 실행 및 실제 기본 흐름 확인. dependencies metadata/추출 license 원문과 이 표의 조건을 대조해야 하며 metadata만으로 재배포 완료 선언을 하지 않는다. [의존성 고지](../packaging/THIRD_PARTY_NOTICES.md), [사용자 안내](../packaging/USER_GUIDE.md)가 패키지에 포함된다.
 
 원격 휴지통 Unknown/실행 차단·임의 영구삭제 전환 없음·actual IO drain/정상 종료 시간 상한 없음·AVI 조사 보류 및 기존 수동 미검증/사용자 승인 생략은 그대로다. 실제 NAS/RaiDrive는 [T18A-6 N01~N12 실사용 점검표](T18A_6_INTEGRATION_VALIDATION.md)로 이관하고 반복 조사하지 않는다. T11 최초 native dialog 실패/수정 없는 재실행 통과 이력도 보존한다.
 
