@@ -1,12 +1,24 @@
 # 현재 구현 상태
 
-## 현재 우선 상태 — T18-D1 PR #32 병합 전 보완
+## 현재 우선 상태 — T18-D1 PR #32 보완 후 재검토 대기
+
+수정 SHA **a420a39a62a554c9e0427b0a273a6dec7eb81d18**에서 assert 기반 무결성 검사 9개를 명시적 조건/ValueError로 바꾸고 일반/-O/PYTHONOPTIMIZE=1 정상·변조 회귀 42개를 T18 CI에 연결했다. Windows [run 38344541619](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38344541619), job 115122761895 최초 성공. artifact 11788208112을 내려받아 실제 ZIP manifest·LICENSE/원문 licenses 17개·source archive 8개를 재대조했고 source sidecar는 Linux/Windows와 세 모드에서 byte 동일했다. 자세한 새 SHA/해시와 이전 거짓 PASS 재현은 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)를 따른다.
+
+검사 누락 보완은 재검토로 넘기며 전체 대응 소스·license graph·클린 PC 미완료와 기존 실물/수동/잠금 실패 이력은 유지한다. MIT·제품/SDK/엔진/번들을 변경하지 않았다. 이후 결과 커밋은 문서 3개뿐이다. 직접 병합·공개 Release/tag·다음 Task/VSR 착수는 없다.
+
+### 0fc0c82 검토 당시 보완 요구와 재현 근거
 
 PR #32 head `0fc0c82340cd983310498ae5081285f193c931bd`를 검토했다. 자체 코드·작성 문서 MIT 적용, 제3자/전체 ZIP 조건 분리, 불완전한 검토용 source sidecar의 상태 표시는 보존한다. 검증 입력 `450cbb4`의 Windows T18 run `38337573828`은 success이며 이후 변경은 결과 문서 3개뿐이다. 아직 main에 병합하지 않았다.
 
-병합 차단: `scripts/Package-SourceSidecar.py`의 build/verify 무결성 검사가 `assert`에 의존한다. Python `-O` 또는 `PYTHONOPTIMIZE`에서는 검사가 제거된다. PR head의 스크립트와 합성 ZIP으로 payload를 변조해 재현한 결과, 일반 실행은 exit 1/AssertionError였지만 `python -O ... --verify`는 exit 0과 PASS를 출력했다. 기존 CI의 성공은 이 실패 경로를 검증한 결과가 아니다.
+보완 전 병합 차단 근거: `scripts/Package-SourceSidecar.py`의 build/verify 무결성 검사가 `assert`에 의존한다. Python `-O` 또는 `PYTHONOPTIMIZE`에서는 검사가 제거된다. PR head의 스크립트와 합성 ZIP으로 payload를 변조해 재현한 결과, 일반 실행은 exit 1/AssertionError였지만 `python -O ... --verify`는 exit 0과 PASS를 출력했다. 기존 CI의 성공은 이 실패 경로를 검증한 결과가 아니다.
 
-다음은 기존 PR #32의 좁은 보완이다. 라이선스 위임은 유효하며 사용자 재승인 대기로 바꾸지 않는다. 전체 대응 소스·license graph·클린 PC 미완료 및 기존 실물/잠금 실패 이력은 유지한다.
+위 요구에 따른 기존 PR #32의 좁은 보완을 수행했다. 라이선스 위임은 유효하며 사용자 재승인 대기로 바꾸지 않는다. 전체 대응 소스·license graph·클린 PC 미완료 및 기존 실물/잠금 실패 이력은 유지한다.
+
+### 이전 PR #32 검증 결과 (최적화 실패 검증과 구별)
+
+PR #32의 구현·패키징 검증 SHA는 **450cbb4fe2e73fb7f622c0b08a80a8c9e3342239**다. T18 Windows [run 38337573828](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38337573828), job 115101033114 최초 성공 및 artifact 11785329450의 실제 ZIP·manifest·LICENSE/원문 licenses 17개·소스 묶음을 재대조했다. 동일 SHA source sidecar는 Linux/Windows 전체 byte 일치다. 최초 aade32d의 CI 성공/소스 tar 줄바꿈 차이와 보완 경위는 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)에 보존한다.
+
+자체 MIT 적용·검토 자료와 패키징 검증 인계는 준비됐지만 전체 대응 소스/graph 양립·공개 배포는 미완료다. 8개 archives/116 contrib recipes와 전체 native 1,285행/956 plugin target 후보를 제공하되 actual build provenance로 표시하지 않는다. 기존 실물/수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한은 유지한다. 다음은 PR #32 검토 및 명시된 누락/재개 조건 확인이며 T18-D2~D5·VSR을 연속 착수하지 않는다. 직접 병합·공개 Release/tag는 없다. 이후 결과 문서는 검증 입력을 변경하지 않는다.
 
 ## PR #31 비교안 작성 당시 상태 (라이선스 위임은 위 최신 상태 참조)
 

@@ -2,7 +2,7 @@
 
 ## 최신 사용자 결정 — 2026-10-12
 
-MIT 우선, 불가능하면 적절한 오픈소스 라이선스 선택·적용이 위임됐다. 정확한 범위는 [DECISIONS.md](../../docs/DECISIONS.md)의 “T18 라이선스 선택 위임”을 따른다. T18-D1의 권리 부여 방향·정확한 라이선스 선택 대기는 해소됐으며 최신 실행 계약은 [TASKS.md](../../TASKS.md)의 T18-D1 지시문이다. 아래 비교안의 사용자 재선택/문구 별도 확정 조건보다 이번 위임을 우선한다. 제3자 권리·소스 제공·배포 적합성 검토와 공개 배포 차단은 유지한다.
+MIT 우선, 불가능하면 적절한 오픈소스 라이선스 선택·적용이 위임됐다. 정확한 범위는 [DECISIONS.md](../../docs/DECISIONS.md)의 “T18 라이선스 선택 위임”을 따른다. T18-D1에서 자체 소스의 MIT를 적용했으며 최신 실행 계약은 [TASKS.md](../../TASKS.md)의 T18-D1 지시문이다. 아래 비교안의 사용자 재선택/문구 별도 확정 조건보다 이번 위임을 우선한다. 제3자 권리·소스 제공·배포 적합성 검토와 공개 배포 차단은 유지한다.
 
 
 기준 main `163f88f` / PR #29 병합 `09eb08f`. 이 자료는 2026-10-12에 검토 ZIP을 직접 다시 내려받아 대조한 결과다. **공개 배포 승인이나 앱 라이선스 지정이 아니다.** 제품/DB/정책/SDK/패키지 버전 변경은 없다.
@@ -196,3 +196,39 @@ B/C의 필수 미디어 비교는 기존 지원 확장자 `.mp4/.mkv/.avi/.webm/
 변경은 이 README와 CURRENT_STATE/TASKS뿐이다. 기존 archive 4개와 inventory/manifest/GPL evidence hash를 로컬 대조했고 exact wrapper 초기화 소스와 제품/패키징 경계를 읽었다. Markdown 링크·diff/문서 보존을 검사한다. `packaging/**`가 T18 CI paths에 포함되므로 이 README만 바뀌어도 PR exact head에서 기존 Windows 패키징 CI가 실행된다. 그 결과는 PR checks로 확인하며 새로운 LGPL/외부 방식 구현 검증이나 라이선스 승인으로 해석하지 않는다.
 
 깨끗한 Windows PC, NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 조사 보류·기존 수동 미검증/승인 생략·실제 IO drain/정상 종료 상한 없음은 유지한다. 통합 `38142117377`의 최초 comic.cbz cleanup 잠금 실패→동일 SHA 재실행 성공은 원인 미확정이며 이번 문서 검토가 해결한 것이 아니다. 기존 자료/패키지/실패 이력과 앱 라이선스 미확정·공개 배포 차단을 보존한다.
+
+## T18-D1 라이선스 적용과 검토용 소스 묶음
+
+기준 main 690ac0b, 브랜치 task/t18-d1-license-source. 최신 지시는 과거 비교안의 사용자 재선택 대기보다 우선한다. **자체 코드·작성 문서 MIT 적용, 전체 번들 공개 배포 차단**이다.
+
+### 권리와 라이선스 판단
+
+전체 Git 이력의 author는 HAEKWANG DAN (danhk0612) 한 명이다. 사용자 위임과 저장소 소유·개발 이력을 근거로 소유자의 자체 코드·문서에 MIT를 적용했다. author 기록은 모든 파일의 권리를 증명하지 않으므로 제3자 archives/notices/upstream·의존성·원문 인용과 타인 저작물을 재라이선스하지 않는다. src/tests C#/XAML에 copyright/SPDX/copied/adapted 표시는 검색되지 않았다. 외부 코드 부재를 완전히 보증하는 검사는 아니다. fixture README의 합성 패턴/톤 생성 근거를 보존하며 출처가 별도 입증되지 않은 fixture까지 권리를 재부여하지 않는다.
+
+MIT의 수정·sublicense·재배포 허용은 GPL-compatible이며 자체 MIT 권리와 GPL 결합 조건을 구별할 수 있어 다른 앱 라이선스로 바꿀 이유는 확인되지 않았다. LGPL dynamic loading도 MIT가 제한하지 않는다. library 수정/debugging reverse engineering 금지 EULA는 없다. 앱→Core·SQLitePCLRaw/Sqlite·SkiaSharp·LibVLCSharp/WPF→외부 libvlc/libvlccore→plugins/정적 contrib의 graph를 유지한다.
+
+FFmpeg 실제 DLL의 GPL version 2 or later와 optional GPL 코드는 기존 evidence와 공식 설명에 근거한다. Apache-2.0의 GPLv3 호환/GPLv2 비호환을 고려해야 하며 모든 plugin의 only/or-later 검토가 끝나지 않아 전체 결합물의 GPL 버전을 임의 확정하지 않는다. **앱 소스 MIT 적용은 성립하지만 전체 graph 양립·재배포 적합성은 미완료**다.
+
+공식 참조(2026-10-13): https://www.ffmpeg.org/legal.html live 접근 확인. https://www.gnu.org/licenses/license-list.en.html 및 https://www.gnu.org/licenses/gpl-faq.en.html 은 검색으로 MIT/Apache·plugin 조건을 확인했으나 live open은 timeout이었다. 오늘 원문 live 접근 성공으로 기록하지 않는다. 저장된 GPL/LGPL COPYING와 exact binary evidence를 우선하며 소스 제공 미완료를 앱 라이선스 사용자 재승인 대기로 바꾸지 않는다.
+
+### 추가 확보와 바이너리별 대응
+
+source-inputs.json은 8개 archive를 포함한다. 기존 4개의 byte/hash는 그대로다. FFmpeg 6개 DLL configure의 libgsm/openjpeg/mp3lame/pthreads와 contrib FFmpeg recipe의 zlib/gsm 및 조건부 deps를 근거로 GSM/OpenJPEG/LAME/zlib 4개를 확보하여 VLC tar SHA512SUMS와 대조했다. 정확한 linked version이 recipe와 같다는 attestation은 없어 **후보 소스**다. pthreads VideoLAN 경로는 404였고 누락으로 기록했다(contrib-acquisition.json). recipe MinGW 10.0.0을 실제 compiler 버전으로 단정하지 않는다.
+
+| 실제 파일 그룹 | 제공한 소스·고지/빌드 입력 | 남은 확인 |
+|---|---|---|
+| avcodec/swscale 6개 | path/hash/configure GPL evidence, FFmpeg 4.4.5, ffmpeg recipe/patches/SHA512, GSM/OpenJPEG/LAME/zlib 후보·원문 고지 | 실제 patch 분기·linked versions, winpthreads/MinGW/libunwind·compiler runtime source/예외·링크 명령 |
+| VLC core·956 plugin DLL·지원 파일 | exact VLC tar, 1,285 native/support path/hash별 module target 후보/source headers/LIBADD, 전체 contrib recipe/patch | Make 변수/조건 해석·정적 링크 전이 graph·개별 licenses, 미매핑 파일 식별·build provenance |
+| LibVLCSharp/WPF | exact nuspec commit source·LGPL·앱 build | modified compatible DLL 교체 검증, 결합 조건 최종 대조 |
+| SQLite/SQLitePCLRaw | native source ID 동일 amalgamation·Apache 고지/locks | exact wrapper/native build provenance. Apache/public-domain을 GPL 소스 의무로 처리하지 않음 |
+| Skia/.NET/Desktop | exact nuspec·원문 license/third-party notices·Skia revisions/build.cake | 개별 notice/linked license 양립 확인. MIT/BSD attribution 유지, 전체 소스 일괄 의무 없음 |
+
+### 생성·검증·제공 절차
+
+clean tracked checkout에서 `python scripts/Package-SourceSidecar.py --output artifacts/t18-source`를 실행한다. Git HEAD objects의 application.tar에 자체 source/tests/scripts/locks/global.json/workflows/문서와 evidence를 포함한다. source parts는 검증하여 VLC tar로 재조립한다. 8개 archive·contrib recipe/patch 원문·전체 native inventory의 module-source-candidates.json·contrib-recipe-index.json·evidence/고지·LICENSE를 묶는다. Makefile 후보/headers는 라이선스 판정·확정 graph가 아니다. tar/patch 자체를 수정·적용하지 않고 recipe와 원문을 제공한다.
+
+고정 entry 순서/2020 timestamp/ZIP_STORED로 압축기 버전 차이를 피한다. manifest.json은 자신을 제외한 모든 entry의 size/SHA256, 별도 ZIP sha256는 전체 파일을 검사한다. status.json에는 exact app commit·동결 native commit·누락·completeCorrespondingSource:false/publicReleaseApproved:false가 있다. `python scripts/Package-SourceSidecar.py --verify <zip>`은 entry 집합/중복·size/hash·상태·application LICENSE를 검사한다. CI는 두 생성 ZIP byte 일치와 inputs hash 및 runtime ZIP의 LICENSE·고지·모든 upstream licenses byte를 대조한다.
+
+공개 재개 조건은 세 아키텍처 공급자의 build provenance/linked versions·전체 필요한 archives/patch 분기·toolchain/build instructions·파일별 고지와 license graph 양립 확인이다. 공급자와 소스 확보 경로 확인이 필요하지만 이번에 메시지를 보내거나 native 자체 빌드를 수행하지 않았다. 완전한 sidecar를 exact binary와 같은 위치에서 동시에 제공한다. 일반 upstream 링크나 현재 sidecar로 의무 완료를 선언하거나 실현되지 않은 서면 소스 약정을 발행하지 않는다.
+
+클린 PC/NAS/RaiDrive/AVI·기존 수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. 제품/DB/API/SDK/엔진/번들 변경·직접 병합·공개 Release/tag·VSR 착수는 없다.

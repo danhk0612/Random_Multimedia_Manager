@@ -22,6 +22,7 @@ foreach ($required in @('RandomMultimediaManager.App.exe', 'RandomMultimediaMana
     if (-not (Test-Path (Join-Path $package $required))) { throw "Missing required payload: $required" }
 }
 if (@(Get-ChildItem "$package/libvlc/win-x64/plugins" -Recurse -Filter '*.dll').Count -eq 0) { throw 'VLC plugins missing.' }
+Copy-Item LICENSE "$package/LICENSE"
 Copy-Item packaging/USER_GUIDE.md "$package/USER_GUIDE.md"
 Copy-Item packaging/THIRD_PARTY_NOTICES.md "$package/THIRD_PARTY_NOTICES.md"
 Copy-Item packaging/licenses "$package/licenses" -Recurse

@@ -27,3 +27,9 @@ DB는 `%LOCALAPPDATA%\RandomMultimediaManager\library.db`, 삭제 복구 저널�
 
 실사용 점검표: 저장소 `docs/T18A_6_INTEGRATION_VALIDATION.md`. 패키지 결과: `docs/T18_DISTRIBUTION_VALIDATION.md`.
 `build-info.json`은 소스 SHA와 빌드 설정, `files.json`은 파일별 SHA256, ZIP 옆 `.sha256`은 ZIP SHA256이다. 앱 자체 라이선스와 재배포 최종 검토가 남아 있다. 고지 파일은 `THIRD_PARTY_NOTICES.md`, `dependency-notices`를 확인한다.
+
+## 라이선스·소스
+
+동봉 LICENSE는 자체 코드·작성 문서의 MIT 라이선스다. 전체 ZIP과 제3자 DLL/plugins를 MIT로 재표시하지 않는다. THIRD_PARTY_NOTICES.md, licenses/, dependency-notices/의 원문 조건을 함께 확인한다. 라이브러리 수정·교체 및 그 변경을 디버깅하기 위한 reverse engineering을 금지하는 추가 EULA는 두지 않는다.
+
+동일 commit의 `RandomMultimediaManager-source-review-<sha>.zip`은 **미완성 검토용 sidecar**다. status.json은 전체 대응 소스 미완료·공개 승인 false를 표시한다. 일반 upstream 링크나 이 sidecar만으로 조건 충족을 선언하지 않는다. 공개 전 정확한 linked contrib/patches/toolchain과 파일별 고지 검토를 완료하고 완전한 소스를 바이너리와 같은 배포 위치에서 제공해야 한다.

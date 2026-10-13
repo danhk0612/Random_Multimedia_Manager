@@ -8,6 +8,10 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'scripts/*Windows*.ps1'
+      - 'scripts/Package-SourceSidecar.py'
+      - 'scripts/Verify-SourceSidecar.py'
+      - 'LICENSE'
+      - '.gitattributes'
       - 'packaging/**'
       - 'global.json'
       - 'NuGet.Config'
@@ -43,6 +47,22 @@ jobs:
           dotnet --info
           [Runtime.InteropServices.RuntimeInformation]::OSDescription
           Write-Output "Global VLC installed: $(Test-Path 'C:/Program Files/VideoLAN/VLC/vlc.exe')"
+      - name: Source integrity regression in all Python modes
+        shell: pwsh
+        run: |
+          python scripts/Verify-SourceSidecar.py
+          if ($LASTEXITCODE -ne 0) { throw 'Source integrity regression failed.' }
+      - name: Build and verify repeatable review source sidecar
+        shell: pwsh
+        run: |
+          python scripts/Package-SourceSidecar.py
+          if ($LASTEXITCODE -ne 0) { throw 'Source sidecar failed.' }
+          python scripts/Package-SourceSidecar.py --output artifacts/t18-source-repeat
+          if ($LASTEXITCODE -ne 0) { throw 'Repeat source sidecar failed.' }
+          $first = Get-ChildItem artifacts/t18-source -Filter '*.zip'
+          $second = Get-ChildItem artifacts/t18-source-repeat -Filter '*.zip'
+          if ((Get-FileHash $first.FullName).Hash -ne (Get-FileHash $second.FullName).Hash) { throw 'Source sidecar bytes differ.' }
+          Write-Output 'PASS byte-identical source sidecar; completeCorrespondingSource false'
       - name: Publish folder and review ZIP
         shell: pwsh
         run: ./scripts/Package-Windows.ps1
@@ -65,6 +85,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           path: |
+            artifacts/t18-source/*.zip
+            artifacts/t18-source/*.sha256
             artifacts/t18/*.zip
             artifacts/t18/*.sha256
             artifacts/t18/*.log
