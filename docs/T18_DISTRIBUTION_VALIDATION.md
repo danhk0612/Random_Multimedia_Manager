@@ -206,3 +206,17 @@ fixture는 TemporaryDirectory의 작은 synthetic tar/ZIP/archive만 사용한�
 이후 결과 확정 커밋은 CURRENT_STATE/TASKS/이 문서만 변경한다. 실제 Python/패키징/workflow·제품/검증/원문 입력은 위 SHA와 동일하며 후속 문서 SHA에서 새 ZIP을 검증했다고 주장하지 않는다. main의 보완 지시와 기존 CURRENT_STATE/TASKS 본문, 이 문서의 기존 성공/줄바꿈 이력을 손실 없이 보존했다.
 
 판정: **최적화 모드 무결성 검사 누락 보완·회귀/Windows CI 확인, PR #32 재검토 대기**. 전체 대응 소스·license graph·클린 PC 및 기존 NAS/RaiDrive/원격 휴지통 Unknown/차단·AVI 보류·수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. MIT 적용을 재승인 대기로 바꾸지 않았고 직접 병합·공개 Release/tag·다음 Task/VSR 착수는 하지 않았다.
+
+
+## T18-D1 source-closure — 잔여 자료와 외부 증거 경계
+
+기준 main `a7c5881`, 브랜치 `task/t18-d1-source-closure`. 기존 MIT·최적화 42개 회귀 보완은 변경하지 않았다. 이전 run/artifact·줄바꿈 보완·comic.cbz 실패/동일 SHA 재실행과 실물 미검증을 유지한다.
+
+- 기존 8개 archive bytes/SHA256/SHA512를 보존하고 MinGW-w64 10.0.0 및 libbluray 1.4.0만 추가했다. 원본 모두 VLC recipe SHA512 일치, 원문 고지 포함. actual linked version/patch 완료는 아니다.
+- 동결 native/support 1,285개 path/hash를 source-closure-inventory.csv와 대조. plugin 956개/323개 고유 target의 source/Makefile 후보, native core 6개, import 6개, Java JAR 6개, Lua bytecode 108개를 분리했다. 지원 84개 source hash 그대로, 96개 LF→CRLF 변환 hash 일치. actual linked graph는 아니며 외부 source/notice 누락을 명시한다.
+- exact 공식 Windows build.sh/gitlab-ci/get-contrib-sha 원문·blob/hash와 release pipeline 674296/job 2403066/7/8 metadata를 확보했다. trace는 401, win64 archive endpoint는 404. HTTP 200 anti-bot HTML은 source로 거부했다. checksum이 맞는 후보·build instructions와 actual selected graph/실행 로그를 구별한다.
+- source sidecar의 evidence/archives와 status 잔여 분류만 갱신. 제품/src/tests/DB/API·SDK/엔진/번들 및 무결성 로직 변경 없음. 전체 corresponding source/publicReleaseApproved false 유지.
+
+검증 입력 SHA와 로컬/Windows 결과는 아래 최종 결과 절에 기록한다. 필수 소스/patch/build 지시·고지 및 단순 compiler/wrapper provenance의 차이, 정확한 누락·재개 조건/미발송 문의 초안은 release-readiness README의 source-closure 절이 단일 기준이다.
+
+판정: 잔여 조사·검토용 자료 제출, 전체 대응 소스·license graph 미완료/공개 배포 차단. 클린 PC/NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 보류·기존 수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한 없음 유지. 직접 병합·공개 Release/tag·VSR 미착수.

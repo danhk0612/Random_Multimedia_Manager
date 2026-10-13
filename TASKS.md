@@ -26,13 +26,13 @@
 | T18 | Windows 배포 및 통합 검증 | Astra | PR #29/#30 main 통합 / 배포 방식·앱 라이선스·실PC 확인 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
-## 현재 우선 상태 — PR #32 통합·T18-D1 잔여 대응 소스 확인
+## 현재 우선 상태 — T18-D1 source-closure 검토
 
 PR #32를 `5159714`로 main에 통합했다. 자체 코드·작성 문서 MIT LICENSE 및 검토용 소스 묶음 생성/검증이 반영됐다. 전체 ZIP은 MIT-only 배포물이 아니며 제3자 조건은 별도로 유지한다.
 
 최적화 모드의 거짓 PASS 보완을 확인했다. 검증 입력 `a420a39`의 Windows run `38344541619` / job `115122761895` 최초 성공: 42개 무결성 회귀, source/runtime ZIP 반복 byte 일치, 셸 시작·정상 종료·재시작 2회와 기존 ZIP 의존성 회귀 통과. 병합 검토에서도 최종 head의 42개 Python 회귀를 로컬에서 직접 실행해 통과했다. 최종 head `42d3881`까지 후속 변경은 결과 문서 3개뿐이며 검토 중 Windows/실제 artifact 다운로드를 재수행한 것은 아니다.
 
-다음은 고성능 Work의 **T18-D1 잔여 대응 소스·배포 조건 확인**이다. 8개 확보 archives와 recipe/module 후보는 완전한 대응 소스 증명이 아니다. 공개 배포 보류, 클린 PC·NAS/RaiDrive·AVI 및 기존 comic.cbz 잠금 원인 미확정은 유지한다. MIT 선택은 다시 승인 대기로 돌리지 않는다.
+`task/t18-d1-source-closure`에서 잔여 조사·검토 자료를 통합했다. 기존 8개 archive를 재수집하지 않고 MinGW-w64 10.0.0/libbluray 1.4.0 원본과 고지(기존 VLC recipe SHA512 일치), exact 공식 Windows build/CI 원문을 추가했다. 전체 1,285개 native/support 파일을 대응표에 연결했고 지원 파일 84개는 원문 hash, 96개는 LF→CRLF hash가 일치한다. compiler provenance advisory와 필수 source/patch/build/notice 잔여를 구분했다. 공식 release job 2403066/7/8 trace 401·win64 artifact 404 때문에 외부 증거 없이 selected graph를 닫지 않는다. [정확한 누락 S01~S03/N01~N03/G01·재개 조건](packaging/release-readiness/README.md#t18-d1-잔여-대응-소스-확인--source-closure)을 따른다. 자체 MIT·최적화 무결성 보완은 반복하지 않았으며 공개 배포/전체 소스 상태는 false다. 클린 PC·NAS/RaiDrive·AVI·comic.cbz 잠금 원인 미확정·기존 성공/실패는 유지한다. 이번 PR 검토가 다음 단계이며 직접 병합·공개 배포·VSR은 없다.
 
 ## 새 작업 시작 지시문 — T18-D1 잔여 대응 소스·배포 조건 확인
 
