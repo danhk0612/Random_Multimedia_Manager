@@ -54,10 +54,30 @@ def build(output):
     # Use committed Git objects rather than checkout line-ending conversions.
     tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
     paths = [p for p in tracked if p and not p.startswith('packaging/release-readiness/sources/')]
-    files['application.tar'] = subprocess.check_output(['git', 'archive', '--format=tar', sha, '--', *paths], cwd=ROOT)
+    requests = ''.join(f'{sha}:{p}\n' for p in sorted(paths)).encode()
+    batch = subprocess.check_output(['git', 'cat-file', '--batch'], input=requests, cwd=ROOT)
+    snapshot = {}
+    cursor = 0
+    for p in sorted(paths):
+        end = batch.index(b'\n', cursor)
+        header = batch[cursor:end].split()
+        assert header[1] == b'blob', p
+        length = int(header[2])
+        cursor = end + 1
+        snapshot[p] = batch[cursor:cursor + length]
+        cursor += length + 1
+    archive = io.BytesIO()
+    with tarfile.open(fileobj=archive, mode='w', format=tarfile.PAX_FORMAT) as app:
+        for p, data in snapshot.items():
+            info = tarfile.TarInfo(p)
+            info.size = len(data)
+            info.mode = 0o644
+            info.mtime = 1577836800
+            app.addfile(info, io.BytesIO(data))
+    files['application.tar'] = archive.getvalue()
     for p in tracked:
         if p.startswith('packaging/') and not p.startswith('packaging/release-readiness/sources/'):
-            files['evidence/' + p] = subprocess.check_output(['git', 'show', f'{sha}:{p}'], cwd=ROOT)
+            files['evidence/' + p] = snapshot[p]
     # Preserve literal recipe lines/patches and module source headers. These are
     # candidate mappings, not evaluated make variables or build attestations.
     with tarfile.open(fileobj=io.BytesIO(lzma.decompress(files['sources/vlc-3.0.23.tar.xz'])), mode='r:') as tar:
