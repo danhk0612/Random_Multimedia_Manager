@@ -232,3 +232,61 @@ clean tracked checkout에서 `python scripts/Package-SourceSidecar.py --output a
 공개 재개 조건은 세 아키텍처 공급자의 build provenance/linked versions·전체 필요한 archives/patch 분기·toolchain/build instructions·파일별 고지와 license graph 양립 확인이다. 공급자와 소스 확보 경로 확인이 필요하지만 이번에 메시지를 보내거나 native 자체 빌드를 수행하지 않았다. 완전한 sidecar를 exact binary와 같은 위치에서 동시에 제공한다. 일반 upstream 링크나 현재 sidecar로 의무 완료를 선언하거나 실현되지 않은 서면 소스 약정을 발행하지 않는다.
 
 클린 PC/NAS/RaiDrive/AVI·기존 수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. 제품/DB/API/SDK/엔진/번들 변경·직접 병합·공개 Release/tag·VSR 착수는 없다.
+
+## T18-D1 잔여 대응 소스 확인 — source-closure
+
+기준 main `a7c588166dd1be3a90b775a0c807c95e164b015f`, 브랜치 `task/t18-d1-source-closure`. PR #32의 MIT 적용·42개 최적화 무결성 보완은 유지한다. 이번 결과는 **잔여 자료 조사와 검토용 sidecar 갱신 완료, 전체 대응 소스·license graph·공개 배포 차단 유지**다. 아래가 현재 잔여의 기준이며 위 과거 비교안의 앱 라이선스 재선택 조건을 적용하지 않는다.
+
+### 확보·입증 범위
+
+- 기존 8개 archive를 재다운로드하지 않았다. `source-inputs.json`의 기존 bytes/SHA256/SHA512를 보존하고 MinGW-w64 10.0.0, libbluray 1.4.0 원본만 추가했다(총 10개). 두 원본 모두 기존 VLC tar의 `contrib/src/{pthreads,bluray}/SHA512SUMS`와 일치한다. archive 확보가 actual linked version/patch 완료를 뜻하지 않는다.
+- pthreads recipe의 `download_pkg(...,winpthreads)`는 `pub/contrib/winpthreads/`를 먼저 사용한다. 이전 `pthreads/` 404는 유지하며 올바른 mirror의 v10.0.0도 404임을 확인했다. recipe의 공식 SourceForge fallback에서 **9,620,291 bytes / SHA256 `ba6b430aed72c63a3768531f6a3ffc2b0fde2c57a3b251450dcf489a894f0894` / SHA512 `3c0827af7c40809a867758f6cd9ef3ff0c988b43082345bf725e03949af95968d634ace99a7ffae323189549221dcb5d861de9e801f1fbc7904e446641b60516`**를 확보했다. v9/v11/v14 또는 pthreads-w32로 대체하지 않았다. winpthreads의 MIT·Lockless BSD 고지 및 MinGW 최상위 ZPL/예외 설명을 원문으로 포함한다. 최상위 ZPL만으로 모든 toolchain/runtime 파일을 판정하지 않는다.
+- JAR 이름 `libbluray-{awt-,}j2se-1.4.0.jar`와 VLC recipe 버전이 일치한다. 공식 libbluray 1.4.0 원본 **458,580 bytes / SHA256 `77937baf07eadda4b2b311cf3af4c50269d2ea3165041f5843d96476c4c92777`** 및 COPYING을 추가했다. exact Java compiler/patch·JAR 생성·native 링크를 아직 입증하지 않았다.
+- tar에 빠져 있던 공식 `extras/package/win32/build.sh`, `extras/ci/gitlab-ci.yml`, `extras/ci/get-contrib-sha.sh`를 exact revision `79128878ddb2c280bbb6c89c76a46b31a80ade1c`에서 확보했다. 보존 파일/blob/hash·공식 요청은 [vlc-release-evidence.json](upstream/vlc-release-evidence.json)에 있다. GitHub mirror의 Git blob을 대조했고 공식 repository/files API로 실제 source 본문도 확인했다. raw 웹 경로의 HTTP 200 anti-bot HTML은 source로 채택하지 않았다.
+- release pipeline [674296](https://code.videolan.org/videolan/vlc/-/pipelines/674296)의 `3.0.23-2` 성공과 Windows release job 2403066/2403067/2403068 metadata를 확인했다. CI는 x86/x64 이미지 `20251208092116`, ARM64 LLVM/UCRT 이미지 `20251223015425`, `build.sh -r -l -i u ...`, contrib tarballs와 extras/tools archives 보존 경로를 명시한다. 이는 **정해진 build instructions**이며 exact DLL의 compiler 버전/실제 실행·링크 attestation은 아니다. release template은 일반/nightly의 prebuilt contrib logic을 우회한다. 2017년 `latest` prebuilt를 이 release의 소스로 사용하지 않는다.
+
+### 바이너리별 필수 잔여와 단순 provenance
+
+[source-closure-inventory.csv](source-closure-inventory.csv)는 동결 `native-inventory.csv` 1,285개 path/SHA256를 하나도 제외하지 않고 그룹·대응 source path·증거 수준·잔여 ID로 연결한다. [source-closure.json](source-closure.json)은 exact source hash와 323개 고유 plugin target의 literal Makefile/source/link 후보를 담는다. `_la_SOURCES`의 조건 분기는 실행하지 않으며 `libscaletempo_pitch`의 명시적 source alias만 원문 대조로 풀었다. 이 파일들은 license scanner의 승인 결과가 아니다.
+
+| exact 파일 그룹 / 수 | 현재 대응 | 필수 잔여 / 분류 |
+|---|---|---|
+| avcodec/swscale / 6 | binary configure·GPL 증거, FFmpeg 4.4.5, recipe의 USE_FFMPEG patch 14개와 GSM/OpenJPEG/LAME/zlib/MinGW 후보 | S01/N01/G01: actual selected versions·patch 적용 및 필요한 컴파일/설치 scripts, 각 linked code 고지·양립. ARM64 `libunwind.a/libpthread.a/-static-libstdc++`의 실제 LLVM/GCC runtime 구분·예외 확인. `--cc=...gcc` 이름만으로 구현/버전 확정 금지 |
+| 다른 plugin / 950, VLC core / 6 | revision-matched VLC 원본, 파일별 source 헤더·LIBADD 후보 | S01/N01/G01: build의 `make list`, `config.mak/config.log`, 링크 `.la/.pc` 또는 link map/log 및 선택된 contrib 원본/patch. GnuTLS→nettle/GMP, live555, libass→freetype/harfbuzz 등은 recipe 후보이며 실제 버전/전이 graph 미확정 |
+| Lua bytecode / 108 | 36개 고유 `.lua` 원본 및 `share/Makefile.am` LUAC 명령 | S03/N02: 사용된 source/변경 및 bytecode 생성 지시의 대응 확인. 원본 소스는 제공됐지만 동일 bytecode 재빌드는 미실시. compiler patch 버전·byte 동일 재빌드는 일괄 법적 의무로 두지 않음 |
+| HRTF·이미지·web 지원 / 180 | 84개 source SHA256 그대로 일치, 96개는 LF→CRLF 변환 SHA256가 동결 hash와 일치 | N02: 개별 copyright/license 원문 보존·전체 notice coverage 최종 대조. 소스가 없는 180개로 분류하지 않음. CRLF만 다르며 별도 semantic patch를 추정하지 않음 |
+| libbluray JAR / 6 | 1.4.0 archive/recipe checksum/COPYING, Java source | S02/N01/G01: 배포된 두 JAR variant의 source·Java build와 dependencies/patch 대응. JAR를 단순 비실행 지원 파일로 제외하지 않음 |
+| SDK import `.lib` / 6 | VLC src/lib build 후보, x64 2개 공식 7z byte 대조 이력 | S01/N01: archive members/import stub 및 생성 조건 확인, x86/ARM64 기존 미대조 유지. 모든 compiler binary 수집 요구와 구분 |
+| SQLite / 1 | native SOURCE_ID 일치 amalgamation + SQLitePCLRaw Apache 원문 | N03: 적용 NOTICE/변경 고지 검토. exact wrapper commit/compiler 옵션은 advisory provenance이며 public-domain/Apache만으로 GPL 전체 소스 차단 부과 안 함 |
+| Skia / 1 | exact package source revision/build.cake 및 제공 notices | N03/G01: 실제 linked third-party 조건과 고지 coverage·graph 양립 검토. MIT만으로 native 전체 승인 금지; 필요 소스가 생기는지 actual linked license에서 판단 |
+| .NET/Desktop/apphost 등 / 21 | runtime/app source 및 exact package notice 수집 경로 | N03: NuGet/runtime의 기존 원문·적용 third-party 조건 대조. D3DCompiler/vcruntime/MSQuic/native apphost도 누락하지 않음. compiler 환경 미확보 자체를 GPL 전체 소스 의무로 확대 안 함 |
+
+`N01/N02/N03`는 기존 COPYING/원문을 삭제하라는 뜻이 아니라 파일별 필요한 notice가 모두 포함됐는지 확인해야 한다는 뜻이다. 새 `licenses/contrib/`에 winpthreads/MinGW/libbluray·dkjson copyright, HRTF의 내장 License 문자열 및 GPL module source header 원문을 보완했다. 원본을 relicense하지 않는다.
+
+### 전체 graph 판정
+
+자체 MIT·MIT/BSD류와 GPL 결합 배포 조건을 분리한다. FFmpeg 6개는 기존 실제 binary의 `GPL version 2 or later`가 근거다. 추가로 source 후보 10개 target에 GPL 헤더가 있다: dolby/headphone channel mixer, x26410b, lua, remoteosd, deinterlace, hqdn3d, visual, i420_rgb_mmx, glspectrum. 전체 목록·source hash는 source-closure.json에 있다. **조건부 source/header까지 포함한 후보**이므로 이 목록만으로 모든 target의 실제 GPL 적용/only/or-later를 확정하지 않는다. avcodec/swscale 문자열 부재·NuGet exclude list 통과를 다른 target의 LGPL 증거로 쓰지 않는다.
+
+LGPL source header와 GPL-or-later 후보는 GPLv3 경로를 배제하지 않지만 SQLitePCLRaw Apache-2.0와 GPLv2-only의 결합은 양립한다고 선언할 수 없다. GnuTLS/nettle/GMP/live555·Java/Skia의 실제 linked 조건·버전 및 필요한 예외를 대조하기 전 **전체 graph 양립 미입증**이다. LGPL library 배포의 소스/고지 및 교체·수정 debugging 조건도 별도로 남는다. 앱 권리는 MIT 그대로이며 제3자 권리를 MIT/GPLv3로 재부여하지 않는다. LGPL 교체 실제 시험 미실시·클린 PC 미검증도 유지한다.
+
+### 외부 증거가 필요한 정확한 누락과 재개 조건
+
+| ID | 필요한 증거·질문 | 확인 경로·실패 / 재개 조건 |
+|---|---|---|
+| S01 | revision 79128878 release-win32/win64/win64-arm의 contrib selected 목록, actual archives/checksums, applied patches와 `config.mak/config.log`, 필요한 build/install scripts·link map 또는 `.pc/.la`, statically copied runtime의 version/license exception | 공식 project 435 pipeline 674296/job 2403066/7/8 metadata는 HTTP 200. 세 `/jobs/<id>/trace`는 **HTTP 401**. job 2403067 `/artifacts`는 **HTTP 404**. metadata의 archive 만료일 2026-01-06 및 trace만 남음을 기록. 공급자의 대응 소스 묶음 또는 이 release 로그/artifact의 권한 있는 접근을 확보하면 재개. 인증 우회/실제 공급자 연락 없음 |
+| S02 | `plugins/access/libbluray-{awt-,}j2se-1.4.0.jar` 6개 hash에 대응하는 Java/native source 변경·compiler/build instructions, JAR 내부 고지/제3자 class 목록 | official libbluray 1.4.0 source HTTP 200 + recipe SHA512 match. archive/filename 증거만으로 JAR correspondence 미확정. 공급자 Java build·JAR inventory를 확보하거나 승인된 exact artifact 검사 환경에서 확인하면 재개 |
+| S03 | Lua 36개 source/bytecode 생성·원본 변경 여부 및 actual LUAC 조건 | 원본 36개와 build rule 제공. release trace 401로 생성 실행 미확인. 해당 로그/공급자 설명 또는 exact `.luac` 검사로 source 대응 확인 시 재개. source 제공과 byte 동일 재빌드 의무를 구별 |
+| N01/N02 | DLL/core/JAR·지원 파일별 copyright/notice 포함, transitive source license/변경 조건 | COPYING/AUTHORS/새 notice는 제공됐지만 모든 linked source의 고지 미입증. S01/S02 selected graph와 existing source headers를 연결하고 최종 runtime ZIP 원문 포함을 검사하면 재개 |
+| N03/G01 | Skia/runtime의 실제 linked 예외·per-file notice coverage와 전체 GPL version 양립, LGPL 교체 조건 | exact NuGet 원문 유지. GNU license-list/GPL/LGPL live 직접 요청은 HTTP 502, web open timeout; 완료 근거로 사용하지 않음. 저장한 원문 조건을 actual graph에 대조하거나 공식 설명 확보 시 재개. MIT 선택 재승인 또는 SQLitePCLRaw commit만을 이유로 차단하지 않음 |
+
+동일 조사를 계속 반복하지 않는다. compiler version/환경의 미확보는 provenance advisory다. 대응 소스에 필요한 실제 patch·컴파일/설치 script의 누락과 구별한다. source sidecar의 `completeCorrespondingSource:false`, `publicReleaseApproved:false`는 유지하고 위 ID를 status/evidence에 연결한다. 기존 원문 archives와 literal recipe patches는 제공하되 실제 적용을 주장하지 않는다. 공급자 자료를 확보하면 **해당 ID만** 검증·고지/sidecar에 통합하고 exact SHA의 Windows 패키징을 확인한다. 새 native build·번들 교체·plugin 제거·T18-D2~D5/VSR은 별도 지시 전 착수하지 않는다.
+
+공급자 문의 초안(발송하지 않음):
+
+> For VideoLAN.LibVLC.Windows 3.0.23.1 and the official VLC 3.0.23-2 Windows binaries (commit 79128878), please provide the corresponding source/build materials for release jobs 2403066/2403067/2403068: selected contrib versions and checksums, actual patches, config/link inputs and necessary build/install scripts, plus linked compiler runtime licenses/exceptions. The public traces return 401 and the win64 artifact returns 404. Please also identify the source/build correspondence for libbluray 1.4.0 Java JARs and compiled Lua files. Our per-file SHA256 inventory and the six GPL FFmpeg findings are available for matching. We are not requesting a license change or a replacement bundle.
+
+### 이번 변경의 검증 경계
+
+sidecar는 기존 committed Git snapshot/evidence 복사로 새 source-closure CSV/JSON·공식 scripts·10개 source archives·추가 고지를 포함한다. builder의 무결성 로직은 그대로이며 status의 누락 분류와 evidence 경로만 갱신한다. 현재 파일별 대응 검사와 source hash/recipe checksum, 반복 sidecar manifest/byte 검증 및 exact SHA Windows T18 CI 결과는 [T18 검증 문서](../../docs/T18_DISTRIBUTION_VALIDATION.md)의 이번 결과를 따른다. 이전 성공/실패와 검토 ZIP·자료에 소급 포함됐다고 기록하지 않는다.
+
+클린 Windows PC/NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 조사 보류·기존 수동 미검증/승인 생략·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. 제품·DB/API/SDK/엔진/native 번들 변경, 직접 병합·공개 Release/tag·VSR은 없다.

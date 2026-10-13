@@ -39,5 +39,23 @@
     "url": "https://download.videolan.org/pub/contrib/zlib/zlib-1.3.1.tar.xz",
     "checkedOn": "2026-10-13",
     "status": "VLC recipe checksum matched; FFmpeg binary configure/recipe dependency candidate, exact linked version and applied patches unresolved"
+  },
+  {
+    "file": "sources/mingw-w64-v10.0.0.tar.bz2",
+    "bytes": 9620291,
+    "sha256": "ba6b430aed72c63a3768531f6a3ffc2b0fde2c57a3b251450dcf489a894f0894",
+    "sha512": "3c0827af7c40809a867758f6cd9ef3ff0c988b43082345bf725e03949af95968d634ace99a7ffae323189549221dcb5d861de9e801f1fbc7904e446641b60516",
+    "url": "https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v10.0.0.tar.bz2",
+    "checkedOn": "2026-10-13",
+    "status": "Exact VLC pthreads recipe SHA512 matched; winpthreads COPYING retained; linked version/toolchain and applied patches not attested by this archive"
+  },
+  {
+    "file": "sources/libbluray-1.4.0.tar.xz",
+    "bytes": 458580,
+    "sha256": "77937baf07eadda4b2b311cf3af4c50269d2ea3165041f5843d96476c4c92777",
+    "sha512": "7284169b32624e5ca4fd71b260a4cc2921efafb1f63143a562568be45e373bfcbfeac63895d5659ccdcb11d7dbd0236cc46ccb15c12eff855703010e46991f27",
+    "url": "https://download.videolan.org/pub/videolan/libbluray/1.4.0/libbluray-1.4.0.tar.xz",
+    "checkedOn": "2026-10-13",
+    "status": "VLC bluray recipe SHA512 matched; distributed JAR filename version 1.4.0 matches; exact Java/native build and linked dependencies unresolved"
   }
 ]

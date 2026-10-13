@@ -1,0 +1,147 @@
+{
+  "checkedOn": "2026-10-13",
+  "sourceCommit": "79128878ddb2c280bbb6c89c76a46b31a80ade1c",
+  "pipeline": {
+    "id": 674296,
+    "ref": "3.0.23-2",
+    "status": "success",
+    "createdAt": "2025-12-23T10:49:10.441Z",
+    "url": "https://code.videolan.org/videolan/vlc/-/pipelines/674296"
+  },
+  "jobs": [
+    {
+      "id": 2403066,
+      "name": "release-win32",
+      "status": "success",
+      "traceBytes": 12148648,
+      "artifactsExpireAt": "2026-01-06T11:29:29.228Z"
+    },
+    {
+      "id": 2403067,
+      "name": "release-win64",
+      "status": "success",
+      "traceBytes": 12273810,
+      "artifactsExpireAt": "2026-01-06T11:49:54.782Z"
+    },
+    {
+      "id": 2403068,
+      "name": "release-win64-arm",
+      "status": "success",
+      "traceBytes": 16375052,
+      "artifactsExpireAt": "2026-01-06T12:06:05.494Z"
+    }
+  ],
+  "scope": "Public API metadata and exact repository scripts, not trace/link attestation; binary equality inherited from official-vlc-comparison.json",
+  "scripts": [
+    {
+      "file": "upstream/vlc-build.sh",
+      "upstreamPath": "extras/package/win32/build.sh",
+      "gitBlob": "e974d3dd29d93bf9a8c54891a8410cd48a4e19fe",
+      "bytes": 16051,
+      "sha256": "2d71033cc215de1505b7b6512fead762d363cf6be230e52563d9d74cbce25731",
+      "url": "https://github.com/videolan/vlc/blob/79128878ddb2c280bbb6c89c76a46b31a80ade1c/extras/package/win32/build.sh"
+    },
+    {
+      "file": "upstream/vlc-gitlab-ci.yml",
+      "upstreamPath": "extras/ci/gitlab-ci.yml",
+      "gitBlob": "458c609092959db0019639f6e2ad376f93c0af50",
+      "bytes": 14413,
+      "sha256": "161aa6d1bc0bd111201830010734eae07de8b9b97c7cb2da01e3b674400d0217",
+      "url": "https://github.com/videolan/vlc/blob/79128878ddb2c280bbb6c89c76a46b31a80ade1c/extras/ci/gitlab-ci.yml"
+    },
+    {
+      "file": "upstream/vlc-get-contrib-sha.sh",
+      "upstreamPath": "extras/ci/get-contrib-sha.sh",
+      "gitBlob": "640aa74563a6626b11ce28190a502632cb0f6d81",
+      "bytes": 1133,
+      "sha256": "97ffaec0edf5c37a4fc881b63327b87b3c7a00b567c6585c505d663f2775a91f",
+      "url": "https://github.com/videolan/vlc/blob/79128878ddb2c280bbb6c89c76a46b31a80ade1c/extras/ci/get-contrib-sha.sh"
+    }
+  ],
+  "requests": [
+    {
+      "url": "https://download.videolan.org/pub/contrib/pthreads/mingw-w64-v10.0.0.tar.bz2",
+      "result": "HTTP 404 (original failed route retained)"
+    },
+    {
+      "url": "https://download.videolan.org/pub/contrib/winpthreads/mingw-w64-v10.0.0.tar.bz2",
+      "result": "HTTP 404; correct download_pkg mirror also lacks 10.0.0"
+    },
+    {
+      "url": "https://download.videolan.org/pub/contrib/pthreads/",
+      "result": "HTTP 200; only pthreads-w32/stubs, no MinGW 10.0.0"
+    },
+    {
+      "url": "https://download.videolan.org/pub/contrib/winpthreads/",
+      "result": "HTTP 200; v5/v7/v9 only; not substituted"
+    },
+    {
+      "url": "https://download.videolan.org/pub/contrib/mingw64/",
+      "result": "HTTP 200; v14 only; not substituted"
+    },
+    {
+      "url": "https://downloads.sourceforge.net/project/mingw-w64/mingw-w64/mingw-w64-release/mingw-w64-v10.0.0.tar.bz2",
+      "result": "HTTP 200; 9620291 bytes; VLC recipe SHA512 match"
+    },
+    {
+      "url": "https://code.videolan.org/api/v4/projects/videolan%2Fvlc/repository/tags/3.0.23-2",
+      "result": "HTTP 200; commit 79128878; tag object target 9f8aacb713c7d8220e96aa0b4d18d8d1733465f0 distinct from commit"
+    },
+    {
+      "url": "https://code.videolan.org/api/v4/projects/435/pipelines/674296/jobs?per_page=100",
+      "result": "HTTP 200; release jobs success, only trace artifacts retained"
+    },
+    {
+      "url": "https://code.videolan.org/api/v4/projects/435/jobs/2403067/artifacts",
+      "result": "HTTP 404; archive not available"
+    },
+    {
+      "url": "https://download.videolan.org/pub/videolan/contrib/x86_64-w64-mingw32/",
+      "result": "HTTP 200; latest prebuilt dated 2017-12-09, not release 3.0.23 evidence"
+    },
+    {
+      "url": "https://artifacts.videolan.org/vlc-3.0/",
+      "result": "HTTP 200 directory; no exact selected build attestation obtained"
+    },
+    {
+      "url": "https://www.gnu.org/licenses/license-list.en.html",
+      "result": "HTTP 502; license compatibility page not live-verified"
+    },
+    {
+      "url": "https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt",
+      "result": "HTTP 502; retain stored originals"
+    },
+    {
+      "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt",
+      "result": "HTTP 502; retain stored originals"
+    },
+    {
+      "url": "https://ffmpeg.org/legal.html",
+      "result": "HTTP 200; existing GPL option interpretation confirmed"
+    },
+    {
+      "url": "https://www.videolan.org/legal.html",
+      "result": "HTTP 200; general redistribution guidance only"
+    },
+    {
+      "url": "https://code.videolan.org/api/v4/projects/435/jobs/2403066/trace",
+      "result": "HTTP 401 Unauthorized; no trace read; auth/access or supplier source package required"
+    },
+    {
+      "url": "https://code.videolan.org/api/v4/projects/435/jobs/2403067/trace",
+      "result": "HTTP 401 Unauthorized; no trace read; auth/access or supplier source package required"
+    },
+    {
+      "url": "https://code.videolan.org/api/v4/projects/435/jobs/2403068/trace",
+      "result": "HTTP 401 Unauthorized; no trace read; auth/access or supplier source package required"
+    },
+    {
+      "url": "https://code.videolan.org/videolan/vlc/-/raw/79128878ddb2c280bbb6c89c76a46b31a80ade1c/extras/ci/gitlab-ci.yml",
+      "result": "HTTP 200 anti-bot HTML (7458 bytes); rejected as source; exact GitHub mirror blob used, official repository/files API subsequently returned real source"
+    },
+    {
+      "url": "https://code.videolan.org/videolan/vlc/-/raw/79128878ddb2c280bbb6c89c76a46b31a80ade1c/extras/package/win32/build.sh",
+      "result": "HTTP 200 anti-bot HTML (7458 bytes); rejected as source; exact GitHub mirror blob used, official repository/files API subsequently returned real source"
+    }
+  ]
+}

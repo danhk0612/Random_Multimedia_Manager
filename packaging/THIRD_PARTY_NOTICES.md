@@ -49,3 +49,7 @@ MIT 자체 소스 권리와 GPL 결합 배포 의무를 구별한다. FFmpeg의 
 licenses/contrib/에는 VLC recipe checksum과 일치하는 GSM 1.0.13 COPYRIGHT, OpenJPEG 2.5.0 LICENSE, LAME 3.100 COPYING/LICENSE, zlib 1.3.1 LICENSE/README 원문을 포함한다. 정확한 linked 버전의 최종 입증은 아니며 전체 고지를 대체하지 않는다. LGPL 소스·교체/수정 debugging 조건은 유지한다. MIT/Apache/public-domain 의존성에 GPL의 전체 소스 의무를 일괄 부여하지 않는다.
 
 source sidecar는 exact SHA 앱 소스·확보 archive 8개·VLC contrib recipes/patches·module 후보/source headers·동결 native hash·manifest와 LICENSE를 포함한다. incomplete이며 전체 대응 소스 제공 완료가 아니다. 공개 전 binary와 완전한 대응 소스를 같은 위치에서 다운로드할 수 있게 하고 commit/hash/크기·고지·build instructions를 대조한다. 아직 서면 소스 제공 약정이나 공개 Release를 발행하지 않았다.
+
+## T18-D1 source-closure 보완 고지
+
+현재 잔여는 [배포 자료의 source-closure 절](release-readiness/README.md#t18-d1-잔여-대응-소스-확인--source-closure)과 파일별 source-closure-inventory.csv를 따른다. 추가 MinGW-w64 10.0.0/winpthreads, libbluray 1.4.0, dkjson copyright, HRTF License 및 GPL module source header 원문을 licenses/contrib/에 포함한다. checksum/source header 후보와 actual linked 조건을 구별한다. FFmpeg 6개 외의 LGPL-only를 선언하지 않으며 전체 graph·고지 coverage·대응 소스는 미완료다. 10개 확보 archive는 검토용 source sidecar에 포함되고 공개 승인 상태는 false다. 자체 MIT·기존 무결성 로직 및 제3자 권리를 유지한다.

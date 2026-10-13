@@ -206,3 +206,33 @@ fixture는 TemporaryDirectory의 작은 synthetic tar/ZIP/archive만 사용한�
 이후 결과 확정 커밋은 CURRENT_STATE/TASKS/이 문서만 변경한다. 실제 Python/패키징/workflow·제품/검증/원문 입력은 위 SHA와 동일하며 후속 문서 SHA에서 새 ZIP을 검증했다고 주장하지 않는다. main의 보완 지시와 기존 CURRENT_STATE/TASKS 본문, 이 문서의 기존 성공/줄바꿈 이력을 손실 없이 보존했다.
 
 판정: **최적화 모드 무결성 검사 누락 보완·회귀/Windows CI 확인, PR #32 재검토 대기**. 전체 대응 소스·license graph·클린 PC 및 기존 NAS/RaiDrive/원격 휴지통 Unknown/차단·AVI 보류·수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. MIT 적용을 재승인 대기로 바꾸지 않았고 직접 병합·공개 Release/tag·다음 Task/VSR 착수는 하지 않았다.
+
+
+## T18-D1 source-closure — 잔여 자료와 외부 증거 경계
+
+기준 main `a7c5881`, 브랜치 `task/t18-d1-source-closure`. 기존 MIT·최적화 42개 회귀 보완은 변경하지 않았다. 이전 run/artifact·줄바꿈 보완·comic.cbz 실패/동일 SHA 재실행과 실물 미검증을 유지한다.
+
+- 기존 8개 archive bytes/SHA256/SHA512를 보존하고 MinGW-w64 10.0.0 및 libbluray 1.4.0만 추가했다. 원본 모두 VLC recipe SHA512 일치, 원문 고지 포함. actual linked version/patch 완료는 아니다.
+- 동결 native/support 1,285개 path/hash를 source-closure-inventory.csv와 대조. plugin 956개/323개 고유 target의 source/Makefile 후보, native core 6개, import 6개, Java JAR 6개, Lua bytecode 108개를 분리했다. 지원 84개 source hash 그대로, 96개 LF→CRLF 변환 hash 일치. actual linked graph는 아니며 외부 source/notice 누락을 명시한다.
+- exact 공식 Windows build.sh/gitlab-ci/get-contrib-sha 원문·blob/hash와 release pipeline 674296/job 2403066/7/8 metadata를 확보했다. trace는 401, win64 archive endpoint는 404. HTTP 200 anti-bot HTML은 source로 거부했다. checksum이 맞는 후보·build instructions와 actual selected graph/실행 로그를 구별한다.
+- source sidecar의 evidence/archives와 status 잔여 분류만 갱신. 제품/src/tests/DB/API·SDK/엔진/번들 및 무결성 로직 변경 없음. 전체 corresponding source/publicReleaseApproved false 유지.
+
+검증 입력 SHA와 로컬/Windows 결과는 아래 최종 결과 절에 기록한다. 필수 소스/patch/build 지시·고지 및 단순 compiler/wrapper provenance의 차이, 정확한 누락·재개 조건/미발송 문의 초안은 release-readiness README의 source-closure 절이 단일 기준이다.
+
+판정: 잔여 조사·검토용 자료 제출, 전체 대응 소스·license graph 미완료/공개 배포 차단. 클린 PC/NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 보류·기존 수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한 없음 유지. 직접 병합·공개 Release/tag·VSR 미착수.
+
+
+### source-closure 최종 검증 결과 — PR #33
+
+검증 입력은 **e27c80d3440f544f6f06694d9286415d71611254**다. Windows Server 2025 x64/.NET SDK 10.0.401/runtime 10.0.12의 [run 38350407460](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38350407460), job **115141274710**, attempt 1이 최초 성공했다. 이후 결과 커밋은 CURRENT_STATE/TASKS/이 검증 문서 3개뿐이며 패키징 입력을 바꾸지 않는다.
+
+- 기존 42개 무결성 회귀(일반 Python/`-O`/`PYTHONOPTIMIZE=1`) 및 source/runtime ZIP 반복 byte 일치 통과. 무결성 로직을 재구현하지 않았다.
+- 압축 해제 후 LICENSE/원문 고지 byte 검사, 셸 시작·정상 종료·재시작 2회, ZIP 의존성 경로/manifest 및 Core/Data/Comic/Scanner basic~t18a6/Video/Subtitle/Viewing 기존 회귀 통과. 클린 사용자 PC 또는 실제 NAS/RaiDrive 검증은 아니다.
+- [artifact 11789979837](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38350407460/artifacts/11789979837)의 실제 ZIP을 다운로드했다. outer **292,227,189 bytes / SHA256 `0965d00ba6a2f9cdc541a20700f23c2ebd090e8adc1108d9a652fe1558aa2482`**, GitHub metadata digest와 일치. 만료 예정 **2026-10-27**, 영속 공개 소스 제공 경로로 사용하지 않는다.
+- 내부 source ZIP **71,000,823 bytes / SHA256 `c41e83c1c00c2c7e9327c93c820a06dca3db631813cb69b34d6600de7985e29f`**. Linux 동일 SHA 생성물과 전체 byte 일치. manifest 641개 payload(자기 manifest 포함 ZIP entry 642개)의 크기/hash/entry 집합을 실제 검사했다. 10개 archives·closure CSV/JSON·새 원문 고지와 application source가 포함됐고 source/public 승인 false다.
+- 내부 runtime ZIP **232,034,356 bytes / SHA256 `8be9d64370ff0feec06b409131b1053d01c6dab6620ebd42e1d43df04e2a9bc0`**. build-info의 exact SHA·SDK/runtime·self-contained·publicReleaseApproved false, manifest 1,739개 payload(총 파일 1,740개), LICENSE와 원문 licenses **23개**의 size/hash/byte를 대조했다.
+- 동결 native-inventory의 제3자 native/support **1,284개**는 hash/size가 모두 동일하다. 자체 App.exe만 162,816 bytes로 크기가 같고 새 SHA 버전 정보 때문에 hash가 다르다. 새 App.exe SHA256 `2dc9569058406710970382a41c0018003f264f07b1a6b48375baf9a1ced22a96`, UTF-16 버전 정보의 exact `e27c80d...`를 확인했다. 제품 src/tests/locks/SDK/엔진 변경은 없다. 1,285개 전부가 옛 artifact와 byte 동일하다고 기록하지 않는다.
+- 초기 cross-platform 대조에서는 작성 문서 THIRD_PARTY_NOTICES의 LF/CRLF 차이와 재생성 App.exe를 차이로 검출했다. 내용의 LF/CRLF 정규화 일치·exact Git SHA 버전 정보를 확인해 위 구분으로 기록했다. 원문 23개/LICENSE의 검사는 완화하지 않았으며 CI에서는 실제 Windows checkout과 runtime 문서의 byte 일치도 통과했다. 문서 line ending/자체 apphost 차이를 대응 소스 완료나 native bundle 교체로 해석하지 않는다.
+- archive 10개/기존 8개 입력의 byte/hash 보존, 공식 script Git blob 3개, closure 1,285개 path/hash coverage·그룹 합계, 기존 문서 heading/길이·diff/local 링크를 확인했다. 기존 성공/실패/실물 미검증은 삭제하지 않았다.
+
+최종 판정은 **PR #33의 잔여 조사·검토 자료 및 영향 검증 제출 완료**다. S01~S03/N01~N03/G01의 공급자/링크 증거·전체 대응 소스·license graph·LGPL 교체·클린 PC 및 기존 실물 잔여는 미완료다. `completeCorrespondingSource/publicReleaseApproved:false`를 유지하고 MIT를 다시 승인 대기로 돌리지 않는다. 직접 병합·공개 Release/tag·제품/번들 변경·VSR은 없다.

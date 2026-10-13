@@ -1,0 +1,1137 @@
+T18 review: original source header excerpts below; module mappings are candidates, not complete binary license closure.
+
+
+===== vlc-3.0.23/modules/audio_filter/channel_mixer/dolby.c =====
+/*****************************************************************************
+ * dolby.c : simple decoder for dolby surround encoded streams
+ *****************************************************************************
+ * Copyright (C) 2005-2009 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Boris Dorès <babal@via.ecp.fr>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/audio_filter/channel_mixer/headphone.c =====
+/*****************************************************************************
+ * headphone.c : headphone virtual spatialization channel mixer module
+ *               -> gives the feeling of a real room with a simple headphone
+ *****************************************************************************
+ * Copyright (C) 2002-2006 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Boris Dorès <babal@via.ecp.fr>
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/codec/x264.c =====
+/*****************************************************************************
+ * x264.c: h264 video encoder
+ *****************************************************************************
+ * Copyright (C) 2004-2010 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Laurent Aimar <fenrir@via.ecp.fr>
+ *          Ilkka Ollakka <ileoo (at)videolan org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/demux.c =====
+/*****************************************************************************
+ * demux.c :  Lua playlist demux module
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/extension.c =====
+/*****************************************************************************
+ * extension.c: Lua Extensions (meta data, web information, ...)
+ *****************************************************************************
+ * Copyright (C) 2009-2010 VideoLAN and authors
+ * $Id$
+ *
+ * Authors: Jean-Philippe André < jpeg # videolan.org >
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/extension.h =====
+/*****************************************************************************
+ * extension.h: Lua Extensions (meta data, web information, ...)
+ *****************************************************************************
+ * Copyright (C) 2009-2010 VideoLAN and authors
+ * $Id$
+ *
+ * Authors: Jean-Philippe André < jpeg # videolan.org >
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/extension_thread.c =====
+/*****************************************************************************
+ * extension_thread.c: Extensions Manager, Threads manager (no Lua here)
+ *****************************************************************************
+ * Copyright (C) 2009-2010 VideoLAN and authors
+ * $Id$
+ *
+ * Authors: Jean-Philippe André < jpeg # videolan.org >
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/intf.c =====
+/*****************************************************************************
+ * intf.c: Generic lua interface functions
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs.h =====
+/*****************************************************************************
+ * libs.h: VLC Lua wrapper libraries
+ *****************************************************************************
+ * Copyright (C) 2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/configuration.c =====
+/*****************************************************************************
+ * configuration.c: Generic lua<->vlc config interface
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/dialog.c =====
+/*****************************************************************************
+ * dialog.c: Functions to create interface dialogs from Lua extensions
+ *****************************************************************************
+ * Copyright (C) 2009-2010 VideoLAN and authors
+ * $Id$
+ *
+ * Authors: Jean-Philippe André < jpeg # videolan.org >
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/equalizer.c =====
+/*****************************************************************************
+ * equalizer.c
+ *****************************************************************************
+ * Copyright (C) 2011 VideoLAN and VLC authors
+ * $Id$
+ *
+ * Authors: Akash Mehrotra < mehrotra <dot> akash <at> gmail <dot> com >
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/errno.c =====
+/*****************************************************************************
+ * errno.c
+ *****************************************************************************
+ * Copyright (C) 2007-2018 the VideoLAN team
+ *
+ * Authors: Hugo Beauzée-Luyssen <hugo@beauzee.fr>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/gettext.c =====
+/*****************************************************************************
+ * gettext.c
+ *****************************************************************************
+ * Copyright (C) 2009 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/httpd.c =====
+/*****************************************************************************
+ * httpd.c: HTTPd wrapper
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/input.c =====
+/*****************************************************************************
+ * input.c
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/input.h =====
+/*****************************************************************************
+ * input.h
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/io.c =====
+/*****************************************************************************
+ * misc.c
+ *****************************************************************************
+ * Copyright (C) 2007-2018 the VideoLAN team
+ *
+ * Authors: Hugo Beauzée-Luyssen <hugo@beauzee.fr>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/messages.c =====
+/*****************************************************************************
+ * messages.c
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/misc.c =====
+/*****************************************************************************
+ * misc.c
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *          Rémi Duraffort <ivoire # videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/misc.h =====
+/*****************************************************************************
+ * misc.h
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/net.c =====
+/*****************************************************************************
+ * net.c: Network related functions
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/objects.c =====
+/*****************************************************************************
+ * objects.c: Generic lua<->vlc object wrapper
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/objects.h =====
+/*****************************************************************************
+ * objects.h: Generic lua<->vlc object wrapper
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/osd.c =====
+/*****************************************************************************
+ * osd.c: Generic lua interface functions
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/playlist.c =====
+/*****************************************************************************
+ * playlist.c
+ *****************************************************************************
+ * Copyright (C) 2007-2011 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/sd.c =====
+/*****************************************************************************
+ * sd.c: Services discovery related functions
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Fabio Ritrovato <sephiroth87 at videolan dot org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/stream.c =====
+/*****************************************************************************
+ * stream.c: stream functions
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/strings.c =====
+/*****************************************************************************
+ * strings.c
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/variables.c =====
+/*****************************************************************************
+ * variables.c: Generic lua<->vlc variables interface
+ *****************************************************************************
+ * Copyright (C) 2007-2010 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/variables.h =====
+/*****************************************************************************
+ * variables.h: Generic lua<->vlc variables interface
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/video.c =====
+/*****************************************************************************
+ * video.c: Generic lua interface functions
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/vlm.c =====
+/*****************************************************************************
+ * vlm.c: Generic lua VLM wrapper
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/volume.c =====
+/*****************************************************************************
+ * volume.c
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/win.c =====
+/*****************************************************************************
+ * win.c: Windows specific functions
+ *****************************************************************************
+ * Copyright (C) 2007-2012 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/libs/xml.c =====
+/*****************************************************************************
+ * xml.c: XML related functions
+ *****************************************************************************
+ * Copyright (C) 2010 Antoine Cellerier
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/meta.c =====
+/*****************************************************************************
+ * meta.c: Get meta/artwork using lua scripts
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/services_discovery.c =====
+/*****************************************************************************
+ * services_discovery.c : Services discovery using lua scripts
+ *****************************************************************************
+ * Copyright (C) 2010 VideoLAN and AUTHORS
+ *
+ * Authors: Fabio Ritrovato <sephiroth87 at videolan dot org>
+ *          Rémi Duraffort <ivoire at videolan -dot- org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/vlc.c =====
+/*****************************************************************************
+ * vlc.c: Generic lua interface functions
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/lua/vlc.h =====
+/*****************************************************************************
+ * vlc.h: VLC specific lua library functions.
+ *****************************************************************************
+ * Copyright (C) 2007-2008 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Antoine Cellerier <dionoea at videolan tod org>
+ *          Pierre d'Herbemont <pdherbemont # videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/spu/remoteosd_rfbproto.h =====
+/*
+ *  Copyright (C) 2002 RealVNC Ltd.  All Rights Reserved.
+ *  Copyright (C) 1999 AT&T Laboratories Cambridge.  All Rights Reserved.
+ *
+ *  This is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This software is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this software; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307,
+ *  USA.
+ */
+
+===== vlc-3.0.23/modules/video_chroma/i420_rgb_mmx.h =====
+/*****************************************************************************
+ * i420_rgb_mmx.h: MMX YUV transformation assembly
+ *****************************************************************************
+ * Copyright (C) 1999-2007 the VideoLAN team
+ * $Id$
+ *
+ * Authors: Olie Lho <ollie@sis.com.tw>
+ *          Gaël Hendryckx <jimmy@via.ecp.fr>
+ *          Samuel Hocevar <sam@zoy.org>
+ *          Damien Fouilleul <damienf@videolan.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/video_filter/deinterlace/yadif.h =====
+/*
+ * Copyright (C) 2006 Michael Niedermayer <michaelni@gmx.at>
+ *
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with FFmpeg; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+===== vlc-3.0.23/modules/video_filter/deinterlace/yadif_template.h =====
+/*
+ * Copyright (C) 2006 Michael Niedermayer <michaelni@gmx.at>
+ *
+ * This file is part of FFmpeg.
+ *
+ * FFmpeg is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * FFmpeg is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with FFmpeg; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+===== vlc-3.0.23/modules/video_filter/hqdn3d.h =====
+/*
+ * Copyright (C) 2003 Daniel Moreno <comac@comac.darktech.org>
+ *
+ * This file is part of MPlayer.
+ *
+ * MPlayer is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * MPlayer is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with MPlayer; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+===== vlc-3.0.23/modules/visualization/visual/fft.c =====
+/*****************************************************************************
+ * fft.c: Iterative implementation of a FFT
+ *****************************************************************************
+ * $Id$
+ *
+ * Mainly taken from XMMS's code
+ *
+ * Authors: Richard Boulton <richard@tartarus.org>
+ *          Ralph Loader <suckfish@ihug.co.nz>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
+
+===== vlc-3.0.23/modules/visualization/visual/fft.h =====
+/*****************************************************************************
+ * fft.h: Headers for iterative implementation of a FFT
+ *****************************************************************************
+ * $Id$
+ *
+ * Mainly taken from XMMS's code
+ *
+ * Authors: Richard Boulton <richard@tartarus.org>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+ *****************************************************************************/
