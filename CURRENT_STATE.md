@@ -1,5 +1,14 @@
 # 현재 구현 상태
 
+## PR #34 병합 검토 — NuGet 해시 대조 보완 대기
+
+PR #34 head `91865d6`의 검증 입력 `cff8956`에서 Windows CI `38396037357`가 success이며 이후 변경은 결과 문서 3개뿐임을 확인했다. 원격 exact SHA의 새 결과로 제출 전 로컬 검증과 구분됐다. JAR/Lua/지원 자료·고지 검사 결과는 보존한다. 아직 병합하지 않았다.
+
+NuGet 12개의 dependencies/lock hash와 동봉 .nupkg.sha512 불일치가 원인 미확정이다. Package-Windows.ps1은 assets의 lib.sha512를 기록하고 해당 lib.path 캐시의 .nupkg.sha512를 복사한다. 현재 확인만으로 변조나 단순 표현 차이 어느 쪽도 단정하지 않는다. 정상 비교 규칙·실제 archive와의 관계를 확인하기 전 provenance advisory만으로 종결하지 않는다. runtime 2개 값은 복사 원본 자체에서 metadata를 만들므로 그 일치만으로 독립 검증을 주장하지 않는다.
+
+다음은 TASKS.md의 “T18-D1 PR #34 보완 지시문 — 현재 우선 작업”이다. 공개 배포 보류와 클린 PC/실물 미검증은 유지한다.
+
+
 ## 현재 우선 상태 — PR #33 통합·확보 자료의 잔여 검사
 
 PR #33을 `79ec9f2`로 main에 통합했다. 검증 입력 `e27c80d`의 Windows CI `38350407460` / job `115141274710` 최초 성공과 이후 결과 문서 3개만 변경된 것을 확인했다. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·ZIP 의존성 회귀가 통과했다. 병합 검토에서는 native/closure inventory의 1,285개 고유 path/hash 일치를 직접 대조했다. Windows 실행과 실제 artifact 다운로드는 이 검토에서 독립 재수행하지 않았다.
