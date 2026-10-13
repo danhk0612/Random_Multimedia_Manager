@@ -26,11 +26,15 @@
 | T18 | Windows 배포 및 통합 검증 | Astra | PR #29/#30 main 통합 / 배포 방식·앱 라이선스·실PC 확인 대기 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
-## 현재 우선 상태 — T18-D1 검토 PR 준비
+## 현재 우선 상태 — T18-D1 PR #32 검토 대기
 
 PR #31은 `8fb0980`로 통합됐고 exact head `d0a9ecc`의 T18 Windows CI `38210842353` 최초 성공을 확인했다. 기존 패키지·실패/미검증 기록은 유지한다.
 
 2026-10-12 사용자가 **MIT 우선, 불가능하면 적절한 오픈소스 라이선스 선택·적용**을 위임했다. 앱 라이선스 선택 대기는 해소됐으며 다음은 고성능 Work의 T18-D1이다. 현재 번들을 유지하고 앱 소스의 권리 부여와 결합 배포물의 조건을 구분해 검토·적용한다. 정확한 정책은 docs/DECISIONS.md의 “T18 라이선스 선택 위임”을 따른다. T18-D1에서 자체 코드·작성 문서에 MIT LICENSE를 적용했다. 제3자·전체 ZIP에는 원문 조건을 유지한다. 검토용 source sidecar와 패키징 검증을 준비했으며 exact SHA Windows CI 결과는 T18 검증 문서에 기록한다. 전체 contrib/build provenance·license graph 양립·클린 PC가 남아 공개 배포는 차단한다.
+
+PR #32의 구현·패키징 검증 SHA는 **450cbb4fe2e73fb7f622c0b08a80a8c9e3342239**다. T18 Windows [run 38337573828](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38337573828), job 115101033114 최초 성공 및 artifact 11785329450의 실제 ZIP·manifest·LICENSE/원문 licenses 17개·소스 묶음을 재대조했다. 동일 SHA source sidecar는 Linux/Windows 전체 byte 일치다. 최초 aade32d의 CI 성공/소스 tar 줄바꿈 차이와 보완 경위는 [T18 검증 문서](docs/T18_DISTRIBUTION_VALIDATION.md)에 보존한다.
+
+자체 MIT 적용·검토 자료와 패키징 검증 인계는 준비됐지만 전체 대응 소스/graph 양립·공개 배포는 미완료다. 8개 archives/116 contrib recipes와 전체 native 1,285행/956 plugin target 후보를 제공하되 actual build provenance로 표시하지 않는다. 기존 실물/수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한은 유지한다. 다음은 PR #32 검토 및 명시된 누락/재개 조건 확인이며 T18-D2~D5·VSR을 연속 착수하지 않는다. 직접 병합·공개 Release/tag는 없다. 이후 결과 문서는 검증 입력을 변경하지 않는다.
 
 ## 새 작업 시작 지시문 — T18-D1 라이선스 적용·소스 제공 준비
 

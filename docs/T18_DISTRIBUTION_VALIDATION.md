@@ -150,3 +150,30 @@ native/runtime 라이선스 원문·metadata는 ZIP의 dependency-notices와 lic
 - `packaging/licenses` 11개가 이번 ZIP에 **원본 byte 그대로** 포함되는 것을 확인했다. `core.autocrlf=true` checkout의 수집 원문·소스/빌드 자료 51개도 byte 일치다. 패키지 안내의 자료 링크는 압축 해제 폴더에 없는 상대 경로가 아닌 exact `748eddd` 저장소 자료로 연결된다.
 - 동결 native/지원 inventory 1,285개 중 새 SourceRevisionId의 apphost만 달라지고 나머지 1,284개 hash가 일치한다. GPL FFmpeg 6개 DLL과 native 버전은 바뀌지 않았다. 최초 `748eddd`의 CI 성공/줄바꿈 변환 관찰을 보존하며 이번 결과와 구별한다. 원래 `61a98bb` 검토 artifact `11703665480`과 source 대응표는 계속 동결 기준이다.
 - 이후 결과 확정은 CURRENT_STATE/TASKS/이 검증 문서만 변경한다. packaging 고지·원문·소스, 제품 및 검증 입력은 이 검증 SHA와 동일하며 후속 문서 SHA에서 새 패키지를 검증했다고 주장하지 않는다. 자료 정리/PR #30 검토 인계 완료, **공개 배포 차단 유지**다. 앱 라이선스·GPL FFmpeg 처리/전체 contrib source 제공·깨끗한 PC, 기존 미검증/잠금 원인 미확정은 해결 처리하지 않는다. 직접 병합·공개 Release/tag·T19는 수행하지 않았다.
+
+## T18-D1 — MIT 적용·소스 제공 검토 PR #32
+
+기준 main 690ac0b, task/t18-d1-license-source. 자체 소유 코드·작성 문서의 MIT를 root LICENSE에 적용하고 전체 ZIP/제3자의 원문 조건과 구별했다. 권리/graph 판단·binary별 제공과 누락·재개 조건은 [자료 README](../packaging/release-readiness/README.md#t18-d1-라이선스-적용과-검토용-소스-묶음)를 따른다. LICENSE를 전체 번들 재라이선스로 사용하지 않는다. 제품·DB/API·SDK/엔진/번들은 바뀌지 않았다.
+
+- source-inputs의 기존 4개 archive byte/hash 보존, GSM/OpenJPEG/LAME/zlib 4개 후보 archive 추가. VLC contrib SHA512SUMS와 대조하고 원문 고지 6개를 포함했다. 총 8개 source archive 48,212,560 bytes. pthreads mirror 404, 실제 linked versions/patch 분기와 전체 build provenance·per-file graph 양립은 미완료다.
+- sidecar는 exact Git 원문 blob의 application.tar, 8개 archives, 모든 contrib recipe/patch 원문(116 recipes), 1,285개 native/support 행의 source 후보·원문 headers/link assignments, evidence·LICENSE·627-entry manifest를 포함한다. plugin target 956행 전부 후보가 있으며 그중 953행에 literal source 파일이 있다. 조건/변수 기반 3행을 포함한 후보는 확정 build attestation이 아니다. completeCorrespondingSource/publicReleaseApproved는 false다.
+
+### 최초 검증과 플랫폼 차이 보완
+
+SHA aade32d2c21950dc23bddf68abb1fbe35632a0a7의 [run 38337004925](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38337004925), job 115099254567, attempt 1 success. source와 runtime repeat byte 일치·앱 셸 2회·전체 ZIP 회귀·라이선스 포함 검사가 통과했다. [artifact 11784538980](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38337004925/artifacts/11784538980): 281,862,706 bytes, SHA256 82af9528248228bb90d100079a24cfb2476a96b7e1b7917b49fdbb7c5b65ceea.
+
+Windows source ZIP 58,727,716 bytes/hash a9fc9f02221548e4b8c20bb1166dacdd51f1696df4fb9875699763f569f439fb와 Linux source ZIP 58,707,236 bytes/hash 04d8837bfdefe1b55b8fe3761d060e7fd10c39a0d6b83c383db192aea9d8d913는 달랐다. 직접 entry 대조에서 application.tar/manifest만 달랐고, tar 내부 143개 파일이 Git archive의 checkout 줄바꿈 변환으로 달랐다(LF 정규화 후 동일). runtime ZIP 232,017,120 bytes/hash 858cf10db664a75e26306e92198e3e655b96ef8ed2d40e01d08bb16305c5f0d6의 1,733개 manifest·root LICENSE·17개 upstream licenses 및 기존 native/support 1,284개 해시는 검증됐다. 이 최초 성공을 플랫폼 간 byte 일치로 해석하지 않는다.
+
+보완은 git cat-file --batch로 원문 blob을 읽어 고정 순서/mtime/mode/uid/gid의 tar를 만드는 변경이다. 제3자 archives·고지·제품 입력은 바꾸지 않았다.
+
+### 보완한 exact SHA Windows 검증과 산출물 재대조
+
+- SHA **450cbb4fe2e73fb7f622c0b08a80a8c9e3342239**, [run 38337573828](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38337573828), job **115101033114**, attempt 1 **success**. Windows Server 2025 x64, SDK 10.0.401/runtime 10.0.12. source와 runtime repeat ZIP byte 일치, root LICENSE/원문 licenses/안내 포함, 압축 해제 셸 시작·정상 종료·재시작 2회, 전체 ZIP 의존성 16회 harness/native load 경로가 통과했다. 클린 사용자 PC 검증은 아니다.
+- [artifact 11785329450](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38337573828/artifacts/11785329450), 만료 2026-10-27T02:38:55Z: **281,859,611 bytes**, SHA256 **3d7a1e206b87c2cc5e151b3fcb3e63f9e82efc51a63ea82e7071bd8bf4d12141**. 내려받아 hash/크기를 재대조했다.
+- runtime `RandomMultimediaManager-win-x64-450cbb4fe2e7.zip`: **232,017,137 bytes**, SHA256 **10ba65e0db4dd04c23fff3ad0f35e5ec79daea83cb73654332f7f103302cdae1**. 1,734 files/manifest 1,733행의 경로 집합·크기/hash, build-info exact commit/publicReleaseApproved false를 검사했다. root LICENSE와 17개 upstream license 원문은 byte 그대로다. 자체 안내 2개는 Windows CRLF checkout이 적용되며 LF 정규화 후 Git 원문과 같고 CI는 checkout 원문과 byte 일치를 검사했다.
+- source `RandomMultimediaManager-source-review-450cbb4fe2e7.zip`: **58,686,756 bytes**, SHA256 **10a0207286134471a6de1636cf40901496880620b136832256e27cdec87b3fea**. artifact의 Windows ZIP이 Linux 동일 SHA 반복 생성물과 **전체 byte 일치**한다. 627-entry manifest·entry 집합/중복·size/hash·status와 application LICENSE를 다시 검증했다. 8개 source archives/input hashes를 대조했다. 최초 SHA에서 별도로 LICENSE entry를 변조한 ZIP은 verifier가 거부했다.
+- 동결 native/support inventory 1,285개 중 SourceRevisionId의 apphost 하나만 달라지고 나머지 **1,284개 hash 동일**이다. 기존 GPL FFmpeg 6개 DLL, 엔진/버전/코덱을 그대로 보존했다. src/tests·global.json·locks·기존 evidence/archives도 변경하지 않았다.
+
+결과 문서 커밋은 CURRENT_STATE/TASKS/이 문서만 변경한다. LICENSE·packaging·scripts/workflow·원문 소스·제품/검증 입력은 위 검증 SHA와 동일하며 이후 문서 SHA에서 새 ZIP을 검증했다고 주장하지 않는다.
+
+판정: **MIT 자체 소스 적용 및 검토용 소스 제공물·패키징 검증을 준비해 PR #32 재검토로 제출, 전체 대응 소스·공개 배포는 미완료/차단**. native-selected contrib graph·archives·patch/build/toolchain attestation·per-file 고지/라이선스 양립을 채운 후 공개 가능 여부를 별도로 검토한다. 기존 클린 PC/NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 보류·수동 미검증/승인 생략·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. 직접 병합·공개 Release/tag·T19 VSR 착수는 하지 않았다.
