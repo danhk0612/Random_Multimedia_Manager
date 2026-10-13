@@ -177,3 +177,32 @@ Windows source ZIP 58,727,716 bytes/hash a9fc9f02221548e4b8c20bb1166dacdd51f1696
 결과 문서 커밋은 CURRENT_STATE/TASKS/이 문서만 변경한다. LICENSE·packaging·scripts/workflow·원문 소스·제품/검증 입력은 위 검증 SHA와 동일하며 이후 문서 SHA에서 새 ZIP을 검증했다고 주장하지 않는다.
 
 판정: **MIT 자체 소스 적용 및 검토용 소스 제공물·패키징 검증을 준비해 PR #32 재검토로 제출, 전체 대응 소스·공개 배포는 미완료/차단**. native-selected contrib graph·archives·patch/build/toolchain attestation·per-file 고지/라이선스 양립을 채운 후 공개 가능 여부를 별도로 검토한다. 기존 클린 PC/NAS/RaiDrive·원격 휴지통 Unknown/차단·AVI 보류·수동 미검증/승인 생략·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. 직접 병합·공개 Release/tag·T19 VSR 착수는 하지 않았다.
+
+## PR #32 보완 — Python 최적화에도 유지되는 무결성 검사
+
+main b9f9bdb의 보완 지시를 기존 task/t18-d1-license-source에 통합했다. 기존 MIT/고지·원문 archives·제품/DB/API·SDK/엔진/번들 및 450cbb4/최초 줄바꿈 검증 이력을 보존했다. 변경은 source sidecar 검사 9개의 assert를 명시적인 조건 검사/ValueError로 교체, 좁은 Python 회귀 스크립트와 T18 CI step/그 파일 paths 필터 추가다. 오류는 exit 1이며 실패 검증에서 PASS를 출력하지 않는다. incomplete/publicReleaseApproved false의 기존 의미는 유지한다.
+
+### 변경 전 재현과 변경 후 회귀
+
+0fc0c82와 동일한 변경 전 스크립트에 임시 합성 ZIP의 같은 크기 payload를 바꿔 대조했다. 일반 Python은 exit 1/AssertionError, python -O와 PYTHONOPTIMIZE=1은 각각 exit 0/PASS였다. 이는 기존 CI 성공이 검사하지 않았던 거짓 PASS이며 이전 successful artifact를 소급 무효화하거나 이 실패가 기존 실사용 자료를 변조했다는 의미가 아니다.
+
+`python scripts/Verify-SourceSidecar.py`는 일반 Python / python -O / PYTHONOPTIMIZE=1 각각에서 아래 14개 사례, 총 **42개**를 검사한다. 회귀 자체도 assert 없이 exit/PASS/ValueError 원인을 명시적으로 판정한다.
+
+| 영역 | 각 모드 사례 | 결과 |
+|---|---|---|
+| ZIP verify | 정상, payload 변경, size/hash 불일치, entry 누락/중복, completeCorrespondingSource true, publicReleaseApproved true, application LICENSE 불일치 (9개) | 정상 exit 0/PASS, 나머지 exit 1/지정 ValueError·PASS 없음 |
+| build | 정상, source-input size/SHA256/제공된 SHA512 불일치, Git 응답이 blob 아님 (5개) | 정상 exit 0/PASS, 나머지 exit 1/지정 ValueError·PASS 없음 |
+
+fixture는 TemporaryDirectory의 작은 synthetic tar/ZIP/archive만 사용한다. build fixture에서 Git 질의만 합성 응답으로 바꾸며 실제 build/input/verify 코드를 실행한다. 실제 저장소 source archives를 손상시키지 않는다. 로컬에서는 실제 8개 archives로 세 모드의 source sidecar build도 성공·전체 byte 동일을 확인했다. Git blob 타입 실패는 오류 주입이며 실제 Git 객체 손상 검증으로 표시하지 않는다.
+
+### 정확한 수정 SHA의 Windows CI와 실제 artifact
+
+- 수정 SHA **a420a39a62a554c9e0427b0a273a6dec7eb81d18**의 [run 38344541619](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38344541619), job **115122761895**, attempt 1 **success**. Windows Server 2025 x64, SDK 10.0.401/runtime 10.0.12. Python 42개 회귀, source/runtime repeat ZIP byte 일치, LICENSE·고지 원문 포함, 압축 해제 셸 시작/정상 종료/재시작 2회, 기존 ZIP 의존성 16회 harness/native load 경로가 통과했다. 클린 사용자 PC 검증이 아니다.
+- [artifact 11788208112](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38344541619/artifacts/11788208112): **281,867,959 bytes**, SHA256 **28705d1d78e88376a8bad8991c8ac82a5b60fee3913ce6964acc2bcdbb9fcd75**, 만료 2026-10-27T04:07:15Z. 내려받아 실제 hash/크기를 대조했다.
+- runtime `RandomMultimediaManager-win-x64-a420a39a62a5.zip`: **232,017,104 bytes**, SHA256 **f743c212706bf0bf31c5e54a5f0ba61fb3568b8853deeeca52c752ae735724e6**. 1,734 files/manifest 1,733행의 경로 집합·크기/hash, build-info exact SHA/SDK/runtime/publicReleaseApproved false를 확인했다. MIT LICENSE·upstream licenses 17개 byte를 원문과 대조하고 자체 안내 2개는 LF 정규화 후 내용 동일을 확인했다.
+- source `RandomMultimediaManager-source-review-a420a39a62a5.zip`: **58,707,236 bytes**, SHA256 **a38c163f3e14ecf6b8ce19a24832fb185cf78c2f869bd7bfb526ff47a0f9493c**. Windows artifact가 Linux 동일 SHA의 일반/-O/환경 최적화 build와 전체 byte 일치한다. 내려받은 ZIP의 627-entry manifest·상태·application LICENSE를 세 모드로 재검증하고 source-input archive 8개의 크기/SHA256/제공된 SHA512를 대조했다.
+- 동결 native/support 1,285개 중 revision apphost 하나만 달라지고 나머지 **1,284개 hash 동일**이다. 이전 source/runtime/artifact 해시와 새 SHA 결과를 구분한다. 원문 archives·licenses·src/tests·SDK/locks/native 설정은 이전 PR head와 동일하다.
+
+이후 결과 확정 커밋은 CURRENT_STATE/TASKS/이 문서만 변경한다. 실제 Python/패키징/workflow·제품/검증/원문 입력은 위 SHA와 동일하며 후속 문서 SHA에서 새 ZIP을 검증했다고 주장하지 않는다. main의 보완 지시와 기존 CURRENT_STATE/TASKS 본문, 이 문서의 기존 성공/줄바꿈 이력을 손실 없이 보존했다.
+
+판정: **최적화 모드 무결성 검사 누락 보완·회귀/Windows CI 확인, PR #32 재검토 대기**. 전체 대응 소스·license graph·클린 PC 및 기존 NAS/RaiDrive/원격 휴지통 Unknown/차단·AVI 보류·수동 미검증·comic.cbz 잠금 원인 미확정·종료 상한 없음은 유지한다. MIT 적용을 재승인 대기로 바꾸지 않았고 직접 병합·공개 Release/tag·다음 Task/VSR 착수는 하지 않았다.
