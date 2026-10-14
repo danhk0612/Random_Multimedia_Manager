@@ -1,14 +1,14 @@
 # 개발 Task
 
-## PR #34 보완 — NuGet hash 원인 재현·Windows 검증 준비
+## PR #34 보완 — NuGet hash 원인 해소·Windows 검증 완료
 
 PR #34 head `91865d6`의 검증 입력 `cff8956`에서 Windows CI `38396037357`가 success이며 이후 변경은 결과 문서 3개뿐임을 확인했다. 원격 exact SHA의 새 결과로 제출 전 로컬 검증과 구분됐다. JAR/Lua/지원 자료·고지 검사 결과는 보존한다. 아직 병합하지 않았다.
 
-보완 전에는 NuGet 12개의 dependencies/lock hash와 동봉 .nupkg.sha512 차이가 원인 미확정이었다. Package-Windows.ps1은 assets의 lib.sha512를 기록하고 해당 lib.path 캐시의 .nupkg.sha512를 복사한다. 현재 확인만으로 변조나 단순 표현 차이 어느 쪽도 단정하지 않는다. 정상 비교 규칙·실제 archive와의 관계를 확인하기 전 provenance advisory만으로 종결하지 않는다. runtime 2개 값은 복사 원본 자체에서 metadata를 만들므로 그 일치만으로 독립 검증을 주장하지 않는다.
+보완 전에는 NuGet 12개의 dependencies/lock hash와 동봉 .nupkg.sha512 차이가 원인 미확정이었다. Package-Windows.ps1은 assets의 lib.sha512를 기록하고 해당 lib.path 캐시의 .nupkg.sha512를 복사한다. 당시 자료만으로 변조나 단순 표현 차이를 단정하지 않았으며 provenance advisory만으로 종결하지 않았다. runtime 2개 값의 기존 일치는 복사 원본 자체를 metadata로 만든 자기 비교였으므로 독립 검증 근거로 삼지 않았다.
 
-로컬 원인 재현: exact 원본 14개 raw SHA512/제공 고지가 이전 artifact와 일치하고 실제 SDK NuGet API·독립 restore로 signed content hash를 확인했다. 12개 차이는 signature-aware content/whole archive 의미 차이이며 runtime 2개는 기존 metadata 추출이 raw hash를 복사한 오류였다. 새 helper/패키징/CI에서 두 hash를 분리하고 actual mismatch 5개를 거부한다. 기존 결과를 보존하고 exact Windows CI·새 artifact는 검증 대기다. 상세 근거/검증은 T18_DISTRIBUTION_VALIDATION.md 및 release-readiness README를 따른다.
+로컬 원인 재현: exact 원본 14개 raw SHA512/제공 고지가 이전 artifact와 일치하고 실제 SDK NuGet API·독립 restore로 signed content hash를 확인했다. 12개 차이는 signature-aware content/whole archive 의미 차이이며 runtime 2개는 기존 metadata 추출이 raw hash를 복사한 오류였다. 새 helper/패키징/CI에서 두 hash를 분리하고 actual mismatch 5개를 거부한다. 정확한 수정 SHA **e4500fcc1879dbe968d078aa76a00c4a2ba652f3**에서 Windows workflow 9개 모두 attempt 1 success다. T18 run **38489221298** / job **115610185694**, artifact **11861271580**를 실제 다운로드해 14개 warm/cold archive/content hash, manifest, 원문 license 27개·notice 36개·native/support 1,284개 보존과 Linux/Windows source ZIP 전체 byte 일치를 확인했다. 기존 sidecar 회귀 42개와 새 정상 2개/불일치 거부 5개, 반복 ZIP·셸/ZIP 의존성 회귀를 통과했다. NuGet 12개 차이는 해소됐고 runtime 2개 metadata만 비교 의미를 바로잡았다. 전체 대응 소스/고지 graph·공개 배포 및 실물 검증의 미완료는 유지한다. 상세 근거/검증은 T18_DISTRIBUTION_VALIDATION.md 및 release-readiness README를 따른다.
 
-## T18-D1 PR #34 보완 지시문 — 현재 우선 작업
+## 수행한 T18-D1 PR #34 보완 지시문 — 현재 PR 재검토 대기
 
 ```text
 최신 main/AI_WORKFLOW.md를 확인하고 기존 task/t18-d1-local-evidence에서
