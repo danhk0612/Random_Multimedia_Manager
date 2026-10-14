@@ -1,6 +1,19 @@
 # 개발 Task
 
-## PR #34 보완 — NuGet hash 원인 해소·Windows 검증 완료
+## 현재 우선 상태 — PR #34 통합·외부 증거 및 클린 PC 대기
+
+PR #34를 `6e048b9`로 main에 통합했다. NuGet 12개 차이는 signature-aware content hash와 whole-archive hash의 의미 차이로 해소됐고, runtime 2개 metadata의 비교 기준도 수정됐다. 패키징 helper/CI의 정상·변조 구분 코드를 검토했고 exact 입력 `e4500fcc1879dbe968d078aa76a00c4a2ba652f3`의 Windows T18 run `38489221298` 성공 및 이후 head `4e32ae8`까지 결과 문서 3개만 변경된 것을 확인했다. 이번 병합 검토에서 Windows 실행·artifact 다운로드를 독립 재수행한 것은 아니다.
+
+JAR/Lua/지원 자료의 확보 자료 검사와 NuGet 해시 보완은 통합 완료다. 전체 대응 소스·라이선스 조건 검토 완료나 공개 배포 승인은 아니다. 기존 소스 조사/해시 보완을 다시 수행하는 Task를 만들지 않는다.
+
+다음 진행:
+- 접근 가능한 깨끗한 Windows x64 Desktop PC/VM이 있으면 TASKS.md의 병렬 검증 지시문을 수행한다. 현재 환경 확보·실행 결과는 미제공이다.
+- 공급자 actual source/patch/build·selected graph 및 지원 파일 author/license·Desktop/Skia 적용 범위는 release-readiness README의 남은 항목과 기존 문의 초안을 따른다. 실제 연락은 별도 발송 승인 전 대기하며 401/404 반복 조회를 하지 않는다.
+- 공급자 증거를 확보하면 해당 미해결 항목만 재개한다. 자료 확보가 불가능해 배포 방식 변경을 검토해야 할 때는 영향과 선택지를 먼저 제시하며 번들을 임의 교체하지 않는다.
+- MIT 유지, 공개 Release/tag·최종 사용자 배포 및 VSR은 보류한다. 기존 실물 미검증/실패 기록은 보존한다.
+
+
+## PR #34 제출 당시 보완 — NuGet hash 원인 해소·Windows 검증 완료
 
 PR #34 head `91865d6`의 검증 입력 `cff8956`에서 Windows CI `38396037357`가 success이며 이후 변경은 결과 문서 3개뿐임을 확인했다. 원격 exact SHA의 새 결과로 제출 전 로컬 검증과 구분됐다. JAR/Lua/지원 자료·고지 검사 결과는 보존한다. 아직 병합하지 않았다.
 
@@ -8,7 +21,7 @@ PR #34 head `91865d6`의 검증 입력 `cff8956`에서 Windows CI `38396037357`�
 
 로컬 원인 재현: exact 원본 14개 raw SHA512/제공 고지가 이전 artifact와 일치하고 실제 SDK NuGet API·독립 restore로 signed content hash를 확인했다. 12개 차이는 signature-aware content/whole archive 의미 차이이며 runtime 2개는 기존 metadata 추출이 raw hash를 복사한 오류였다. 새 helper/패키징/CI에서 두 hash를 분리하고 actual mismatch 5개를 거부한다. 정확한 수정 SHA **e4500fcc1879dbe968d078aa76a00c4a2ba652f3**에서 Windows workflow 9개 모두 attempt 1 success다. T18 run **38489221298** / job **115610185694**, artifact **11861271580**를 실제 다운로드해 14개 warm/cold archive/content hash, manifest, 원문 license 27개·notice 36개·native/support 1,284개 보존과 Linux/Windows source ZIP 전체 byte 일치를 확인했다. 기존 sidecar 회귀 42개와 새 정상 2개/불일치 거부 5개, 반복 ZIP·셸/ZIP 의존성 회귀를 통과했다. NuGet 12개 차이는 해소됐고 runtime 2개 metadata만 비교 의미를 바로잡았다. 전체 대응 소스/고지 graph·공개 배포 및 실물 검증의 미완료는 유지한다. 상세 근거/검증은 T18_DISTRIBUTION_VALIDATION.md 및 release-readiness README를 따른다.
 
-## 수행한 T18-D1 PR #34 보완 지시문 — 현재 PR 재검토 대기
+## 완료된 T18-D1 PR #34 보완 지시문 — main 통합
 
 ```text
 최신 main/AI_WORKFLOW.md를 확인하고 기존 task/t18-d1-local-evidence에서
@@ -65,7 +78,7 @@ PR #34의 NuGet hash 불일치만 고성능 Work로 조사·보완해.
 | T16 | 빠른 숨김·음소거·종료 | Astra | 구현·Windows 자동 검증 완료 (PR #18 main 통합), 수동 미검증 | T14/T15 |
 | T17 | 최소 라이브러리 탐색 및 파일 정보 | Sol | 구현·Windows 자동 검증 완료 (PR #19 main 통합 완료) | T11; T02 수동 방문 계약 |
 | T18A | 변경 감지와 경로 상태 갱신 | Astra | T18A-1~5 PR #23~27 main 통합 완료; T18A-6 PR #28 반복 스캔 검사 보완 확인·main 통합 완료 (e850a64) | T05/T12; T02 식별 계약 |
-| T18 | Windows 배포 및 통합 검증 | Astra | PR #29~#33 main 통합 / 자체 MIT 적용 완료 / T18-D1 잔여 소스·고지 검사 및 클린 PC 확인 대기, 공개 배포 보류 | T10~T13/T15~T17/T18A; D08 |
+| T18 | Windows 배포 및 통합 검증 | Astra | PR #29~#34 main 통합 / 자체 MIT·확보 자료 검사·NuGet 해시 보완 완료 / 외부 증거·클린 PC 대기, 공개 배포 보류 | T10~T13/T15~T17/T18A; D08 |
 | T19 | RTX VSR 기술 검증 | Astra | 후순위 | T09/T18; D09 착수 결정 |
 
 ## 현재 우선 상태 — T18-D1 PR #34 제출·Windows 검증 완료
@@ -127,9 +140,9 @@ T18-D1 확보 패키지 잔여 검사와 별개이며 제품 구현 작업이 �
 기존 사용자 설치를 제거하지 마. 새 계정만으로 클린 PC라고 판단하지 마.
 환경 접근이 없으면 환경 확보 대기로 보고하고 통과로 기록하지 마.
 
-PR #33 검증 run 38350407460 / artifact 11789979837의
+PR #34 보완 검증 run 38489221298 / artifact 11861271580의
 runtime ZIP을 기준으로 사용해. ZIP SHA256:
-8be9d64370ff0feec06b409131b1053d01c6dab6620ebd42e1d43df04e2a9bc0
+2ad513bc071b24861e2b2d3cfef645473c64b9fb3c370240ac046354d8178a83
 다른 ZIP이면 해당 SHA·manifest·검증 입력을 별도로 식별해.
 artifact가 만료되거나 접근 불가하면 임의 다운로드 파일로 대체하지 마.
 

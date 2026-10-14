@@ -1,6 +1,19 @@
 # 현재 구현 상태
 
-## PR #34 보완 — NuGet hash 원인 해소·Windows 검증 완료
+## 현재 우선 상태 — PR #34 통합·외부 증거 및 클린 PC 대기
+
+PR #34를 `6e048b9`로 main에 통합했다. NuGet 12개 차이는 signature-aware content hash와 whole-archive hash의 의미 차이로 해소됐고, runtime 2개 metadata의 비교 기준도 수정됐다. 패키징 helper/CI의 정상·변조 구분 코드를 검토했고 exact 입력 `e4500fcc1879dbe968d078aa76a00c4a2ba652f3`의 Windows T18 run `38489221298` 성공 및 이후 head `4e32ae8`까지 결과 문서 3개만 변경된 것을 확인했다. 이번 병합 검토에서 Windows 실행·artifact 다운로드를 독립 재수행한 것은 아니다.
+
+JAR/Lua/지원 자료의 확보 자료 검사와 NuGet 해시 보완은 통합 완료다. 전체 대응 소스·라이선스 조건 검토 완료나 공개 배포 승인은 아니다. 기존 소스 조사/해시 보완을 다시 수행하는 Task를 만들지 않는다.
+
+다음 진행:
+- 접근 가능한 깨끗한 Windows x64 Desktop PC/VM이 있으면 TASKS.md의 병렬 검증 지시문을 수행한다. 현재 환경 확보·실행 결과는 미제공이다.
+- 공급자 actual source/patch/build·selected graph 및 지원 파일 author/license·Desktop/Skia 적용 범위는 release-readiness README의 남은 항목과 기존 문의 초안을 따른다. 실제 연락은 별도 발송 승인 전 대기하며 401/404 반복 조회를 하지 않는다.
+- 공급자 증거를 확보하면 해당 미해결 항목만 재개한다. 자료 확보가 불가능해 배포 방식 변경을 검토해야 할 때는 영향과 선택지를 먼저 제시하며 번들을 임의 교체하지 않는다.
+- MIT 유지, 공개 Release/tag·최종 사용자 배포 및 VSR은 보류한다. 기존 실물 미검증/실패 기록은 보존한다.
+
+
+## PR #34 제출 당시 보완 — NuGet hash 원인 해소·Windows 검증 완료
 
 PR #34 head `91865d6`의 검증 입력 `cff8956`에서 Windows CI `38396037357`가 success이며 이후 변경은 결과 문서 3개뿐임을 확인했다. 원격 exact SHA의 새 결과로 제출 전 로컬 검증과 구분됐다. JAR/Lua/지원 자료·고지 검사 결과는 보존한다. 아직 병합하지 않았다.
 
