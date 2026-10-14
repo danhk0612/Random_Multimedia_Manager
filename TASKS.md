@@ -1,5 +1,12 @@
 # 개발 Task
 
+## 공급자 자료 문의 상태 — 2026-10-14
+
+사용자가 공급자 자료 확인 진행을 승인했다. 공식 개발자 목록 안내 https://mailman.videolan.org/listinfo/vlc-devel 에서 수신처를 확인한 후 `vlc-devel@videolan.org`로 기술 문의를 발송했다. 제목: “Source/build materials for VideoLAN.LibVLC.Windows 3.0.23.1 / VLC 3.0.23-2 Windows binaries”. Gmail 발송 결과 SENT 확인이며 수신/목록 게시/담당자 응답이 확인된 것은 아니다. 중복 발송하거나 목록에 자동 가입하지 않는다.
+
+문의 범위는 기존 VideoLAN source/build 초안의 exact release/contrib·patch/build 자료, JAR/Lua 대응 관계 및 지원 파일/Java 고지 위치다. 공개 저장소의 검토 요약과 native inventory를 연결했으며 라이선스 변경·대체 번들을 요청하지 않았다. 해당 항목은 답변 대기다. Microsoft/Desktop 및 Skia에 별도로 문의한 것은 아니며 그 적용 범위 검토는 계속 미완료다. 답변 수령 시 필요한 해당 항목만 검토한다. 공개 배포 보류는 유지한다.
+
+
 ## 현재 우선 상태 — PR #34 통합·외부 증거 및 클린 PC 대기
 
 PR #34를 `6e048b9`로 main에 통합했다. NuGet 12개 차이는 signature-aware content hash와 whole-archive hash의 의미 차이로 해소됐고, runtime 2개 metadata의 비교 기준도 수정됐다. 패키징 helper/CI의 정상·변조 구분 코드를 검토했고 exact 입력 `e4500fcc1879dbe968d078aa76a00c4a2ba652f3`의 Windows T18 run `38489221298` 성공 및 이후 head `4e32ae8`까지 결과 문서 3개만 변경된 것을 확인했다. 이번 병합 검토에서 Windows 실행·artifact 다운로드를 독립 재수행한 것은 아니다.
@@ -8,7 +15,7 @@ JAR/Lua/지원 자료의 확보 자료 검사와 NuGet 해시 보완은 통합 �
 
 다음 진행:
 - 접근 가능한 깨끗한 Windows x64 Desktop PC/VM이 있으면 TASKS.md의 병렬 검증 지시문을 수행한다. 현재 환경 확보·실행 결과는 미제공이다.
-- 공급자 actual source/patch/build·selected graph 및 지원 파일 author/license·Desktop/Skia 적용 범위는 release-readiness README의 남은 항목과 기존 문의 초안을 따른다. 실제 연락은 별도 발송 승인 전 대기하며 401/404 반복 조회를 하지 않는다.
+- 공급자 actual source/patch/build·selected graph 및 지원 파일 author/license·Desktop/Skia 적용 범위는 release-readiness README의 남은 항목과 기존 문의 초안을 따른다. VideoLAN 문의는 위와 같이 발송 완료·답변 대기이며 401/404 반복 조회를 하지 않는다.
 - 공급자 증거를 확보하면 해당 미해결 항목만 재개한다. 자료 확보가 불가능해 배포 방식 변경을 검토해야 할 때는 영향과 선택지를 먼저 제시하며 번들을 임의 교체하지 않는다.
 - MIT 유지, 공개 Release/tag·최종 사용자 배포 및 VSR은 보류한다. 기존 실물 미검증/실패 기록은 보존한다.
 

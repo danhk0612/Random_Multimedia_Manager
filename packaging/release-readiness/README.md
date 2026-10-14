@@ -1,5 +1,12 @@
 # T18 네이티브 재배포 자료 — 공개 배포 차단
 
+## 공급자 자료 문의 상태 — 2026-10-14
+
+사용자가 공급자 자료 확인 진행을 승인했다. 공식 개발자 목록 안내 https://mailman.videolan.org/listinfo/vlc-devel 에서 수신처를 확인한 후 `vlc-devel@videolan.org`로 기술 문의를 발송했다. 제목: “Source/build materials for VideoLAN.LibVLC.Windows 3.0.23.1 / VLC 3.0.23-2 Windows binaries”. Gmail 발송 결과 SENT 확인이며 수신/목록 게시/담당자 응답이 확인된 것은 아니다. 중복 발송하거나 목록에 자동 가입하지 않는다.
+
+문의 범위는 기존 VideoLAN source/build 초안의 exact release/contrib·patch/build 자료, JAR/Lua 대응 관계 및 지원 파일/Java 고지 위치다. 공개 저장소의 검토 요약과 native inventory를 연결했으며 라이선스 변경·대체 번들을 요청하지 않았다. 해당 항목은 답변 대기다. Microsoft/Desktop 및 Skia에 별도로 문의한 것은 아니며 그 적용 범위 검토는 계속 미완료다. 답변 수령 시 필요한 해당 항목만 검토한다. 공개 배포 보류는 유지한다.
+
+
 ## 최신 사용자 결정 — 2026-10-12
 
 MIT 우선, 불가능하면 적절한 오픈소스 라이선스 선택·적용이 위임됐다. 정확한 범위는 [DECISIONS.md](../../docs/DECISIONS.md)의 “T18 라이선스 선택 위임”을 따른다. T18-D1에서 자체 소스의 MIT를 적용했으며 최신 실행 계약은 [TASKS.md](../../TASKS.md)의 T18-D1 지시문이다. 아래 비교안의 사용자 재선택/문구 별도 확정 조건보다 이번 위임을 우선한다. 제3자 권리·소스 제공·배포 적합성 검토와 공개 배포 차단은 유지한다.
@@ -285,7 +292,7 @@ LGPL source header와 GPL-or-later 후보는 GPLv3 경로를 배제하지 않지
 
 동일 조사를 계속 반복하지 않는다. compiler version/환경의 미확보는 provenance advisory다. 대응 소스에 필요한 실제 patch·컴파일/설치 script의 누락과 구별한다. source sidecar의 `completeCorrespondingSource:false`, `publicReleaseApproved:false`는 유지하고 위 ID를 status/evidence에 연결한다. 기존 원문 archives와 literal recipe patches는 제공하되 실제 적용을 주장하지 않는다. 공급자 자료를 확보하면 **해당 ID만** 검증·고지/sidecar에 통합하고 exact SHA의 Windows 패키징을 확인한다. 새 native build·번들 교체·plugin 제거·T18-D2~D5/VSR은 별도 지시 전 착수하지 않는다.
 
-공급자 문의 초안(발송하지 않음):
+공급자 문의 초안(아래 원안 기반 기술 문의를 2026-10-14 사용자 승인으로 발송):
 
 > For VideoLAN.LibVLC.Windows 3.0.23.1 and the official VLC 3.0.23-2 Windows binaries (commit 79128878), please provide the corresponding source/build materials for release jobs 2403066/2403067/2403068: selected contrib versions and checksums, actual patches, config/link inputs and necessary build/install scripts, plus linked compiler runtime licenses/exceptions. The public traces return 401 and the win64 artifact returns 404. Please also identify the source/build correspondence for libbluray 1.4.0 Java JARs and compiled Lua files. Our per-file SHA256 inventory and the six GPL FFmpeg findings are available for matching. We are not requesting a license change or a replacement bundle.
 
