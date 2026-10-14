@@ -279,3 +279,16 @@ Windows source ZIP은 Linux 동일 SHA의 두 번 생성물과 **전체 byte 동
 runtime manifest **1743개 payload/전체 1744개 파일**의 entry 집합/중복·size/hash, build-info의 exact SHA/SDK/runtime/public 승인 false, MIT LICENSE와 원문 license **27개** byte 일치, 기존 dependency notice **36개 hash 보존을 확인했다. 새 고지 4개는 byte 그대로 포함됐고 기존 제3자 native/support **1284개** size/hash는 동결 inventory와 같다. 자체 apphost는 162816 bytes/SHA256 `a33644eff8ebf4c8517a5b09ea267d636f8623f395979b92d81438773d476a40`, UTF-16 exact commit version을 확인했다. apphost SHA 차이는 제품 변경/native bundle 교체가 아니다.
 
 결과 커밋은 CURRENT_STATE/TASKS/이 검증 문서 3개만 변경한다. 자료·고지·패키징/검증 입력은 cff8956과 동일하고 결과 문서 SHA의 새 ZIP 검증을 주장하지 않는다. PR #34는 검토 대기이며 직접 병합/Release/tag/최종 사용자 배포·제품/번들 변경·공급자 연락 없음. S02/S03 내부 검사와 N02/N03 고지 보존 부분만 완료다. actual source/patch/selected graph·author/license/Skia/Desktop 범위, NuGet hash 표기 advisory·전체 대응 소스/라이선스 양립 및 기존 클린 PC/실물 잔여는 유지한다.
+
+
+## PR #34 NuGet hash 보완 — 원인 재현·비교 기준 수정
+
+main 2ae0113의 보완 지시를 기존 task/t18-d1-local-evidence에 통합했다. JAR/Lua/support/원문 고지 및 cff8956의 CI/artifact 이력을 보존한다. 원인/파일별 근거는 release-readiness README의 NuGet hash 보완 절 및 source-closure.json.localEvidence.nugetHashReconciliation을 따른다.
+
+SDK 10.0.401 Linux 원본을 공식 release metadata SHA512로 확인한 뒤 실제 SDK NuGet.Packaging API를 사용했다. exact NuGet.org nupkg 14개를 독립 다운로드해 이전 artifact의 whole archive SHA512와 제공 원문 고지 byte가 모두 일치함을 확인했다. 별도 새 cache에 실제 PackageDownload restore를 수행했고 signature-aware content hash와 signed archive integrity/identity를 확인했다. 14개 모두 signed이고 12개 lock hash는 content hash와 같다. runtime 2개는 기존 추출이 raw hash를 metadata로 복사했기 때문에 비교 기준 오류였다. 원본은 수정하지 않고 새 패키징 metadata만 content/archive를 분리했다.
+
+helper는 SDK assembly만 참조하며 앱/NuGet dependency를 추가하지 않는다. Linux Release helper 빌드 경고 0/오류 0, 정상 exact archive 14개 검증, 정상/정규화 2개와 invalid content/raw hash·identity·DLL payload 및 rehashed payload 5개 거부를 확인했다. 마지막은 NuGet SignatureException의 package integrity 실패다. 첫 diagnostic의 runtime content mismatch는 정상 원본이 변조됐다는 판정이 아니며 기존 raw field를 잘못 비교한 재현이다. 기존 42개 sidecar 회귀는 그대로 유지한다.
+
+Package-Windows.ps1은 매번 cached nupkg를 실제 계산해 검증하고 contentHash/archiveSha512/signed를 별도 기록한다. runtime도 .nupkg.metadata로부터 독립 content 기준을 읽는다. 새 Windows CI는 기존 cache를 보존하고 별도 cache/HTTP cache 미사용 locked restore 후 14개 원본 hash를 비교하며 mismatch 회귀를 실행한다. package-hashes report는 CI artifact에만 포함하고 runtime payload에 SDK/helper 또는 nupkg를 넣지 않는다. 실제 bundle/SDK/버전/제품/원문 고지·10개 source archive·MIT와 source/public 승인 false는 보존했다.
+
+exact 수정 SHA의 Windows CI·새 artifact 검증은 결과 확정 절에서 이전 결과와 구분한다. NuGet archive/content provenance 해소를 native selected graph/고지·license graph·클린 PC 완료로 확대하지 않는다. 실제 공급자 연락·직접 병합·공개 Release/tag·최종 사용자 배포·VSR 없음.

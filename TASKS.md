@@ -1,5 +1,47 @@
 # 개발 Task
 
+## PR #34 보완 — NuGet hash 원인 재현·Windows 검증 준비
+
+PR #34 head `91865d6`의 검증 입력 `cff8956`에서 Windows CI `38396037357`가 success이며 이후 변경은 결과 문서 3개뿐임을 확인했다. 원격 exact SHA의 새 결과로 제출 전 로컬 검증과 구분됐다. JAR/Lua/지원 자료·고지 검사 결과는 보존한다. 아직 병합하지 않았다.
+
+보완 전에는 NuGet 12개의 dependencies/lock hash와 동봉 .nupkg.sha512 차이가 원인 미확정이었다. Package-Windows.ps1은 assets의 lib.sha512를 기록하고 해당 lib.path 캐시의 .nupkg.sha512를 복사한다. 현재 확인만으로 변조나 단순 표현 차이 어느 쪽도 단정하지 않는다. 정상 비교 규칙·실제 archive와의 관계를 확인하기 전 provenance advisory만으로 종결하지 않는다. runtime 2개 값은 복사 원본 자체에서 metadata를 만들므로 그 일치만으로 독립 검증을 주장하지 않는다.
+
+로컬 원인 재현: exact 원본 14개 raw SHA512/제공 고지가 이전 artifact와 일치하고 실제 SDK NuGet API·독립 restore로 signed content hash를 확인했다. 12개 차이는 signature-aware content/whole archive 의미 차이이며 runtime 2개는 기존 metadata 추출이 raw hash를 복사한 오류였다. 새 helper/패키징/CI에서 두 hash를 분리하고 actual mismatch 5개를 거부한다. 기존 결과를 보존하고 exact Windows CI·새 artifact는 검증 대기다. 상세 근거/검증은 T18_DISTRIBUTION_VALIDATION.md 및 release-readiness README를 따른다.
+
+## T18-D1 PR #34 보완 지시문 — 현재 우선 작업
+
+```text
+최신 main/AI_WORKFLOW.md를 확인하고 기존 task/t18-d1-local-evidence에서
+PR #34의 NuGet hash 불일치만 고성능 Work로 조사·보완해.
+
+1. exact artifact의 패키지별 dependencies.sha512, 동봉 .nupkg.sha512,
+   assets/lock contentHash 및 기존 추출 방법을 대조해.
+   prefix/공백/인코딩 정규화와 signed archive/content hash 의미를
+   실제 NuGet 구현·공식 근거와 함께 확인하고 값을 임의로 같게 만들지 마.
+2. 필요한 exact package/version의 원본 nupkg 및 독립적인 복원 근거를
+   사용해 실제 차이인지 비교 오류인지 재현해. 기존 캐시/증거를 지우지 마.
+   기존 artifact의 추출 오류라면 원문과 수정된 결과를 구분해.
+3. 비교 오류면 검사/자료 판정을 바로잡고, 실제 불일치면 원인과 영향 범위를
+   확인해 패키징이 해당 불일치를 검출하도록 좁게 보완해.
+   이번 검토로 scripts/Package-Windows.ps1 및 관련 검증/CI의
+   필요한 최소 수정은 허용한다. 원인 증명 없이 raw SHA512만 강제 비교하지 마.
+4. 정상 exact package와 실제 불일치 자료를 구분하는 의미 있는 회귀 검증,
+   정확한 수정 SHA의 Windows CI 및 새 artifact 대조를 수행해.
+   기존 42개 sidecar 검사와 JAR/Lua/고지 근거를 보존해.
+5. CURRENT_STATE/TASKS/검증 문서와 관련 closure 판정을 갱신하고
+   기존 PR #34에 제출해. 미확인 부분은 미확인으로 유지해.
+
+완료 조건: 12개 차이의 원인·정상 비교 기준·패키지 provenance 범위가
+재현 가능한 근거로 설명되고, 실제 불일치를 통과시키지 않아야 한다.
+외부 자료가 부족하면 정확한 누락/재개 조건을 보고해.
+
+제품/DB/API/SDK/엔진/번들 버전·MIT 변경, 공급자 연락,
+직접 병합·Release/tag·최종 사용자 배포·VSR은 하지 마.
+공개 저장소의 해당 작업 브랜치 push·PR 갱신·Windows CI 및
+검토 artifact 생성은 승인된 범위다. 승인 거절 시 우회하지 마.
+```
+
+
 상태는 이 파일에서 관리한다. 아래 순서는 우선순위이며 선행 관계를 반드시 함께 확인한다. Sol 작업도 선행 계약이 확정되지 않았으면 시작하지 않는다. 각 Task는 아래에 명시한 목적·범위·완료 조건·금지 영역을 계약으로 사용한다.
 
 | ID | 목적 | 담당 | 상태 | 선행 |

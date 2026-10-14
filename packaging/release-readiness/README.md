@@ -316,3 +316,22 @@ sidecar는 기존 committed Git snapshot/evidence 복사로 새 source-closure C
 고지 4개는 기존 `licenses/contrib/`에 통합했다: `libbluray-1.4.0-ASM-LICENSE.txt`(archive 원문), `libbluray-Java-source-header-notices.txt`, `VLC-Lua-source-header-notices.txt`, `VLC-support-source-header-notices.txt`(source 경로별 header 원본 bytes). Lua koreus의 Latin-1 copyright도 변환 없이 보존한다. 발췌 고지는 라이선스를 재작성하거나 source archive/완전한 조건을 대신하지 않는다. 이전 runtime ZIP에 소급 포함되지 않으며 기존 licenses 복사 경로의 새 CI 검토 ZIP에 포함된다.
 
 **부분 검사 완료, 전체 S02/S03/N02/N03는 아직 미완료**다. S01/N01/G01의 실제 selected linked graph와 위 변경·고지 범위는 외부 증거 대기이며 recipe/string 부재를 승인 근거로 삼지 않는다. 기존 S01 trace 401/artifact 404는 재조회하지 않았다. actual patches·필요 build/install scripts 누락과 compiler provenance advisory를 구별한다. completeCorrespondingSource/publicReleaseApproved false, 자체 MIT 및 기존 실패/실물 미검증을 유지한다. 클린 PC·LGPL 교체·NAS/RaiDrive·AVI/잠금/수동 미검증은 이번 검사로 해소되지 않는다. 제품/번들·SDK/엔진 변경, 공급자 연락, 직접 병합·Release/tag·VSR 없음. exact SHA/CI/새 artifact 검증은 [T18 검증 문서](../../docs/T18_DISTRIBUTION_VALIDATION.md)의 local-evidence 절을 따른다.
+
+
+### PR #34 NuGet hash 보완 — 비교 기준과 provenance
+
+main 2ae0113의 보완 지시를 기존 브랜치에 통합했다. 이전 NuGet 12개 차이를 단순 advisory로 종결한 판정은 아래 exact nupkg 근거로 보완한다. 기존 JAR/Lua/support/고지·이전 CI/artifact/실패 이력은 보존한다.
+
+[NuGet PackageArchiveReader](https://github.com/NuGet/NuGet.Client/blob/dev/src/NuGet.Core/NuGet.Packaging/PackageArchiveReader.cs)의 GetContentHash는 signed archive에서 signature-aware 경로, unsigned archive에서 실제 전체 SHA512 경로를 사용한다. [SignedPackageArchiveUtility](https://github.com/NuGet/NuGet.Client/blob/dev/src/NuGet.Core/NuGet.Packaging/Signing/Archive/SignedPackageArchiveUtility.cs)의 GetPackageContentHash는 .signature.p7s를 제외하고 ZIP offset/central-directory/EOCD 필드를 복원해 hash한다. 단순히 파일 내용을 연결하거나 ZIP을 새로 압축하는 알고리즘이 아니다. [NuGet metadata 설명](https://github.com/NuGet/Home/wiki/Nupkg-Metadata-File)은 기존 .nupkg.sha512가 전체 archive, .nupkg.metadata의 contentHash가 signature-aware임을 구분한다. 공식 본문은 2026-10-13에 접근 확인했다.
+
+exact 14개 nupkg를 NuGet flat-container의 고정 id/version으로 독립 다운로드했다. 실제 전체 SHA512가 이전 artifact 11812502022의 .nupkg.sha512 14개와 모두 같고, 제공 nuspec/license/notice 원문도 archive entry와 byte 일치한다(nuspec basename의 cache 소문자화만 매핑). 기존 캐시를 지우지 않고 새로운 isolated cache에 NuGet PackageDownload restore해 .nupkg.metadata를 확보했다. SDK 10.0.401의 실제 NuGet.Packaging API로 archive hash·identity·signature integrity 및 callback 없는 GetContentHash를 실행했다. 구현 informational version은 7.9.0-rc.42413+e34a38d2...이며 해당 source revision raw 원문 접근은 실패했다. dev 원문과 실제 SDK API 관찰이 일관됨을 근거로 사용하되 정확한 source revision byte 일치를 주장하지 않는다.
+
+| 비교 | 결과·올바른 기준 |
+|---|---|
+| NuGet 12개의 lock/assets/dependencies sha512 | 12개 모두 actual signature-aware GetContentHash와 일치. 전체 nupkg SHA512와 다른 이유는 서명/ZIP hash 의미 차이다. prefix/공백/Base64 정규화로 같아지는 차이가 아님 |
+| 14개의 동봉 .nupkg.sha512 | 독립 원본 actual 전체 SHA512와 전부 일치. 해당 archive 재배포물의 byte fingerprint이며 signed-content hash와 직접 같다고 검사하지 않음 |
+| runtime 2개의 이전 dependencies.sha512 | cache .nupkg.sha512를 복사해 만든 전체 archive hash였다. 두 runtime도 signed이며 actual NuGet content hash와 다르다. 원문은 유지하고 새 metadata의 contentHash 및 sha512 alias를 실제 restore metadata/SDK 계산으로 수정. 이전 자기복사 일치를 독립 검증으로 사용하지 않음 |
+| 새 패키징 | SDK helper가 실제 cached nupkg의 raw SHA512↔동봉 hash, signed-content hash↔assets 또는 runtime restore metadata, id/version 및 signed archive integrity를 확인. dependencies에는 contentHash/archiveSha512/signed를 별도로 추가, sha512는 contentHash alias로 유지 |
+| 회귀·독립 복원 | 정상/정규화 2개, content/raw hash·identity·DLL payload 변경·raw hash 재계산 후 payload 변경 5개 실패. 마지막은 NuGet signature integrity가 거부. Windows CI는 별도 새 package cache/HTTP cache 미사용 exact locked restore 후 14개 archive/content evidence를 첫 패키징 자료와 대조 |
+
+파일별 원본/수정 비교·URL·bytes·SHA256/SHA512·SDK 버전과 근거는 source-closure.json의 localEvidence.nugetHashReconciliation에 통합했다. 출력 package-hashes.json 및 independent report는 CI 검토 artifact에만 보존하며 runtime bundle에 SDK/helper/nupkg를 추가하지 않는다. NuGet 12개 provenance 비교 차이는 해소됐고 runtime 2개 추출 기준 오류를 보완했지만, certificate-chain/timestamp trust나 S01/native linked graph·고지/라이선스 완료를 뜻하지 않는다. 원문 고지·버전·제3자 native payload·MIT/source/public 승인 false는 유지한다. 정확한 수정 SHA/새 Windows CI/artifact 결과는 T18 검증 문서를 따른다.

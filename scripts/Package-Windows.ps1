@@ -26,6 +26,11 @@ Copy-Item LICENSE "$package/LICENSE"
 Copy-Item packaging/USER_GUIDE.md "$package/USER_GUIDE.md"
 Copy-Item packaging/THIRD_PARTY_NOTICES.md "$package/THIRD_PARTY_NOTICES.md"
 Copy-Item packaging/licenses "$package/licenses" -Recurse
+# Keep whole-archive SHA512 separate from NuGet's signature-aware content hash.
+./scripts/Verify-NuGetHashes.ps1 -AssetsPath 'src/RandomMultimediaManager.App/obj/project.assets.json' -OutputPath "$out/package-hashes.json"
+$packageHashes = Get-Content "$out/package-hashes.json" -Raw | ConvertFrom-Json -AsHashtable
+$hashByPackage = @{}
+foreach ($row in $packageHashes) { $hashByPackage[$row.package.ToLowerInvariant()] = $row }
 $assets = Get-Content 'src/RandomMultimediaManager.App/obj/project.assets.json' -Raw | ConvertFrom-Json -AsHashtable
 $licenses = Join-Path $package 'dependency-notices'
 New-Item -ItemType Directory $licenses | Out-Null
@@ -47,7 +52,7 @@ $dependencies = foreach ($key in ($assets.libraries.Keys | Sort-Object)) {
         New-Item -ItemType Directory (Split-Path $target -Parent) -Force | Out-Null
         Copy-Item $file.FullName $target
     }
-    [ordered]@{ package = $key; sha512 = $lib.sha512; noticeFiles = @($noticeFiles | ForEach-Object { [IO.Path]::GetRelativePath($cache, $_.FullName).Replace('\','/') }) }
+    [ordered]@{ package = $key; sha512 = $lib.sha512; contentHash = $hashByPackage[$key.ToLowerInvariant()].contentHash; archiveSha512 = $hashByPackage[$key.ToLowerInvariant()].archiveSha512; signed = $hashByPackage[$key.ToLowerInvariant()].signed; noticeFiles = @($noticeFiles | ForEach-Object { [IO.Path]::GetRelativePath($cache, $_.FullName).Replace('\','/') }) }
 }
 # Runtime packs are download dependencies, not always listed in assets.libraries.
 foreach ($id in @('microsoft.netcore.app.runtime.win-x64', 'microsoft.windowsdesktop.app.runtime.win-x64')) {
@@ -66,7 +71,7 @@ foreach ($id in @('microsoft.netcore.app.runtime.win-x64', 'microsoft.windowsdes
         New-Item -ItemType Directory (Split-Path $target -Parent) -Force | Out-Null
         Copy-Item $file.FullName $target -Force
     }
-    $dependencies += [ordered]@{ package = "$id/10.0.12"; sha512 = (Get-Content "$cache/$id.10.0.12.nupkg.sha512" -Raw).Trim(); noticeFiles = @($noticeFiles | ForEach-Object { [IO.Path]::GetRelativePath($cache, $_.FullName).Replace('\','/') }) }
+    $dependencies += [ordered]@{ package = "$id/10.0.12"; sha512 = $hashByPackage["$id/10.0.12"].contentHash; contentHash = $hashByPackage["$id/10.0.12"].contentHash; archiveSha512 = $hashByPackage["$id/10.0.12"].archiveSha512; signed = $hashByPackage["$id/10.0.12"].signed; noticeFiles = @($noticeFiles | ForEach-Object { [IO.Path]::GetRelativePath($cache, $_.FullName).Replace('\','/') }) }
 }
 $dependencies | ConvertTo-Json -Depth 10 | Set-Content "$package/dependencies.json" -Encoding utf8NoBOM
 Copy-Item 'src/RandomMultimediaManager.App/packages.lock.json' "$package/packages.lock.json"
