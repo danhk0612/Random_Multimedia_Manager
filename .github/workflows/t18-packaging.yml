@@ -10,6 +10,9 @@ on:
       - 'scripts/*Windows*.ps1'
       - 'scripts/Package-SourceSidecar.py'
       - 'scripts/Verify-SourceSidecar.py'
+      - 'scripts/Verify-NuGetHashes.ps1'
+      - 'scripts/NuGetHashVerifier.cs'
+      - 'scripts/NuGetHashVerifier.csproj'
       - 'LICENSE'
       - '.gitattributes'
       - 'packaging/**'
@@ -74,6 +77,22 @@ jobs:
           $second = Get-ChildItem artifacts/t18-repeat -Filter '*.zip'
           if ((Get-FileHash $first.FullName).Hash -ne (Get-FileHash $second.FullName).Hash) { throw 'Repeated ZIP bytes differ.' }
           Write-Output 'PASS byte-identical repeat ZIP'
+      - name: Independently restore and verify exact NuGet hash provenance
+        shell: pwsh
+        run: |
+          $cache = 'artifacts/t18-independent-cache'
+          if (Test-Path $cache) { throw 'Independent restore cache already exists.' }
+          dotnet restore src/RandomMultimediaManager.App/RandomMultimediaManager.App.csproj -r win-x64 -p:SelfContained=true -p:RuntimeFrameworkVersion=10.0.12 --locked-mode --no-http-cache --packages $cache
+          if ($LASTEXITCODE -ne 0) { throw 'Independent exact restore failed.' }
+          ./scripts/Verify-NuGetHashes.ps1 -AssetsPath src/RandomMultimediaManager.App/obj/project.assets.json -OutputPath artifacts/t18/package-hashes-independent.json -Regression
+          $first = Get-Content artifacts/t18/package-hashes.json -Raw | ConvertFrom-Json
+          $independent = Get-Content artifacts/t18/package-hashes-independent.json -Raw | ConvertFrom-Json
+          if ($first.Count -ne $independent.Count) { throw 'Independent package set differs.' }
+          foreach ($row in $first) {
+            $fresh = @($independent | Where-Object package -EQ $row.package)
+            if ($fresh.Count -ne 1 -or $fresh[0].contentHash -ne $row.contentHash -or $fresh[0].archiveSha512 -ne $row.archiveSha512 -or $fresh[0].archiveSha256 -ne $row.archiveSha256) { throw "Independent archive/content evidence differs: $($row.package)" }
+          }
+          Write-Output 'PASS independent exact archives/content hashes and package mismatch regression'
       - name: Extract and run app and existing regression against ZIP dependencies
         shell: pwsh
         run: ./scripts/Verify-WindowsPackage.ps1
@@ -91,6 +110,8 @@ jobs:
             artifacts/t18/*.sha256
             artifacts/t18/*.log
             artifacts/t18/loaded-native-modules.txt
+            artifacts/t18/package-hashes.json
+            artifacts/t18/package-hashes-independent.json
             artifacts/t18/RandomMultimediaManager-win-x64/build-info.json
             artifacts/t18/RandomMultimediaManager-win-x64/files.json
             artifacts/t18/RandomMultimediaManager-win-x64/dependencies.json

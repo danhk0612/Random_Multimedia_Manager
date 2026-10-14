@@ -1,21 +1,27 @@
 # 현재 구현 상태
 
-## PR #34 병합 검토 — NuGet 해시 대조 보완 대기
+## PR #34 보완 — NuGet hash 원인 해소·Windows 검증 완료
 
 PR #34 head `91865d6`의 검증 입력 `cff8956`에서 Windows CI `38396037357`가 success이며 이후 변경은 결과 문서 3개뿐임을 확인했다. 원격 exact SHA의 새 결과로 제출 전 로컬 검증과 구분됐다. JAR/Lua/지원 자료·고지 검사 결과는 보존한다. 아직 병합하지 않았다.
 
-NuGet 12개의 dependencies/lock hash와 동봉 .nupkg.sha512 불일치가 원인 미확정이다. Package-Windows.ps1은 assets의 lib.sha512를 기록하고 해당 lib.path 캐시의 .nupkg.sha512를 복사한다. 현재 확인만으로 변조나 단순 표현 차이 어느 쪽도 단정하지 않는다. 정상 비교 규칙·실제 archive와의 관계를 확인하기 전 provenance advisory만으로 종결하지 않는다. runtime 2개 값은 복사 원본 자체에서 metadata를 만들므로 그 일치만으로 독립 검증을 주장하지 않는다.
+보완 전에는 NuGet 12개의 dependencies/lock hash와 동봉 .nupkg.sha512 차이가 원인 미확정이었다. Package-Windows.ps1은 assets의 lib.sha512를 기록하고 해당 lib.path 캐시의 .nupkg.sha512를 복사한다. 당시 자료만으로 변조나 단순 표현 차이를 단정하지 않았으며 provenance advisory만으로 종결하지 않았다. runtime 2개 값의 기존 일치는 복사 원본 자체를 metadata로 만든 자기 비교였으므로 독립 검증 근거로 삼지 않았다.
 
-다음은 TASKS.md의 “T18-D1 PR #34 보완 지시문 — 현재 우선 작업”이다. 공개 배포 보류와 클린 PC/실물 미검증은 유지한다.
+로컬 원인 재현: exact 원본 14개 raw SHA512/제공 고지가 이전 artifact와 일치하고 실제 SDK NuGet API·독립 restore로 signed content hash를 확인했다. 12개 차이는 signature-aware content/whole archive 의미 차이이며 runtime 2개는 기존 metadata 추출이 raw hash를 복사한 오류였다. 새 helper/패키징/CI에서 두 hash를 분리하고 actual mismatch 5개를 거부한다. 정확한 수정 SHA **e4500fcc1879dbe968d078aa76a00c4a2ba652f3**에서 Windows workflow 9개 모두 attempt 1 success다. T18 run **38489221298** / job **115610185694**, artifact **11861271580**를 실제 다운로드해 14개 warm/cold archive/content hash, manifest, 원문 license 27개·notice 36개·native/support 1,284개 보존과 Linux/Windows source ZIP 전체 byte 일치를 확인했다. 기존 sidecar 회귀 42개와 새 정상 2개/불일치 거부 5개, 반복 ZIP·셸/ZIP 의존성 회귀를 통과했다. NuGet 12개 차이는 해소됐고 runtime 2개 metadata만 비교 의미를 바로잡았다. 전체 대응 소스/고지 graph·공개 배포 및 실물 검증의 미완료는 유지한다. 상세 근거/검증은 T18_DISTRIBUTION_VALIDATION.md 및 release-readiness README를 따른다.
+
+다음은 기존 PR #34의 재검토다. 보완 지시문과 이전 검증 이력은 TASKS.md에 보존한다. 공개 배포 보류와 클린 PC/실물 미검증은 유지한다.
 
 
-## 현재 우선 상태 — PR #33 통합·확보 자료의 잔여 검사
+## PR #34 이전 제출·검증 상태
 
 PR #33을 `79ec9f2`로 main에 통합했다. 검증 입력 `e27c80d`의 Windows CI `38350407460` / job `115141274710` 최초 성공과 이후 결과 문서 3개만 변경된 것을 확인했다. 42개 무결성 회귀·source/runtime ZIP 반복 byte·셸 정상 종료/재시작·ZIP 의존성 회귀가 통과했다. 병합 검토에서는 native/closure inventory의 1,285개 고유 path/hash 일치를 직접 대조했다. Windows 실행과 실제 artifact 다운로드는 이 검토에서 독립 재수행하지 않았다.
 
 자체 코드 MIT, 10개 확보 archive 및 원문 고지는 main에 반영됐다. 전체 대응 소스·license graph·LGPL 교체·클린 PC 완료나 공개 배포 승인은 아니다. S01 공급자 release trace 401/만료 artifact 404는 외부 자료 대기로 분리하고 반복 조회하지 않는다.
 
-다음은 고성능 Work의 **T18-D1 확보 패키지 잔여 검사**다. S02/S03/N02/N03 중 현재 exact artifact와 확보 원문으로 확인 가능한 범위만 수행한다. 실제 공급자 연락·native 빌드·번들 교체는 승인된 작업이 아니다. 기존 실패/실물 미검증과 공개 배포 보류를 유지한다.
+PR **#34**를 main 대상으로 제출했다. Git CLI 인증 부재 때문에 연결된 GitHub 기능으로 로컬 f69b20b의 11개 blob·전체 tree SHA와 동일한 내용을 원격 **cff8956**으로 제출했으며 author/commit metadata에 따른 SHA 차이를 구분했다. 정확한 원격 SHA의 Windows T18 run **38396037357** / job **115291371488**, attempt 1 최초 성공. 42개 무결성 회귀·source/runtime repeat byte·셸 정상 종료/재시작 2회·전체 ZIP 의존성 회귀 통과. 실제 artifact **11812502022**의 manifest/원문 고지 27개/제3자 native 1,284개 및 source ZIP Linux/Windows 전체 byte 일치를 대조했다. 이전 승인 차단은 해소됐으며 검증 입력 이후 결과 커밋은 문서 3개만 변경한다.
+
+현재 `task/t18-d1-local-evidence`에서 main 2a395f3의 문서 정리를 유지하고 JAR 6개·Lua 108개/source 36개·지원 180개/제공 notice 36개를 대조했다. 내부 목록/header·provided notice 보존 부분만 완료이며 actual source/patch·selected graph·지원 자료 author/license 및 Desktop/Skia 고지 scope는 외부 증거 대기다. 검사/고지는 기존 JSON/CSV/README에 통합했다. 영향 검증·PR 결과는 docs/T18_DISTRIBUTION_VALIDATION.md의 local-evidence 절을 따른다. 다음은 해당 PR 검토이며 새 Task·공개 배포로 진행하지 않는다.
+
+이 Task의 계약은 다음과 같다: 고성능 Work의 **T18-D1 확보 패키지 잔여 검사**다. S02/S03/N02/N03 중 현재 exact artifact와 확보 원문으로 확인 가능한 범위만 수행한다. 실제 공급자 연락·native 빌드·번들 교체는 승인된 작업이 아니다. 기존 실패/실물 미검증과 공개 배포 보류를 유지한다.
 
 
 클린 Windows 검사는 T18-D1과 병렬 가능하며 TASKS.md의 별도 지시문을 따른다. PC/VM 접근 및 실제 검사 결과는 아직 확보되지 않았다. 아래 제출 당시·통합 당시 절의 미착수/라이선스 미선택 문구는 당시 상태이며 현재 착수 조건이 아니다.

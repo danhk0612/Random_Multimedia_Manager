@@ -236,3 +236,80 @@ fixture는 TemporaryDirectory의 작은 synthetic tar/ZIP/archive만 사용한�
 - archive 10개/기존 8개 입력의 byte/hash 보존, 공식 script Git blob 3개, closure 1,285개 path/hash coverage·그룹 합계, 기존 문서 heading/길이·diff/local 링크를 확인했다. 기존 성공/실패/실물 미검증은 삭제하지 않았다.
 
 최종 판정은 **PR #33의 잔여 조사·검토 자료 및 영향 검증 제출 완료**다. S01~S03/N01~N03/G01의 공급자/링크 증거·전체 대응 소스·license graph·LGPL 교체·클린 PC 및 기존 실물 잔여는 미완료다. `completeCorrespondingSource/publicReleaseApproved:false`를 유지하고 MIT를 다시 승인 대기로 돌리지 않는다. 직접 병합·공개 Release/tag·제품/번들 변경·VSR은 없다.
+
+
+## T18-D1 local-evidence — 확보 패키지 잔여 검사
+
+기준 main **2a395f3**의 문서 정리/병렬 클린 PC 인계와 기존 실패/미검증을 보존했다. 미push 이전 로컬 작업은 자동 정리로 복구되지 않았으며 이번 검사는 이전 성공 승계가 아닌 같은 exact artifact/확보 archive에서의 자료 복원·검증이다. 공급자 웹 조사나 원본 archive 재수집은 하지 않았다.
+
+입력 artifact **11789979837** outer 292,227,189 bytes/SHA256 `0965d00ba6a2f9cdc541a20700f23c2ebd090e8adc1108d9a652fe1558aa2482`, runtime 232,034,356 bytes/SHA256 `8be9d64370ff0feec06b409131b1053d01c6dab6620ebd42e1d43df04e2a9bc0`를 직접 대조했다. 1,739개 manifest payload와 제3자 native/support 1,284개 크기/hash가 동결 자료와 일치한다. apphost hash 차이는 PR #33의 exact SHA 구분을 유지한다.
+
+Python ZIP reader로 JAR 6개의 모든 entry hash/manifest를 읽고 CAFEBABE·constant pool·this_class·SourceFile을 파싱해 entry/className과 package/SourceFile 후보를 대조했다. 총 class 2,364개가 Java 722개 단일 source 후보에 대응하며 class partition/build-only 제외도 검사했다. header/version/자기표시 compiler와 원문 build 규칙의 일관성은 실제 source equivalence/patch 적용이나 compiler 실행 attestation이 아니다. Lua 12-byte header·size_t/source chunk 및 source hash·기존 share/configure/recipe/32-bit patch 후보를 대조했다. 지원 파일은 source bytes와 LF→CRLF만 적용한 bytes를 비교했고 dependencies.json의 noticeFiles 존재·hash·sha512 파일/metadata를 별도로 대조하고 저장 원문 bytes를 확인했다. runtime 2개 hash 값은 일치, NuGet 12개는 불일치해 auxiliary 비교를 통과 처리하지 않았다. dependencies/lock과 원래 동결 metadata 값은 동일하며 실제 archive/hash 산출 의미 없이 원인을 단정하거나 값을 바꾸지 않는다. 고지 byte 통과와 provenance advisory를 구별한다. 실행/디컴파일/native 또는 Java/Lua 재빌드는 하지 않았다.
+
+검사 결과는 기존 source-closure JSON/CSV와 README에 통합했고 고지 4개 원문을 보완했다. support author/license와 full dual-license 조건, actual source 변경·selected linked graph/Desktop/Skia scope는 외부 증거 대기로 분리했다. S01 401/404 조회/공급자 연락·제품/번들/SDK/엔진/무결성 로직 변경·직접 병합·공개 배포·VSR 없음. completeCorrespondingSource/publicReleaseApproved false와 기존 클린 PC/NAS/RaiDrive/AVI/잠금/수동 미검증을 유지한다. 로컬/정확한 SHA Windows CI·새 artifact 결과는 아래에 기록한다.
+
+
+### local-evidence 제출 전 로컬 검증·원격 차단 이력
+
+검증 자료 SHA **c8bfd72222054ef05d83e8131037b5ebc0e337c9**. 기존 무결성 회귀 **42개**가 일반 Python/`-O`/`PYTHONOPTIMIZE=1`에서 통과했다. 10개 기존 archive bytes/SHA256/제공 SHA512를 모두 검증했고 source sidecar를 두 번 생성해 전체 byte 일치했다. Source ZIP **74,037,284 bytes / SHA256 `f606597f74a33567b84a61d5755761400be715d44ebfd52592cf0a33fecbf552`**, manifest 645개 payload/ZIP entry 646개. 실제 ZIP은 세 Python 모드 verify 통과, 원문 고지 4개 byte 포함 및 source/public 승인 false 확인.
+
+기존 source-closure JSON의 모든 이전 key/value, CSV 1,285개 path/architecture/hash/group/sourcePaths/remaining은 유지된다. main 대비 src/tests/scripts/workflows/SDK/MIT/source-inputs 및 source archives 변경 없음. 추가 source 헤더 판독은 Java 47종/헤더 없는 후보 2개, Lua 36개, 웹 지원 18개(16 GPL 설명·2 dual-license 설명)를 보존했다. 고지의 정확한 적용 잔여는 README의 local-evidence 표를 따른다. 이전 ac828d5의 sidecar hash/성공을 복구했다고 표시하지 않는다.
+
+**제출 전 당시 상태는 PR 미제출·Windows CI 미실행**이었다. automatic approval review가 공개 저장소 작업 브랜치 push도 사용자의 공개 배포 금지에 포함된다고 해석해 거절했다. 다른 API나 우회 경로로 전송하지 않았다. 공개 저장소의 branch push/PR 제출은 허용하고 Release/tag 배포 금지는 유지한다는 범위 확인 후 exact SHA의 T18 CI·새 artifact runtime/source manifest 및 원문 고지 포함을 검증해 PR 결과를 갱신한다. 이전 PR #33 Windows 성공을 이번 자료의 성공으로 대체하지 않는다.
+
+이 결과 커밋은 CURRENT_STATE/TASKS/이 검증 문서만 변경한다. 검증 자료/고지/패키징 입력은 위 SHA 그대로이며 결과 문서 SHA의 새 ZIP 검증을 주장하지 않는다. 전체 소스/고지 graph 미완료·공개 배포 보류와 클린 PC/NAS/RaiDrive/AVI/잠금 및 기존 실물 잔여를 유지한다.
+
+
+### PR #34 제출 및 exact SHA Windows 검증
+
+2026-10-13 사용자가 공개 저장소 branch push/PR 및 CI 검토 artifact를 명시 승인했다. Release/tag·최종 사용자 배포 금지는 유지했다. 자동 승인 차단은 재발하지 않았지만 Git CLI 인증이 없어 직접 push는 실패했다. 연결된 GitHub 기능으로 f69b20b의 변경 blob 11개 및 **전체 tree SHA 동일**을 확인해 cff8956으로 제출했다. 로컬 원본은 preserve/t18-d1-local-f69b20b에 보존했고 원격을 fetch해 full-tree diff 0을 확인했다. commit author/metadata 차이 때문에 SHA를 동일하다고 주장하지 않는다.
+
+검증 입력 **cff89563d362005c4bf281cd8463f120077ed831**. [Windows T18 CI 38396037357](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38396037357), job **115291371488**, attempt 1 최초 성공. Windows Server 2025 x64/.NET SDK 10.0.401/runtime 10.0.12에서 exact checkout/SDK, 기존 Python 무결성 42개, source/runtime ZIP repeat byte, 압축 해제 셸 시작·정상 종료·재시작 2회, 기존 전체 ZIP dependency harness/native 경로 회귀가 통과했다. 사전 설치 없는 사용자 Desktop PC 검증은 아니다.
+
+[검토 artifact 11812502022](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38396037357/artifacts/11812502022), 만료 **2026-10-27T12:20:36Z**를 실제 다운로드해 outer bytes/hash를 GitHub digest와 대조했다. 이전 artifact 11789979837과 구분하며 영속 source 제공 경로나 공개 Release가 아니다.
+
+| 다운로드·직접 검증한 ZIP | bytes | SHA256 |
+|---|---:|---|
+| outer artifact | 292814279 | `80437d36904b0197efc1c59c9f7a2223ec4e79f3f2814b012e18bbc5f670e59b` |
+| source-review-cff89563d362 | 74037284 | `167bdc3c0c501561ac78b50868498d2b04a451f430cd44d49c3598c28078d77c` |
+| win-x64-cff89563d362 | 232050352 | `e260cecb72b67793a1c05202edea7df73b79c75572bddda05dba1f4992d59f70` |
+
+Windows source ZIP은 Linux 동일 SHA의 두 번 생성물과 **전체 byte 동일**이다. 645개 manifest payload/646개 entry, commit/incomplete/source release blocked status 및 원문 source/고지 포함을 확인했다. Linux 실제 ZIP의 일반/-O/PYTHONOPTIMIZE 세 모드 verify도 통과했다.
+
+runtime manifest **1743개 payload/전체 1744개 파일**의 entry 집합/중복·size/hash, build-info의 exact SHA/SDK/runtime/public 승인 false, MIT LICENSE와 원문 license **27개** byte 일치, 기존 dependency notice **36개 hash 보존을 확인했다. 새 고지 4개는 byte 그대로 포함됐고 기존 제3자 native/support **1284개** size/hash는 동결 inventory와 같다. 자체 apphost는 162816 bytes/SHA256 `a33644eff8ebf4c8517a5b09ea267d636f8623f395979b92d81438773d476a40`, UTF-16 exact commit version을 확인했다. apphost SHA 차이는 제품 변경/native bundle 교체가 아니다.
+
+결과 커밋은 CURRENT_STATE/TASKS/이 검증 문서 3개만 변경한다. 자료·고지·패키징/검증 입력은 cff8956과 동일하고 결과 문서 SHA의 새 ZIP 검증을 주장하지 않는다. PR #34는 검토 대기이며 직접 병합/Release/tag/최종 사용자 배포·제품/번들 변경·공급자 연락 없음. S02/S03 내부 검사와 N02/N03 고지 보존 부분만 완료다. actual source/patch/selected graph·author/license/Skia/Desktop 범위, NuGet hash 표기 advisory·전체 대응 소스/라이선스 양립 및 기존 클린 PC/실물 잔여는 유지한다.
+
+
+## PR #34 NuGet hash 보완 — 원인 재현·비교 기준 수정
+
+main 2ae0113의 보완 지시를 기존 task/t18-d1-local-evidence에 통합했다. JAR/Lua/support/원문 고지 및 cff8956의 CI/artifact 이력을 보존한다. 원인/파일별 근거는 release-readiness README의 NuGet hash 보완 절 및 source-closure.json.localEvidence.nugetHashReconciliation을 따른다.
+
+SDK 10.0.401 Linux 원본을 공식 release metadata SHA512로 확인한 뒤 실제 SDK NuGet.Packaging API를 사용했다. exact NuGet.org nupkg 14개를 독립 다운로드해 이전 artifact의 whole archive SHA512와 제공 원문 고지 byte가 모두 일치함을 확인했다. 별도 새 cache에 실제 PackageDownload restore를 수행했고 signature-aware content hash와 signed archive integrity/identity를 확인했다. 14개 모두 signed이고 12개 lock hash는 content hash와 같다. runtime 2개는 기존 추출이 raw hash를 metadata로 복사했기 때문에 비교 기준 오류였다. 원본은 수정하지 않고 새 패키징 metadata만 content/archive를 분리했다.
+
+helper는 SDK assembly만 참조하며 앱/NuGet dependency를 추가하지 않는다. Linux Release helper 빌드 경고 0/오류 0, 정상 exact archive 14개 검증, 정상/정규화 2개와 invalid content/raw hash·identity·DLL payload 및 rehashed payload 5개 거부를 확인했다. 마지막은 NuGet SignatureException의 package integrity 실패다. 첫 diagnostic의 runtime content mismatch는 정상 원본이 변조됐다는 판정이 아니며 기존 raw field를 잘못 비교한 재현이다. 기존 42개 sidecar 회귀는 그대로 유지한다.
+
+Package-Windows.ps1은 매번 cached nupkg를 실제 계산해 검증하고 contentHash/archiveSha512/signed를 별도 기록한다. runtime도 .nupkg.metadata로부터 독립 content 기준을 읽는다. 새 Windows CI는 기존 cache를 보존하고 별도 cache/HTTP cache 미사용 locked restore 후 14개 원본 hash를 비교하며 mismatch 회귀를 실행한다. package-hashes report는 CI artifact에만 포함하고 runtime payload에 SDK/helper 또는 nupkg를 넣지 않는다. 실제 bundle/SDK/버전/제품/원문 고지·10개 source archive·MIT와 source/public 승인 false는 보존했다.
+
+exact 수정 SHA의 Windows CI·새 artifact 검증은 결과 확정 절에서 이전 결과와 구분한다. NuGet archive/content provenance 해소를 native selected graph/고지·license graph·클린 PC 완료로 확대하지 않는다. 실제 공급자 연락·직접 병합·공개 Release/tag·최종 사용자 배포·VSR 없음.
+
+
+### NuGet 보완 exact SHA Windows 검증과 실제 artifact 대조
+
+검증 입력 **e4500fcc1879dbe968d078aa76a00c4a2ba652f3**, tree **15c4b24b39ce80c44951ad7eb9d9b74aaabb5bf4**. main 2ae0113의 지시/기존 PR head 91865d6을 보존한 보완이다. 중단 전에 업로드된 변경 blob 10개를 같은 tree로 복구해 해당 작업 브랜치에 반영했으며 pruned 로컬 541b07b와 commit metadata/SHA를 혼동하지 않는다. 결과 확정 커밋은 CURRENT_STATE/TASKS/이 문서 3개만 변경하며 검증 입력 SHA와 구분한다.
+
+[Windows T18 run 38489221298](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38489221298), job **115610185694**, attempt 1 **success**. exact head checkout / SDK 10.0.401 / runtime 10.0.12 확인, 기존 sidecar 무결성 회귀 **42개**(일반/-O/PYTHONOPTIMIZE), source/runtime ZIP 반복 byte 일치, 셸 시작·정상 종료·재시작 2회와 기존 전체 ZIP dependency/native load 경로 회귀를 통과했다. NuGet 14개 실제 cached archive 검사 및 새 별도 cache/HTTP cache 미사용 locked restore 결과가 일치한다. 정상/표현 정규화 **2개**, 잘못된 content/raw hash·identity·DLL payload·raw hash 재계산 DLL payload **5개 거부**를 확인했다. 마지막은 NuGet signed archive integrity 실패로 거부됐으며 raw hash만 재계산해도 통과하지 않는다. T03 38489221278 / T05 38489221283 / T06 38489221432 / T07 38489221367 / T09 38489221415 / T10 38489221270 / T11 38489221311 / T18A-6 38489221250도 같은 SHA에서 최초 실행 success다.
+
+[검토 artifact 11861271580](https://github.com/danhk0612/Random_Multimedia_Manager/actions/runs/38489221298/artifacts/11861271580), 만료 **2026-10-28T00:22:44Z**를 실제 다운로드했다. outer bytes/SHA256는 GitHub artifact digest와 일치하며 이전 artifact 11812502022는 변경하지 않았다.
+
+| 직접 검증한 ZIP | bytes | SHA256 |
+|---|---:|---|
+| outer artifact | 292844685 | `6a4b842cc6189bf0fc96d791f197f111603f72354325529b4b30d652e5f0f2fd` |
+| source-review-e4500fcc1879 | 74110745 | `0c38bd6535bd84c7fd2327c2d17d6ead7dfe8d21203ff31ab066128bf1952232` |
+| win-x64-e4500fcc1879 | 232051411 | `2ad513bc071b24861e2b2d3cfef645473c64b9fb3c370240ac046354d8178a83` |
+
+Source ZIP 645 payload/646 entry의 size/hash·집합/중복·exact commit/incomplete/public false와 Linux 동일 SHA의 두 생성물 전체 byte 일치를 확인했다. helper 3개는 application.tar의 검토용 소스에 포함된다. Runtime 1743 payload/1744 files의 manifest 전체 size/hash·집합/중복·exact build-info, MIT LICENSE와 원문 license 27개, 이전 dependency notice 36개 및 동결 native/support 1,284개 bytes/hash 보존을 확인했다. 자체 apphost의 UTF-16 exact commit version은 바뀌며 native bundle 변경으로 분류하지 않는다. runtime ZIP에 SDK/helper/nupkg 또는 hash report를 추가하지 않았다.
+
+artifact의 warm/cold report 14개는 package identity·archive bytes/SHA256/raw SHA512·contentHash·signed integrity 및 SDK NuGet informational version이 localEvidence.nugetHashReconciliation의 독립 원본 증거와 모두 같다. dependencies.json의 sha512/contentHash는 실제 NuGet content이고 archiveSha512는 제공 .nupkg.sha512의 raw 값이다. 동봉 lock의 모든 contentHash(타깃 그룹 합계 15개)도 대응 package content와 일치한다. 12개 기존 lock hash는 보존되고 runtime 2개 legacy raw 값만 content 기준으로 바로잡았다. 이 판정은 패키지 byte/identity/content provenance 범위이며 서명 인증서 신뢰 전체나 native selected graph/전체 라이선스 양립을 승인한 것은 아니다. 이전 packageHashComparison은 당시 관측 이력으로 보존되고 새 reconciliation 판정이 현재 의미를 설명한다.
+
+판정: **NuGet 12개 차이 원인/정상 비교 기준 해소, runtime 2개 고지 metadata 추출 수정, 실제 불일치 거부·Windows CI/artifact 검증 완료, PR #34 재검토 대기**. JAR/Lua/support/원문 고지 검사 및 cff8956/이전 실패·검증 이력은 유지한다. 공급자 증거가 필요한 S01/S02/S03 actual source/patch/build·selected graph 및 N02/N03 author/license/적용 범위, 전체 대응 소스·license graph/LGPL 교체/클린 PC·기존 실물 잔여는 미완료다. completeCorrespondingSource/publicReleaseApproved false 유지, 공급자 연락·제품/번들/SDK/버전/MIT 변경·직접 병합·Release/tag·최종 사용자 배포·VSR 없음. PR 병합 전 후속 검토 기준은 task/t18-d1-local-evidence다.

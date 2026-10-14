@@ -53,3 +53,10 @@ source sidecar는 exact SHA 앱 소스·확보 archive 8개·VLC contrib recipes
 ## T18-D1 source-closure 보완 고지
 
 현재 잔여는 [배포 자료의 source-closure 절](release-readiness/README.md#t18-d1-잔여-대응-소스-확인--source-closure)과 파일별 source-closure-inventory.csv를 따른다. 추가 MinGW-w64 10.0.0/winpthreads, libbluray 1.4.0, dkjson copyright, HRTF License 및 GPL module source header 원문을 licenses/contrib/에 포함한다. checksum/source header 후보와 actual linked 조건을 구별한다. FFmpeg 6개 외의 LGPL-only를 선언하지 않으며 전체 graph·고지 coverage·대응 소스는 미완료다. 10개 확보 archive는 검토용 source sidecar에 포함되고 공개 승인 상태는 false다. 자체 MIT·기존 무결성 로직 및 제3자 권리를 유지한다.
+
+
+## T18-D1 local-evidence 고지 보완
+
+exact JAR의 ASM class를 확인해 `licenses/contrib/libbluray-1.4.0-ASM-LICENSE.txt` 원문과 `libbluray-Java-source-header-notices.txt`의 개별 source 후보 copyright/조건을 보완했다. JAR 내부에는 manifest 외 license/resource가 없다. `VLC-Lua-source-header-notices.txt`와 `VLC-support-source-header-notices.txt`에는 대응 후보 원본 header bytes를 보존했다. dkjson/HRTF 기존 원문도 유지한다. source 이름/bytecode header는 실제 source 변경·patch 적용의 증거와 다르다.
+
+jQuery UI·jsTree의 dual-license 설명을 단일 MIT/GPL로 재부여하지 않았다. 전체 author/license 조건 및 unlabelled 지원 자료의 적용 범위는 미완료다. exact 제공 NuGet/runtime 고지 36개 존재·byte 대조는 완료했지만 Skia aggregate/NETCore notice로 모든 native selected graph나 Desktop 고지 범위를 대신하지 않는다. 상세 완료 부분·누락과 재개 조건은 [local-evidence 결과](release-readiness/README.md#t18-d1-확보-패키지-잔여-검사--local-evidence)를 따른다. 전체 대응 소스/고지·graph 승인 및 공개 배포 차단은 유지한다.

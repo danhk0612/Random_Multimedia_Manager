@@ -1,0 +1,401 @@
+Source header excerpts from retained source archives. Candidate correspondence only; not complete linked-license approval. Original header bytes retained.
+
+Sources: vlc-3.0.23/share/lua/http/css/ui-lightness/jquery-ui-1.8.13.custom.css
+/*
+ * jQuery UI CSS Framework 1.8.13
+ *
+ * Copyright 2011, AUTHORS.txt (http://jqueryui.com/about)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ * http://jquery.org/license
+ *
+ * http://docs.jquery.com/UI/Theming/API
+ */
+
+Sources: vlc-3.0.23/share/lua/http/index.html
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  index.html: VLC media player web interface - VLM
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2014 VLC authors and VideoLAN
+<
+<  Authors: Brandon Brooks <bwbrooks -at- archmageinc -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/js/jquery.jstree.js
+/*
+ * jsTree 1.0-rc3
+ * http://jstree.com/
+ *
+ * Copyright (c) 2010 Ivan Bozhanov (vakata.com)
+ *
+ * Licensed same as jquery - under the terms of either the MIT License or the GPL Version 2 License
+ *   http://www.opensource.org/licenses/mit-license.php
+ *   http://www.gnu.org/licenses/gpl.html
+ *
+ * $Date: 2011-02-09 01:17:14 +0200 (ср, 09 февр 2011) $
+ * $Revision: 236 $
+ */
+
+Sources: vlc-3.0.23/share/lua/http/mobile.html
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  mobile.html: VLC media player web interface - VLM
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2014 VLC authors and VideoLAN
+<
+<  Authors: Brandon Brooks <bwbrooks -at- archmageinc -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/mobile_browse.html
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  mobile_browse.html: VLC media player web interface - VLM
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2014 VLC authors and VideoLAN
+<
+<  Authors: Brandon Brooks <bwbrooks -at- archmageinc -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/mobile_equalizer.html
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  mobile_equalizer.html: VLC media player web interface - VLM
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2006 the VideoLAN team
+<
+<  Authors: Brandon Brooks <bwbrooks -at- archmageinc -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/mobile_view.html
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  mobile_view.html: VLC media player web interface - VLM
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2014 VLC authors and VideoLAN
+<
+<  Authors: Brandon Brooks <bwbrooks -at- archmageinc -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/browse.json
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  status.xml: VLC media player web interface
+<  this should mirror the content and function of status.json
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2009 the VideoLAN team
+<
+<  Authors: Rob Jonson <rob -at- hobbyistsoftware -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/browse.xml
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  browse.xml: VLC media player web interface
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2006 the VideoLAN team
+< 
+<  Authors: Antoine Cellerier <dionoea -at- videolan -dot- org>
+< 
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+< 
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+< 
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/playlist.json
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  playlist.json: VLC media player web interface
+<  this should mirror the content of playlist.xml
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2006 the VideoLAN team
+<
+<  Authors: Rob Jonson <rob -at- hobbyistsoftware -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/playlist.xml
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  playlist.xml: VLC media player web interface
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2006 the VideoLAN team
+<
+<  Authors: Antoine Cellerier <dionoea -at- videolan -dot- org>
+<  Authors: Rob Jonson <rob -at- hobbyistsoftware -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/playlist_jstree.xml
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  playlist.xml: VLC media player web interface
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2006 the VideoLAN team
+< 
+<  Authors: Antoine Cellerier <dionoea -at- videolan -dot- org>
+< 
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+< 
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+< 
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/status.json
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  status.xml: VLC media player web interface
+<  this should mirror the content and function of status.json
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2009 the VideoLAN team
+< 
+<  Authors: Rob Jonson <rob -at- hobbyistsoftware -dot- com>
+< 
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+< 
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+< 
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/status.xml
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  status.xml: VLC media player web interface
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2009 the VideoLAN team
+< 
+<  Authors: Antoine Cellerier <dionoea -at- videolan -dot- org>
+<  			Rob Jonson <rob -at- hobbyistsoftware -dot- com>
+< 
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+< 
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+< 
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/vlm.xml
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  vlm.xml: VLC media player web interface
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2006 the VideoLAN team
+< 
+<  Authors: Antoine Cellerier <dionoea -at- videolan -dot- org>
+< 
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+< 
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+< 
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/requests/vlm_cmd.xml
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  vlm_cmd.xml: VLC media player web interface
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2006 the VideoLAN team
+< 
+<  Authors: Antoine Cellerier <dionoea -at- videolan -dot- org>
+< 
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+< 
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+< 
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/view.html
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  view.html: VLC media player web interface - VLM
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2014 VLC authors and VideoLAN
+<
+<  Authors: Brandon Brooks <bwbrooks -at- archmageinc -dot- com>
+<
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
+Sources: vlc-3.0.23/share/lua/http/vlm.html
+<!--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  vlm.html: VLC media player web interface - VLM
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - >
+<  Copyright (C) 2005-2014 VLC authors and VideoLAN
+< 
+<  Authors: Antoine Cellerier <dionoea -at- videolan -dot- org>
+< 
+<  This program is free software; you can redistribute it and/or modify
+<  it under the terms of the GNU General Public License as published by
+<  the Free Software Foundation; either version 2 of the License, or
+<  (at your option) any later version.
+<
+<  This program is distributed in the hope that it will be useful,
+<  but WITHOUT ANY WARRANTY; without even the implied warranty of
+<  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<  GNU General Public License for more details.
+<
+<  You should have received a copy of the GNU General Public License
+<  along with this program; if not, write to the Free Software
+<  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+< - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+
